@@ -1,4 +1,6 @@
-# Minpy
+# MinPy
+
+[![Build Status](https://travis-ci.org/dmlc/minpy.svg?branch=master)](https://travis-ci.org/dmlc/minpy)
 
 This repository aims at prototyping a pure `numpy` interface above [mxnet](https://github.com/dmlc/mxnet) backend. The key features include:
 
