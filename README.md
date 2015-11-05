@@ -1,6 +1,6 @@
 # Minpy
 
-This repository aims at prototyping a pure `numpy` interface [mxnet](https://github.com/dmlc/mxnet) backend. The key features include:
+This repository aims at prototyping a pure `numpy` interface above [mxnet](https://github.com/dmlc/mxnet) backend. The key features include:
 
 * [Autograd](https://github.com/HIPS/autograd) support.
 * Nature [Caffe](https://github.com/BVLC/caffe) layer integration.
