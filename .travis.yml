@@ -3,7 +3,8 @@ sudo: required
 dist: trusty
 
 before_install:
-  - sudo apt-get install --yes libblas-dev liblapack-dev gfortran
+  - "sudo apt-get update -qq"
+  - "sudo apt-get install --yes libblas-dev liblapack-dev gfortran"
 
 language: python
 
