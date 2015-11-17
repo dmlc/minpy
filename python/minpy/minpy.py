@@ -40,10 +40,15 @@ class Primitive(object):
         """Call wrapped function.
 
         Args:
-            *args, **kwargs: Arguments for the wrapped function.
+            *args: Arguments for the wrapped function.
+            **kwargs: Arguments for the wrapped function.
 
         Returns:
             A `Node` representing the result.
+
+        Raises:
+            IndexError: No corresponding gradient function.
+            KeyError: No corresponding gradient function.
         """
         arg_values = tuple(map(lambda x: x._val, args))
         kwargs_values = {x: kwargs[x]._val for x in kwargs}
