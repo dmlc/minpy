@@ -1,6 +1,7 @@
 import functools
 import numpy as np
 
+
 class Node(object):
 
     def __init__(self, val):
@@ -17,23 +18,63 @@ class Node(object):
         if self is target:
             return np.ones(self._val.shape)
         else:
-            return functools.reduce(np.add, (map(lambda x: x[0](x[1].partial_derivative(target)), self._partial_derivatives)))
+            return functools.reduce(np.add, (map(
+                lambda x: x[0](x[1].partial_derivative(target)),
+                self._partial_derivatives)))
+
 
 class Primitive(object):
+    """Primitive computation."""
+
     def __init__(self, func):
+        """Initialize.
+
+        Args:
+            func: A function that performs the action.
+        """
         self._func = func
         self._grad_func = {}
+        self._grad_func_kw = {}
 
-    def __call__(self, *args):
-        arg_values = list(map(lambda x: x._val, args))
-        result = self._func(*arg_values)
-        result_node = Node(result)
+    def __call__(self, *args, **kwargs):
+        """Call wrapped function.
+
+        Args:
+            *args, **kwargs: Arguments for the wrapped function.
+
+        Returns:
+            A `Node` representing the result.
+        """
+        arg_values = tuple(map(lambda x: x._val, args))
+        kwargs_values = {x: kwargs[x]._val for x in kwargs}
+        result_value = self._func(*arg_values, **kwargs_values)
+        result = Node(result_value)
         for i, arg in enumerate(args):
-            arg.add_partial_derivative(self._grad_func[i](result, *arg_values), result_node)
-        return result_node
+            arg.add_partial_derivative(self._grad_func[i](
+                result_value, *arg_values, **kwargs_values), result)
+        for x in kwargs:
+            arg.add_partial_derivative(self._grad_func_kw[x](
+                result_value, *arg_values, **kwargs_values), result)
+        return result
 
     def def_grad(self, func, argnum=0):
+        """Define gradient function.
+
+        Args:
+            func: Gradient function.
+            argnum: Index of the argument.
+        """
         self._grad_func[argnum] = func
+
+    def def_grad_kw(self, func, key):
+        """Define gradient function.
+
+        Args:
+            func: Gradient function.
+            key: Key name of the argument.
+        """
+        self._grad_func[key] = func
+
 
 @Primitive
 def mult(a, b):
