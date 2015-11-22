@@ -3,24 +3,45 @@ import numpy as np
 
 
 class Node(object):
+    """Node that wraps a value."""
 
     def __init__(self, val):
+        """Initialize.
+
+        Args:
+            val: Value to wrap.
+        """
         self._val = val
         self._partial_derivatives = []
+        self._partial_derivative_cache = {}
 
     def __str__(self):
-        return str(self._val)
+        """Get string representation.
+
+        Return:
+            A string representation.
+        """
+        return 'Node(' + str(self._val) + ')'
+
+    @property
+    def val(self):
+        return self._val
 
     def add_partial_derivative(self, func, res):
         self._partial_derivatives.append((func, res))
 
     def partial_derivative(self, target):
-        if self is target:
-            return np.ones(self._val.shape)
+        if target in self._partial_derivative_cache:
+            return self._partial_derivative_cache[target]
         else:
-            return functools.reduce(np.add, (map(
-                lambda x: x[0](x[1].partial_derivative(target)),
-                self._partial_derivatives)))
+            if self is target:
+                return np.ones(self._val.shape)
+            else:
+                res= functools.reduce(np.add, map(
+                    lambda x: x[0](x[1].partial_derivative(target)),
+                    self._partial_derivatives), np.zeros(self._val.shape))
+                self._partial_derivative_cache[target] = res
+                return res
 
 
 class Primitive(object):
@@ -50,8 +71,8 @@ class Primitive(object):
             IndexError: No corresponding gradient function.
             KeyError: No corresponding gradient function.
         """
-        arg_values = tuple(map(lambda x: x._val, args))
-        kwargs_values = {x: kwargs[x]._val for x in kwargs}
+        arg_values = tuple(map(lambda x: x.val, args))
+        kwargs_values = {x: kwargs[x].val for x in kwargs}
         result_value = self._func(*arg_values, **kwargs_values)
         result = Node(result_value)
         for i, arg in enumerate(args):
