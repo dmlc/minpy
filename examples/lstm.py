@@ -53,14 +53,10 @@ def build_lstm(input_size, state_size, output_size):
         output = activations(predict_weights, hiddens)
         return output - logsumexp(output)     # Normalize log-probs.
 
-    def outputs(weights, inputs):
+    def outputs(inputs, forget_weights, change_weights, ingate_weights,
+            outgate_weights, predict_weights):
         """Outputs normalized log-probabilities of each character, plus an
            extra one at the end."""
-        forget_weights  = parser.get(weights, 'forget')
-        change_weights  = parser.get(weights, 'change')
-        ingate_weights  = parser.get(weights, 'ingate')
-        outgate_weights = parser.get(weights, 'outgate')
-        predict_weights = parser.get(weights, 'predict')
         num_sequences = inputs.shape[1]
         hiddens = np.repeat(parser.get(weights, 'init_hiddens'), num_sequences, axis=0)
         cells   = np.repeat(parser.get(weights, 'init_cells'),   num_sequences, axis=0)
