@@ -1,21 +1,6 @@
 import minpy.numpy as np
 import minpy.numpy.random as npr
 
-class WeightsParser(object):
-    """A helper class to index into a parameter vector."""
-    def __init__(self):
-        self.idxs_and_shapes = {}
-        self.num_weights = 0
-
-    def add_shape(self, name, shape):
-        start = self.num_weights
-        self.num_weights += np.prod(shape)
-        self.idxs_and_shapes[name] = (slice(start, self.num_weights), shape)
-
-    def get(self, vect, name):
-        idxs, shape = self.idxs_and_shapes[name]
-        return np.reshape(vect[idxs], shape)
-
 def sigmoid(x):
     return 0.5*(np.tanh(x) + 1.0)   # Output ranges from 0 to 1.
 
@@ -29,23 +14,22 @@ def logsumexp(X, axis=1):
 
 def build_lstm(input_size, state_size, output_size):
     """Builds functions to compute the output of an LSTM."""
-    parser = WeightsParser()
-    parser.add_shape('init_cells',   (1, state_size))
-    parser.add_shape('init_hiddens', (1, state_size))
-    parser.add_shape('change',  (input_size + state_size + 1, state_size))
-    parser.add_shape('forget',  (input_size + 2 * state_size + 1, state_size))
-    parser.add_shape('ingate',  (input_size + 2 * state_size + 1, state_size))
-    parser.add_shape('outgate', (input_size + 2 * state_size + 1, state_size))
-    parser.add_shape('predict', (state_size + 1, output_size))
+    weights = minpy.WeightGroup()
+    weights.add_shape('init_cells',   (1, state_size))
+    weights.add_shape('init_hiddens', (1, state_size))
+    weights.add_shape('change',  (input_size + state_size + 1, state_size))
+    weights.add_shape('forget',  (input_size + 2 * state_size + 1, state_size))
+    weights.add_shape('ingate',  (input_size + 2 * state_size + 1, state_size))
+    weights.add_shape('outgate', (input_size + 2 * state_size + 1, state_size))
+    weights.add_shape('predict', (state_size + 1, output_size))
 
-    def update_lstm(input, hiddens, cells, forget_weights, change_weights,
-                                           ingate_weights, outgate_weights):
+    def update_lstm(input, hiddens, cells, weights):
         """One iteration of an LSTM layer."""
-        change  = np.tanh(activations(change_weights, input, hiddens))
-        forget  = sigmoid(activations(forget_weights, input, cells, hiddens))
-        ingate  = sigmoid(activations(ingate_weights, input, cells, hiddens))
+        change  = np.tanh(activations(weights.change, input, hiddens))
+        forget  = sigmoid(activations(weights.forget, input, cells, hiddens))
+        ingate  = sigmoid(activations(weights.ingate, input, cells, hiddens))
         cells   = cells * forget + ingate * change
-        outgate = sigmoid(activations(outgate_weights, input, cells, hiddens))
+        outgate = sigmoid(activations(weights.outgate, input, cells, hiddens))
         hiddens = outgate * np.tanh(cells)
         return hiddens, cells
 
