@@ -43,6 +43,17 @@ class Node(object):
                 self._partial_derivative_cache[target] = res
                 return res
 
+def assert_type(t, method=False):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            for arg in (args[1:] if method else args):
+                assert(type(arg) == t)
+            for _, kwarg in kwargs.items():
+                assert(type(kwarg) == t)
+            return func(*args, **kwargs)
+        return wrapped
+    return decorator
 
 class Primitive(object):
     """Primitive computation."""
@@ -57,6 +68,7 @@ class Primitive(object):
         self._grad_func = {}
         self._grad_func_kw = {}
 
+    @assert_type(Node, method=True)
     def __call__(self, *args, **kwargs):
         """Call wrapped function.
 
