@@ -36,7 +36,7 @@ class Node(object):
             return self._partial_derivative_cache[target]
         else:
             if self is target:
-                return np.ones(self._val.shape)
+                return np.ones(1)
             else:
                 res= functools.reduce(np.add, map(
                     lambda x: x[0](x[1].partial_derivative(target)),
@@ -102,12 +102,21 @@ class Primitive(object):
         """
         self._grad_func[key] = func
 
+    def def_grad_zero(self, argnum=0):
+        self._grad_func[argnum] = lambda *args, **kwargs: lambda g: np.zeros(1)
+
 
 @Primitive
 def mult(a, b):
     return a * b
 mult.def_grad((lambda ans, x, y: lambda g: g * y), argnum=0)
 mult.def_grad((lambda ans, x, y: lambda g: g * x), argnum=1)
+
+@Primitive
+def func(a, b):
+    return a * b
+func.def_grad((lambda ans, x, y: lambda g: g * y), argnum=0)
+func.def_grad_zero(argnum=1)
 
 
 if __name__ == '__main__':
@@ -122,3 +131,7 @@ if __name__ == '__main__':
     print(a_node.partial_derivative(result_node) == b * c)
     print(b_node.partial_derivative(result_node) == a * c)
     print(c_node.partial_derivative(result_node) == a * b)
+    d_node = func(a_node, b_node)
+    print(a * b == d_node.val)
+    print(a_node.partial_derivative(d_node))
+    print(b_node.partial_derivative(d_node))
