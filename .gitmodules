@@ -1,3 +1,0 @@
-[submodule "mxnet"]
-	path = mxnet
-	url = https://github.com/dmlc/mxnet.git
