@@ -1,6 +1,30 @@
 import functools
 import numpy as np
 from .utils import common
+from .utils import log
+
+logger = log.get_logger(__name__, log.logging.WARNING)
+
+def node_p(x):
+    return isinstance(x, Node)
+
+
+def get_val(x):
+    return x.val
+
+
+def get_val_if_node(x):
+    return get_val(x) if node_p(x) else x
+
+
+node_underlying_types = [np.ndarray]
+
+
+def to_node_maybe(x):
+    if type(x) in node_underlying_types:
+        return Node(x)
+    else:
+        return x
 
 
 class Node(object):
@@ -22,13 +46,14 @@ class Node(object):
         Return:
             A string representation.
         """
-        return 'Node(' + str(self._val) + ')'
+        return 'Node({})'.format(self._val)
 
     @property
     def val(self):
         return self._val
 
     def add_partial_derivative(self, func, res):
+        logger.info('Adding partial derivative to {}: {}'.format(id(self), self))
         self._partial_derivatives.append((func, res))
 
     def partial_derivative(self, target):
@@ -38,10 +63,11 @@ class Node(object):
             if self is target:
                 return np.ones(1)
             else:
-                res= functools.reduce(np.add, map(
+                res = functools.reduce(np.add, map(
                     lambda x: x[0](x[1].partial_derivative(target)),
                     self._partial_derivatives), np.zeros(self._val.shape))
                 self._partial_derivative_cache[target] = res
+                logger.info('Partial derivative id: {}, shape: {}, value: {}'.format(id(self), self.val.shape, res))
                 return res
 
 class Primitive(object):
@@ -57,7 +83,6 @@ class Primitive(object):
         self._grad_func = {}
         self._grad_func_kw = {}
 
-    @common.assert_type(Node, method=True)
     def __call__(self, *args, **kwargs):
         """Call wrapped function.
 
@@ -72,16 +97,19 @@ class Primitive(object):
             IndexError: No corresponding gradient function.
             KeyError: No corresponding gradient function.
         """
-        arg_values = tuple(map(lambda x: x.val, args))
-        kwargs_values = {x: kwargs[x].val for x in kwargs}
+        logger.info('Calling {}'.format(self._func))
+        arg_values = tuple(map(get_val_if_node, args))
+        kwargs_values = {x: get_val_if_node(kwargs[x]) for x in kwargs}
         result_value = self._func(*arg_values, **kwargs_values)
         result = Node(result_value)
         for i, arg in enumerate(args):
-            arg.add_partial_derivative(self._grad_func[i](
-                result_value, *arg_values, **kwargs_values), result)
+            if node_p(arg):
+                arg.add_partial_derivative(self._grad_func[i](
+                    result_value, *arg_values, **kwargs_values), result)
         for x in kwargs:
-            arg.add_partial_derivative(self._grad_func_kw[x](
-                result_value, *arg_values, **kwargs_values), result)
+            if node_p(arg):
+                arg.add_partial_derivative(self._grad_func_kw[x](
+                    result_value, *arg_values, **kwargs_values), result)
         return result
 
     def def_grad(self, func, argnum=0):
@@ -105,33 +133,11 @@ class Primitive(object):
     def def_grad_zero(self, argnum=0):
         self._grad_func[argnum] = lambda *args, **kwargs: lambda g: np.zeros(1)
 
+def grad(func, argnum=0):
+    @functools.wraps(func)
+    def wrapped(*args):
+        nodes = tuple(map(to_node_maybe, args))
+        result_node = func(*nodes)
+        return nodes[argnum].partial_derivative(result_node)
+    return wrapped
 
-@Primitive
-def mult(a, b):
-    return a * b
-mult.def_grad((lambda ans, x, y: lambda g: g * y), argnum=0)
-mult.def_grad((lambda ans, x, y: lambda g: g * x), argnum=1)
-
-@Primitive
-def func(a, b):
-    return a * b
-func.def_grad((lambda ans, x, y: lambda g: g * y), argnum=0)
-func.def_grad_zero(argnum=1)
-
-
-if __name__ == '__main__':
-    a = np.random.random((2, 2))
-    a_node = Node(a)
-    b = np.random.random((2, 2))
-    b_node = Node(b)
-    c = np.random.random((2, 2))
-    c_node = Node(c)
-    intermediate_node = mult(a_node, b_node)
-    result_node = mult(intermediate_node, c_node)
-    print(a_node.partial_derivative(result_node) == b * c)
-    print(b_node.partial_derivative(result_node) == a * c)
-    print(c_node.partial_derivative(result_node) == a * b)
-    d_node = func(a_node, b_node)
-    print(a * b == d_node.val)
-    print(a_node.partial_derivative(d_node))
-    print(b_node.partial_derivative(d_node))
