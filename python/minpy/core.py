@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import functools
 import numpy as np
 from .utils import common

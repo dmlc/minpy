@@ -3,13 +3,14 @@
 """Logging utilities."""
 import logging
 
-
 class _Formatter(logging.Formatter):
     """Customized log formatter."""
 
     def __init__(self):
         datefmt = '%m%d %H:%M:%S'
-        super().__init__(datefmt=datefmt, style='{')
+        # TODO this is python 3.x? use 2.x instead?
+        #super().__init__(datefmt=datefmt, style='{')
+        super(_Formatter, self).__init__(datefmt=datefmt)
 
     def _get_color(self, level):
         if logging.WARNING <= level:
