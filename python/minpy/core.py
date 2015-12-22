@@ -7,30 +7,40 @@ from .utils import log
 
 logger = log.get_logger(__name__, log.logging.WARNING)
 
-def node_p(x):
-    return isinstance(x, Node)
+autograd_mode = False
 
+class AutogradMode:
+    def __init__(self):
+        pass
+    def __enter__(self):
+        global autograd_mode
+        autograd_mode = True
+    def __exit__(slef, type, value, traceback):
+        global autograd_mode
+        autograd_mode = False
 
-def get_val(x):
-    return x.val
+value_type_to_node_type = dict()
 
+def register_node_type(value_type, node_type):
+    value_type_to_node_type[value_type] = node_type
 
-def get_val_if_node(x):
-    return get_val(x) if node_p(x) else x
-
-
-node_underlying_types = [np.ndarray]
-
-
-def to_node_maybe(x):
-    if type(x) in node_underlying_types:
-        return Node(x)
-    else:
+def wrap(x):
+    if isinstance(x, Node):
+        # if already a node type, do not need to wrap it again
         return x
+    elif type(x) in value_type_to_node_type:
+        # if registered a specific node type, wrap it with the registered type
+        node_type = value_type_to_node_type[type(x)]
+        return node_type(x)
+    else:
+        # if nothing specified, wrap it with the base Node type
+        return Node(x)
 
+def unwrap(x):
+    return x._val if isinstance(x, Node) else x
 
 class Node(object):
-    """Node that wraps a value."""
+    """Node that wraps a value (numpy.ndarray, mxnet.ndarray, etc.)."""
 
     def __init__(self, val):
         """Initialize.
@@ -69,7 +79,8 @@ class Node(object):
                     lambda x: x[0](x[1].partial_derivative(target)),
                     self._partial_derivatives), np.zeros(self._val.shape))
                 self._partial_derivative_cache[target] = res
-                logger.info('Partial derivative id: {}, shape: {}, value: {}'.format(id(self), self.val.shape, res))
+                logger.info('Partial derivative id: {}, shape: {}, value: {}'.format(
+                    id(self), self.val.shape, res))
                 return res
 
 class Primitive(object):
@@ -100,18 +111,28 @@ class Primitive(object):
             KeyError: No corresponding gradient function.
         """
         logger.info('Calling {}'.format(self._func))
-        arg_values = tuple(map(get_val_if_node, args))
-        kwargs_values = {x: get_val_if_node(kwargs[x]) for x in kwargs}
+        def get_val(x):
+            return unwrap(x._val if isinstance(x, Node) else x)
+        # unwrap Node or Wrapper to get underlying value
+        arg_values = tuple(map(get_val, args))
+        kwargs_values = {x: get_val(kwargs[x]) for x in kwargs}
+        # call the real function with raw value
         result_value = self._func(*arg_values, **kwargs_values)
-        result = Node(result_value)
-        for i, arg in enumerate(args):
-            if node_p(arg):
-                arg.add_partial_derivative(self._grad_func[i](
-                    result_value, *arg_values, **kwargs_values), result)
-        for x in kwargs:
-            if node_p(arg):
-                arg.add_partial_derivative(self._grad_func_kw[x](
-                    result_value, *arg_values, **kwargs_values), result)
+        # wrap the result raw value with wrapper and node
+        if autograd_mode:
+            result = wrap(result_value)
+            # record partial derivative paths
+            for i, arg in enumerate(args):
+                if isinstance(arg, Node):
+                    arg.add_partial_derivative(self._grad_func[i](
+                        result_value, *arg_values, **kwargs_values), result)
+            for x in kwargs:
+                if isinstance(arg, Node):
+                    arg.add_partial_derivative(self._grad_func_kw[x](
+                        result_value, *arg_values, **kwargs_values), result)
+        else:
+            result = result_value
+
         return result
 
     def def_grad(self, func, argnum=0):
@@ -138,8 +159,8 @@ class Primitive(object):
 def grad(func, argnum=0):
     @functools.wraps(func)
     def wrapped(*args):
-        nodes = tuple(map(to_node_maybe, args))
-        result_node = func(*nodes)
+        with AutogradMode(): # start autograd mode
+            nodes = tuple(map(wrap, args)) # first wrap the input args with Node type
+            result_node = func(*nodes)
         return nodes[argnum].partial_derivative(result_node)
     return wrapped
-
