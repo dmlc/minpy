@@ -58,10 +58,10 @@ npw.true_divide.def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
 npw.true_divide.def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: - g * x / y ** 2), argnum=1)
 # power
 npw.power.def_grad(lambda ans, x, y : unbroadcast(ans, x, lambda g : g * y * x ** (y - 1)))
-npw.power.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : g * npw.log(x) * x ** y), argnum=1)
+npw.power.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : g * np.log(x) * x ** y), argnum=1)
 # mod
 npw.mod.def_grad(lambda ans, x, y : unbroadcast(ans, x, identity))
-npw.mod.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : - g * npw.floor(x/y)), argnum=1)
+npw.mod.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : - g * np.floor(x/y)), argnum=1)
 # negate
 npw.negative.def_grad(lambda ans, x: operator.neg)
 random.random.def_grad_zero()
