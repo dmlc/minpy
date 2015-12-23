@@ -1,9 +1,46 @@
 import operator
-import mxnet as mx
+import mxnet.nd as nd
 
 from . import ndarray_wrapper as ndw
 from . import random
 from .. import core
+
+def identity(x):
+    return x
+
+def unbroadcast(ans, x, gradfun):
+    # TODO currently no broadcasting for mx.ndarray
+    return gradfun
+
+# dot
+ndw.dot.def_grad(lambda ans, a, b: lambda g: nd.dot(g, b.T))
+ndw.dot.def_grad(lambda ans, a, b: lambda g: nd.dot(a.T, g), argnum=1)
+# non-linear
+#ndw.tanh.def_grad(lambda ans, x: lambda g: g / np.cosh(x) ** 2)
+ndw.exp.def_grad(lambda ans, x: lambda g: g * ans)
+ndw.log.def_grad(lambda ans, x: lambda g: g / x)
+# reduce
+ndw.sum.def_grad(lambda ans, x: lambda g: nd.full(x.shape, g))
+# + - * /
+ndw.multiply.def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y))
+ndw.multiply.def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: x * g), argnum=1)
+ndw.add.def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
+ndw.add.def_grad(lambda ans, x, y: unbroadcast(ans, y, identity), argnum=1)
+ndw.subtract.def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
+ndw.subtract.def_grad(lambda ans, x, y: unbroadcast(ans, y, operator.neg), argnum=1)
+ndw.divide.def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
+ndw.divide.def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / y * y), argnum=1)
+ndw.true_divide.def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
+ndw.true_divide.def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / y * y), argnum=1)
+# power
+#ndw.power.def_grad(lambda ans, x, y : unbroadcast(ans, x, lambda g : g * y * x ** (y - 1)))
+#ndw.power.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : g * nd.log(x) * x ** y), argnum=1)
+# mod
+#ndw.mod.def_grad(lambda ans, x, y : unbroadcast(ans, x, identity))
+#ndw.mod.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : - g * nd.floor(x/y)), argnum=1)
+# negate
+ndw.negative.def_grad(lambda ans, x: operator.neg)
+
 
 class MXNetNDArrayNode(core.Node):
     def __init__(self, val):
@@ -30,4 +67,3 @@ class MXNetNDArrayNode(core.Node):
     def __rtruediv__(self, other): return ndw.true_divide(other, self)
     def __rpow__(self, other): return ndw.power(   other, self)
     def __rmod__(self, other): return ndw.mod(     other, self)
-
