@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import functools
-import numpy as np
+import operator
 from .utils import common
 from .utils import log
 
@@ -72,12 +72,12 @@ class Node(object):
         if target in self._partial_derivative_cache:
             return self._partial_derivative_cache[target]
         else:
-            if self is target:
-                return np.ones(1)
+            if self is target: # partial derivative of self is one
+                return 1.0  # TODO shape? 
             else:
-                res = functools.reduce(np.add, map(
+                res = functools.reduce(operator.add, map(
                     lambda x: x[0](x[1].partial_derivative(target)),
-                    self._partial_derivatives), np.zeros(self._val.shape))
+                    self._partial_derivatives), 0.0) # TODO shape?
                 self._partial_derivative_cache[target] = res
                 logger.info('Partial derivative id: {}, shape: {}, value: {}'.format(
                     id(self), self.val.shape, res))
@@ -154,7 +154,7 @@ class Primitive(object):
         self._grad_func[key] = func
 
     def def_grad_zero(self, argnum=0):
-        self._grad_func[argnum] = lambda *args, **kwargs: lambda g: np.zeros(1)
+        self._grad_func[argnum] = lambda *args, **kwargs: lambda g: 0.0 # TODO shape?
 
 def grad(func, argnum=0):
     @functools.wraps(func)

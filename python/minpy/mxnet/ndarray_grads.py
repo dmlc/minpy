@@ -1,5 +1,7 @@
+from __future__ import absolute_import
+
 import operator
-import mxnet.nd as nd
+import mxnet.ndarray as nd
 
 from . import ndarray_wrapper as ndw
 from . import random
@@ -20,7 +22,7 @@ ndw.dot.def_grad(lambda ans, a, b: lambda g: nd.dot(a.T, g), argnum=1)
 ndw.exp.def_grad(lambda ans, x: lambda g: g * ans)
 ndw.log.def_grad(lambda ans, x: lambda g: g / x)
 # reduce
-ndw.sum.def_grad(lambda ans, x: lambda g: nd.full(x.shape, g))
+ndw.sum.def_grad(lambda ans, x: lambda g: nd.full(x.shape, g, x.context))
 # + - * /
 ndw.multiply.def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y))
 ndw.multiply.def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: x * g), argnum=1)
@@ -41,7 +43,6 @@ ndw.true_divide.def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x
 # negate
 ndw.negative.def_grad(lambda ans, x: operator.neg)
 
-
 class MXNetNDArrayNode(core.Node):
     def __init__(self, val):
         super(MXNetNDArrayNode, self).__init__(val)
@@ -49,6 +50,9 @@ class MXNetNDArrayNode(core.Node):
     @property
     def shape(self):
         return self._val.shape
+
+    def asnumpy(self):
+        return self._val.asnumpy()
 
     def __neg__(self): return ndw.negative(self)
 
@@ -67,3 +71,5 @@ class MXNetNDArrayNode(core.Node):
     def __rtruediv__(self, other): return ndw.true_divide(other, self)
     def __rpow__(self, other): return ndw.power(   other, self)
     def __rmod__(self, other): return ndw.mod(     other, self)
+
+core.register_node_type(nd.NDArray, MXNetNDArrayNode)
