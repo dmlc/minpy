@@ -24,13 +24,16 @@ def enforce_type(T, method=False):
                     return T(arg)
                 else:
                     return arg
+
             def wrap_kwarg(kwarg):
                 if not isinstance(kwarg, T):
                     return T(kwarg)
                 else:
                     return kwarg
             args_wrapped = [wrap_arg(i, arg) for i, arg in enumerate(args)]
-            kwargs_wrapped = {k: wrap_kwarg(kwarg) for k, kwarg in kwargs.items()}
+            kwargs_wrapped = {
+                k: wrap_kwarg(kwarg) for k, kwarg in kwargs.items()
+            }
             return func(*args_wrapped, **kwargs_wrapped)
         return wrapped
     return decorator
