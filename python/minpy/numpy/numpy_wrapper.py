@@ -10,6 +10,12 @@ def unbox_args(f):
     return functools.wraps(f)(lambda *args, **kwargs: f(*args, **kwargs))
 
 def wrap_namespace(old, new):
+    """Wrap all functions in a namespace.
+
+    Args:
+        old: Namespace from which functions are to be wrapped.
+        new: Namespace to which to put wrapped functions.
+    """
     unchanged_types = {float, int, type(None), type}
     int_types = {np.int, np.int8, np.int16, np.int32, np.int64, np.integer}
     function_types = {np.ufunc, types.FunctionType, types.BuiltinFunctionType}
