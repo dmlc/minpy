@@ -1,13 +1,16 @@
-from __future__ import absolute_import
-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Wrapper for NumPy namespace."""
 import types
 import functools
 import numpy as np
 
 from ..core import Primitive
 
+
 def unbox_args(f):
     return functools.wraps(f)(lambda *args, **kwargs: f(*args, **kwargs))
+
 
 def wrap_namespace(old, new):
     """Wrap all functions in a namespace.

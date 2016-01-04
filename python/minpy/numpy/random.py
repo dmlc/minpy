@@ -1,5 +1,6 @@
-from __future__ import absolute_import
-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Wrapper for NumPy random functions."""
 from numpy import random
 from . import numpy_wrapper
 

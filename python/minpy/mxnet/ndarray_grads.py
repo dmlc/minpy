@@ -1,14 +1,14 @@
-from __future__ import absolute_import
-
 import operator
 import mxnet.ndarray as nd
 
 from . import ndarray_wrapper as ndw
-from . import random
 from .. import core
+from .. import array
+
 
 def identity(x):
     return x
+
 
 def unbroadcast(ans, x, gradfun):
     # TODO currently no broadcasting for mx.ndarray
@@ -43,7 +43,8 @@ ndw.true_divide.def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x
 # negate
 ndw.negative.def_grad(lambda ans, x: operator.neg)
 
-class MXNetNDArrayNode(core.Node):
+
+class MXNetNDArrayNode(array.Array):
     def __init__(self, val):
         super(MXNetNDArrayNode, self).__init__(val)
 
