@@ -48,8 +48,8 @@ class Registry(object):
         if t in self._reg[name]:
             raise DuplicateRegistryError(
                 'Type {} for name {} is already present'.format(t, name))
-        log.info('Function {} registered to {} with type {}'
-                 .format(func, name, t))
+        logger.info('Function {} registered to {} with type {}'
+                    .format(func, name, t))
         self._reg[name][t] = func
 
     def exists(self, name, t):
@@ -57,3 +57,9 @@ class Registry(object):
 
     def get(self, name, t):
         return self._reg[name][t]
+
+    def iter_available_types(self, name):
+        if name not in self._reg:
+            return iter([])
+        else:
+            return self._reg[name].keys()
