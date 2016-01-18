@@ -7,6 +7,7 @@ import operator
 from .utils import log
 from . import array
 from . import registry
+from . import array_variants as variants
 
 logger = log.get_logger(__name__)
 
@@ -14,21 +15,18 @@ class AmbiguousPolicyError(ValueError):
     pass
 
 class Policy(object):
-
-    def decide(self, *args, **kwargs):
+    """Policy interface """
+    def decide(self, candidates, *args, **kwargs):
         raise AmbiguousPolicyError('Unimplemented')
 
 
 class PreferMXNetPolicy(Policy):
     """Perfer using MXNet functions."""
-
-    def decide(self, *args, **kwargs):
-        if functools.reduce(operator.or_, map(
-                lambda x: x.get_type() == array.ArrayType.NUMPY,
-                itertools.chain(args, kwargs.values())), False):
-            return registry.FunctionType.NUMPY
+    def decide(self, candidates, *args, **kwargs):
+        if variants.FunctionType.MXNET in candidates.keys():
+            return variants.FunctionType.MXNET
         else:
-            return registry.FunctionType.MXNET
+            return variants.FunctionType.NUMPY
 
 default_policy = Policy()
 
@@ -45,9 +43,6 @@ def resolve_name(name, args, kwargs, reg, policy=default_policy):
     Returns:
         A function after resolution.
     """
-    preference = policy.decide(name, args, kwargs)
     available = reg.iter_available_types(name)
-    if preference in available or len(available) == 0:
-        return reg.get(name, preference)
-    else:
-        return reg.get(name, available[0])
+    preference = policy.decide(available, args, kwargs)
+    return reg.get(name, preference)
