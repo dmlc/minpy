@@ -7,16 +7,13 @@ from . import policy
 
 logger = log.get_logger(__name__)
 
-
 class FunctionType(common.AutoNumber):
     """Enumeration of types of functions."""
     NUMPY = ()
     MXNET = ()
 
-
 class DuplicateRegistryError(ValueError):
     pass
-
 
 class Registry(object):
     """Registry for functions under the same symbol."""
@@ -57,10 +54,8 @@ class Registry(object):
         else:
             return self._reg[name].keys()
 
-
 function_registry = Registry()
 method_registry = Registry()
-
 
 def resolve_name(name, args, kwargs, registry, policy=policy.default_policy):
     """Resolve a function name.

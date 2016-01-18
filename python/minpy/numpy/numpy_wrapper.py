@@ -8,18 +8,16 @@ import numpy as np
 from .. import core
 from .. import registry
 
-
 def unbox_args(f):
     return functools.wraps(f)(lambda *args, **kwargs: f(*args, **kwargs))
 
-
-def wrap_namespace(ns, t, registry):
+def wrap_namespace(ns, registry, t):
     """Wrap namespace into a registry.
 
     Args:
         ns: Namespace from which functions are to be wrapped.
-        t: Type of function.
         registry: Registry into which functions are to be wrapped.
+        t: Type of function.
     """
     unchanged_types = {float, int, type(None), type}
     int_types = {np.int, np.int8, np.int16, np.int32, np.int64, np.integer}
@@ -27,11 +25,11 @@ def wrap_namespace(ns, t, registry):
 
     for name, obj in ns.items():
         if type(obj) in function_types:
-            registry.registry(name, core.Primitive(obj), t)
+            registry.register(name, core.Primitive(obj), t)
         elif type(obj) is type and obj in int_types:
-            registry.registry(name, obj, t)
+            registry.register(name, obj, t)
         elif type(obj) in unchanged_types:
-            registry.registry(name, obj, t)
+            registry.register(name, obj, t)
 
 wrap_namespace(np.__dict__, registry.function_registry,
                registry.FunctionType.NUMPY)

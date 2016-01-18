@@ -6,7 +6,6 @@ from .utils import common
 
 logger = log.get_logger(__name__)
 
-
 class ArrayType(common.AutoNumber):
     """Enumeration of types of arrays."""
     NUMPY = ()
