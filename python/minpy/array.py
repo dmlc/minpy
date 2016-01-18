@@ -14,7 +14,8 @@ class ArrayType(common.AutoNumber):
 
 
 class Array(object):
-    """Base array type that provides convenient methods for arithmetic operations.
+    """Base array type that provides convenient methods
+    for arithmetic operations.
     """
     __slots__ = ['_type', '_data']
 
