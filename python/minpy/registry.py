@@ -58,22 +58,26 @@ class Registry(object):
             return self._reg[name].keys()
 
 
-global_registry = Registry()
+function_registry = Registry()
+method_registry = Registry()
 
 
-def resolve_name(name, args, kwargs, policy=policy.global_policy,
-                 registry=global_registry):
+def resolve_name(name, args, kwargs, registry, policy=policy.default_policy):
     """Resolve a function name.
 
     Args:
         name: Name of the function.
         args: Arguments.
         kwargs: Keyword arguments.
-        policy: Resolving policy.
         registry: Registry for functions.
+        policy: Resolving policy.
 
     Returns:
         A function after resolution.
     """
-    t = policy.decide(name, args, kwargs)
-    return registry.get(name, t)
+    preference = policy.decide(name, args, kwargs)
+    available = registry.iter_available_types(name)
+    if preference in available or len(available) == 0:
+        return registry.get(name, preference)
+    else:
+        return registry.get(name, available[0])
