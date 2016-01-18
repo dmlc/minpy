@@ -111,8 +111,12 @@ class Primitive(object):
         Args:
             func: Gradient function.
             argnum: Index of the argument.
+
+        Return:
+            self instance for multiple def_grad in one statement
         """
         self._grad_func[argnum] = func
+        return self
 
     def def_grad_kw(self, func, key):
         """Define gradient function.

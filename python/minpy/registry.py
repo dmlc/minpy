@@ -3,14 +3,8 @@
 """Registry for functions under the same symbol."""
 from .utils import log
 from .utils import common
-from . import policy
 
 logger = log.get_logger(__name__)
-
-class FunctionType(common.AutoNumber):
-    """Enumeration of types of functions."""
-    NUMPY = ()
-    MXNET = ()
 
 class DuplicateRegistryError(ValueError):
     pass
@@ -56,23 +50,3 @@ class Registry(object):
 
 function_registry = Registry()
 method_registry = Registry()
-
-def resolve_name(name, args, kwargs, registry, policy=policy.default_policy):
-    """Resolve a function name.
-
-    Args:
-        name: Name of the function.
-        args: Arguments.
-        kwargs: Keyword arguments.
-        registry: Registry for functions.
-        policy: Resolving policy.
-
-    Returns:
-        A function after resolution.
-    """
-    preference = policy.decide(name, args, kwargs)
-    available = registry.iter_available_types(name)
-    if preference in available or len(available) == 0:
-        return registry.get(name, preference)
-    else:
-        return registry.get(name, available[0])

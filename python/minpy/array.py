@@ -11,7 +11,6 @@ class ArrayType(common.AutoNumber):
     NUMPY = ()
     MXNET = ()
 
-
 class Array(object):
     """Base array type that provides convenient methods
     for arithmetic operations.

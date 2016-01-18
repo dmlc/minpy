@@ -40,8 +40,8 @@ class _Formatter(logging.Formatter):
         fmt += '{asctime} {process:5d} {filename}:{lineno}:{funcName}' \
                ' {name}]\x1b[0m'
         fmt += ' {message}'
-        self._style._fmt = fmt
-        return super().format(record)
+        #self._style._fmt = fmt
+        return super(_Formatter, self).format(record)
 
 
 _handler = logging.StreamHandler()
