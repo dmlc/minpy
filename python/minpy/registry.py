@@ -30,11 +30,17 @@ class Registry(object):
         if name not in self._reg:
             self._reg[name] = {}
         if t in self._reg[name]:
-            raise DuplicateRegistryError(
-                'Type {} for name {} is already present'.format(t, name))
-        logger.info('Function {} registered to {} with type {}'
-                    .format(func, name, t))
-        self._reg[name][t] = func
+            # XXX (how to solve?)
+            # it is possible to have duplicate register key
+            # for example when import numpy.random, some function under numpy
+            # namespace will also be included
+            #raise DuplicateRegistryError(
+                #'Type {} for name {} is already present'.format(t, name))
+            logger.warning('Type {} for name {} is already present'.format(t, name))
+        else:
+            logger.info('Function {} registered to {} with type {}'
+                        .format(func, name, t))
+            self._reg[name][t] = func
 
     def exists(self, name, t):
         return name in self._reg and t in self._reg[name]
