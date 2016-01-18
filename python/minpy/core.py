@@ -7,7 +7,6 @@ from .utils import log
 
 logger = log.get_logger(__name__, log.logging.WARNING)
 
-
 class Node(object):
     """Node representing data with gradient information."""
     __slots__ = ['_val', '_partial_derivatives', '_partial_derivative_cache']
@@ -16,7 +15,7 @@ class Node(object):
         """Initialize.
 
         Args:
-            val: Value to wrap.
+            val: Value to wrap. Normally of minpy.array.Array type
         """
         self._val = val
         self._partial_derivatives = []

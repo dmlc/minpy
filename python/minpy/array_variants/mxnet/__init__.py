@@ -1,3 +1,3 @@
 from __future__ import absolute_import
 
-from mxnet import *
+import mxnet as mx
