@@ -6,7 +6,6 @@ import numpy as np
 
 from . import numpy_wrapper as npw
 from . import random
-from .. import array
 
 
 def unbroadcast(ans, x, gradfun):
@@ -81,58 +80,3 @@ npw.mod.def_grad(lambda ans, x, y: unbroadcast(ans, y,
 npw.negative.def_grad(lambda ans, x: operator.neg)
 random.random.def_grad_zero()
 random.randn.def_grad_zero()
-
-
-class NumpyNode(array.Array):
-
-    def __init__(self, val):
-        super().__init__(val)
-
-    @property
-    def shape(self):
-        return self._val.shape
-
-    def __neg__(self):
-        return npw.negative(self)
-
-    def __add__(self, other):
-        return npw.add(self, other)
-
-    def __sub__(self, other):
-        return npw.subtract(self, other)
-
-    def __mul__(self, other):
-        return npw.multiply(self, other)
-
-    def __div__(self, other):
-        return npw.divide(self, other)
-
-    def __truediv__(self, other):
-        return npw.true_divide(self, other)
-
-    def __pow__(self, other):
-        return npw.power(self, other)
-
-    def __mod__(self, other):
-        return npw.mod(self, other)
-
-    def __radd__(self, other):
-        return npw.add(other, self)
-
-    def __rsub__(self, other):
-        return npw.subtract(other, self)
-
-    def __rmul__(self, other):
-        return npw.multiply(other, self)
-
-    def __rdiv__(self, other):
-        return npw.divide(other, self)
-
-    def __rtruediv__(self, other):
-        return npw.true_divide(other, self)
-
-    def __rpow__(self, other):
-        return npw.power(other, self)
-
-    def __rmod__(self, other):
-        return npw.mod(other, self)

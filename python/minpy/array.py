@@ -29,3 +29,52 @@ class Array(object):
         # TODO implement
         self._type = to
         return self
+
+    @property
+    def shape(self):
+        pass
+
+    def __neg__(self):
+        pass
+
+    def __add__(self, other):
+        pass
+
+    def __sub__(self, other):
+        pass
+
+    def __mul__(self, other):
+        pass
+
+    def __div__(self, other):
+        pass
+
+    def __truediv__(self, other):
+        pass
+
+    def __pow__(self, other):
+        pass
+
+    def __mod__(self, other):
+        pass
+
+    def __radd__(self, other):
+        pass
+
+    def __rsub__(self, other):
+        pass
+
+    def __rmul__(self, other):
+        pass
+
+    def __rdiv__(self, other):
+        pass
+
+    def __rtruediv__(self, other):
+        pass
+
+    def __rpow__(self, other):
+        pass
+
+    def __rmod__(self, other):
+        pass
