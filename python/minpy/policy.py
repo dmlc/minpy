@@ -10,10 +10,8 @@ from . import registry
 
 logger = log.get_logger(__name__)
 
-
 class AmbiguousPolicyError(ValueError):
     pass
-
 
 class Policy(object):
 
@@ -32,5 +30,24 @@ class PreferMXNetPolicy(Policy):
         else:
             return registry.FunctionType.MXNET
 
-
 default_policy = Policy()
+
+def resolve_name(name, args, kwargs, reg, policy=default_policy):
+    """Resolve a function name.
+
+    Args:
+        name: Name of the function.
+        args: Arguments.
+        kwargs: Keyword arguments.
+        reg: Registry for functions.
+        policy: Resolving policy.
+
+    Returns:
+        A function after resolution.
+    """
+    preference = policy.decide(name, args, kwargs)
+    available = reg.iter_available_types(name)
+    if preference in available or len(available) == 0:
+        return reg.get(name, preference)
+    else:
+        return reg.get(name, available[0])
