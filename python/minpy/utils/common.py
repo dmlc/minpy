@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Common utility functions."""
+import enum
 import functools
 
 
@@ -37,3 +38,13 @@ def enforce_type(T, method=False):
             return func(*args_wrapped, **kwargs_wrapped)
         return wrapped
     return decorator
+
+
+class AutoNumber(enum.Enum):
+    """Automatically assign increasing number to enumerations."""
+
+    def __new__(cls):
+        value = len(cls.__members__) + 1
+        obj = object.__new__(cls)
+        obj._value_ = value
+        return obj

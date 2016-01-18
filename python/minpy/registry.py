@@ -1,22 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Registry for functions under the same symbol."""
-import enum
 from .utils import log
+from .utils import common
+from . import policy
 
 logger = log.get_logger(__name__)
 
 
-class AutoNumber(enum.Enum):
-
-    def __new__(cls):
-        value = len(cls.__members__) + 1
-        obj = object.__new__(cls)
-        obj._value_ = value
-        return obj
-
-
-class FunctionType(AutoNumber):
+class FunctionType(common.AutoNumber):
+    """Enumeration of types of functions."""
     NUMPY = ()
     MXNET = ()
 
@@ -63,3 +56,24 @@ class Registry(object):
             return iter([])
         else:
             return self._reg[name].keys()
+
+
+global_registry = Registry()
+
+
+def resolve_name(name, args, kwargs, policy=policy.global_policy,
+                 registry=global_registry):
+    """Resolve a function name.
+
+    Args:
+        name: Name of the function.
+        args: Arguments.
+        kwargs: Keyword arguments.
+        policy: Resolving policy.
+        registry: Registry for functions.
+
+    Returns:
+        A function after resolution.
+    """
+    t = policy.decide(name, args, kwargs)
+    return registry.get(name, t)
