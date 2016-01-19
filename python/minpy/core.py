@@ -56,7 +56,7 @@ class Node(object):
 
 class Primitive(object):
     """Primitive computation."""
-    __slots__ = ['_func', '_grad_func', '_grad_func_kw']
+    __slots__ = ['_func', '_grad_func', '_grad_func_kw', '_type']
 
     def __init__(self, func):
         """Initialize.
@@ -67,6 +67,7 @@ class Primitive(object):
         self._func = func
         self._grad_func = {}
         self._grad_func_kw = {}
+        self._type = None # will be set later by registry
 
     def __call__(self, *args, **kwargs):
         """Call wrapped function.

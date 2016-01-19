@@ -26,8 +26,10 @@ def wrap_namespace(ns, reg, t):
 
     for name, obj in ns.items():
         if type(obj) in function_types:
-            reg.register(name, core.Primitive(obj), t)
-        elif type(obj) is type and obj in int_types:
-            reg.register(name, obj, t)
-        elif type(obj) in unchanged_types:
-            reg.register(name, obj, t)
+            prim = core.Primitive(obj)
+            prim._type = t
+            reg.register(name, prim, t)
+        #elif type(obj) is type and obj in int_types:
+            #reg.register(name, obj, t)
+        #elif type(obj) in unchanged_types:
+            #reg.register(name, obj, t)
