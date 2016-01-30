@@ -39,8 +39,8 @@ class Array(object):
     _data = dict()  # TODO real data
 
     @staticmethod
-    def get_array_type(arr: typing.Union[numpy.ndarray, mxnet.narray.NArray]
-                       ) -> ArrayType:
+    def to_array_type(arr: typing.Union[numpy.ndarray, mxnet.narray.NArray]
+                      ) -> ArrayType:
         t = type(arr)
         if t == numpy.ndarray:
             return ArrayType.NUMPY
@@ -51,7 +51,7 @@ class Array(object):
                 'Array data of type {} unknown.'.format(t))
 
     @staticmethod
-    def get_real_type(arr: ArrayType) -> type:
+    def to_real_type(arr: ArrayType) -> type:
         if arr == ArrayType.NUMPY:
             return numpy.ndarray
         elif arr == ArrayType.MXNET:
@@ -61,7 +61,7 @@ class Array(object):
                 'Array data of type {} unknown.'.format(arr))
 
     def __init__(self, data):
-        t = Array.get_array_type(data)
+        t = Array.to_array_type(data)
         self._data[t] = data
 
     def has_type(self, t):
@@ -79,10 +79,8 @@ class Array(object):
                 'Array data of type {} not found.'.format(t))
         return self._data[t]
 
-    """ Create data of given type """
-
     def create_data(self, t: ArrayType):
-        Array.get_real_type(t)  # Make sure `t` is an allowed type.
+        """Create data of given type."""
         if t not in self._data:
             if t == ArrayType.NUMPY:
                 mxarray = self.get_data(ArrayType.MXNET)
@@ -91,6 +89,9 @@ class Array(object):
             elif t == ArrayType.MXNET:
                 nparray = self.get_data(ArrayType.NUMPY)
                 self._data[ArrayType.MXNET] = mxnet.nd.array(nparray)
+            else:
+                raise UnknownArrayTypeError(
+                    'Array data of type {} unknown.'.format(t))
 
     @property
     def shape(self):
