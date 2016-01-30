@@ -36,7 +36,7 @@ class Array(object):
     underlying array object.
     """
     _node = core.Node()  # TODO derivative info
-    _data = dict()  # TODO real data
+    _data = {}
 
     @staticmethod
     def to_array_type(arr: typing.Union[numpy.ndarray, mxnet.narray.NArray]

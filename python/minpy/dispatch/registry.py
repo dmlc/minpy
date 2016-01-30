@@ -1,42 +1,47 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Registry for functions under the same symbol."""
-from .utils import log
-from .utils import common
+from ..utils import log
+from ..utils import common
+import types
 
 logger = log.get_logger(__name__)
+
+
+class FunctionType(common.AutoNumber):
+    """Enumeration of types of functions.
+
+    Semantically this is different from :class:`..array.ArrayType`,
+    but for now one data type corresponds to one function type.
+    """
+    NUMPY = ()
+    MXNET = ()
+
 
 class DuplicateRegistryError(ValueError):
     pass
 
+
 class Registry(object):
     """Registry for functions under the same symbol."""
 
-    def __init__(self):
-        self._reg = {}
+    _reg = {}
 
-    def register(self, name, func, t):
+    def register(self, name: str, func: types.FunctionType, t: FunctionType):
         """Register function.
 
-        Args:
-            name: Name of the function.
-            func: Function itself.
-            t: Type of function.
+        :param str name: Name of the function.
+        :param function func: Function itself.
+        :param FunctionType t: Type of function.
 
-        Raises:
-            DuplicateRegistryError: Type already registered under the same
-                name.
+        :raises DuplicateRegistryError: Type already registered under the same
+                                        name.
         """
         if name not in self._reg:
             self._reg[name] = {}
         if t in self._reg[name]:
-            # XXX (how to solve?)
-            # it is possible to have duplicate register key
-            # for example when import numpy.random, some function under numpy
-            # namespace will also be included
-            #raise DuplicateRegistryError(
-                #'Type {} for name {} is already present'.format(t, name))
-            logger.warning('Type {} for name {} is already present'.format(t, name))
+            raise DuplicateRegistryError(
+                'Type {} for name {} is already present'.format(t, name))
         else:
             logger.info('Function {} registered to {} with type {}'
                         .format(func, name, t))
@@ -53,6 +58,3 @@ class Registry(object):
             return iter([])
         else:
             return self._reg[name].keys()
-
-function_registry = Registry()
-method_registry = Registry()
