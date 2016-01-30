@@ -26,14 +26,13 @@ class UnknownArrayTypeError(ValueError):
 
 
 class Array(object):
-    """Base array type that provides convenient methods
-    for arithmetic operations. The Array class is used for:
-    1. Redirect all special member functions to corresponding pure function
-    2. Redirect normal member functions to correct member functions of underlying
-        array object
+    """Base array type.
 
-    Member:
-        _data: A dict type { array_type : array_data }
+    It provides convenient methods for arithmetic operations. The Array class
+    is used for:
+    1. Redirect all special member functions to corresponding pure function.
+    2. Redirect normal member functions to correct member functions of
+    underlying array object.
     """
     # _node = Node()  # TODO derivative info
     _data = dict()  # TODO real data
@@ -65,14 +64,12 @@ class Array(object):
         self._data[t] = data
 
     def has_type(self, t):
-        """Return whether array data of given type exists in the underlying
-           storage.
+        """Return whether array data of given type exists in the underlying storage.
         """
         return t in self._data.keys()
 
     def get_data(self, t):
-        """Get array data of given type. Raise exception if the type is
-           missing.
+        """Get array data of given type. Raise exception if the type is missing.
         """
         if t not in self._data:
             raise ArrayTypeMissingError(
