@@ -5,6 +5,7 @@ from .utils import log
 from .utils import common
 import minpy.numpy
 import mxnet
+import numpy
 
 logger = log.get_logger(__name__)
 
@@ -13,6 +14,27 @@ class ArrayType(common.AutoNumber):
     """Enumeration of types of arrays."""
     NUMPY = ()
     MXNET = ()
+
+
+def get_array_type(arr: Union[numpy.ndarray, mxnet.narray.NArray]) -> ArrayType:
+    t = type(arr)
+    if t == numpy.ndarray:
+        return ArrayType.NUMPY
+    elif t == mxnet.nd.NArray:
+        return ArrayType.MXNET
+    else:
+        raise UnknownArrayTypeError(
+            'Array data of type {} unknown.'.format(t))
+
+
+def get_real_type(arr: ArrayType) -> type:
+    if arr == ArrayType.NUMPY:
+        return numpy.ndarray
+    elif arr == ArrayType.MXNET:
+        return mxnet.nd.NArray
+    else:
+        raise UnknownArrayTypeError(
+            'Array data of type {} unknown.'.format(arr))
 
 
 class ArrayTypeMissingError(ValueError):
@@ -33,7 +55,6 @@ class Array(object):
     Member:
         _data: A dict type { array_type : array_data }
     """
-
     _node = Node()  # TODO derivative info
     _data = dict()  # TODO real data
 
