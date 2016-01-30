@@ -3,7 +3,7 @@
 """Core gradient calculation."""
 import functools
 import operator
-from .utils import log
+from ..utils import log
 
 logger = log.get_logger(__name__, log.logging.WARNING)
 
