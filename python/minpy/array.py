@@ -3,6 +3,7 @@
 """Base type for arrays."""
 from .utils import log
 from .utils import common
+from . import core
 import typing
 import minpy.numpy
 import mxnet
@@ -34,7 +35,7 @@ class Array(object):
     2. Redirect normal member functions to correct member functions of
     underlying array object.
     """
-    # _node = Node()  # TODO derivative info
+    _node = core.Node()  # TODO derivative info
     _data = dict()  # TODO real data
 
     @staticmethod

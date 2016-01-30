@@ -7,6 +7,7 @@ from .utils import log
 
 logger = log.get_logger(__name__, log.logging.WARNING)
 
+
 class Node(object):
     """Node representing data with gradient information."""
     __slots__ = ['_val', '_partial_derivatives', '_partial_derivative_cache']
@@ -67,7 +68,7 @@ class Primitive(object):
         self._func = func
         self._grad_func = {}
         self._grad_func_kw = {}
-        self._type = None # will be set later by registry
+        self._type = None  # will be set later by registry
 
     def __call__(self, *args, **kwargs):
         """Call wrapped function.
