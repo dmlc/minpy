@@ -3,7 +3,7 @@
 """Base type for arrays."""
 from .utils import log
 from .utils import common
-from . import core
+from .graph import core
 import typing
 import minpy.numpy
 import mxnet
