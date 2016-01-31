@@ -43,4 +43,5 @@ class Module(object):
         else:
             raise DynamicLookupError()
 
+# TODO initialize registry here by importing "arary variants"
 sys.modules[__name__] = Module()
