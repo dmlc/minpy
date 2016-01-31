@@ -7,6 +7,8 @@ import numpy as np
 from ... import core
 
 
+# TODO Do not use Primitive here, refer to
+# [https://goo.gl/PgqOYS] last slide
 def wrap_namespace(ns, reg, t):
     """Wrap namespace into a reg.
 
