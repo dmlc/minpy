@@ -5,7 +5,7 @@ from ..utils import log
 from ..utils import common
 import types
 
-logger = log.get_logger(__name__)
+_logger = log.get_logger(__name__)
 
 
 class FunctionType(common.AutoNumber):
@@ -43,9 +43,12 @@ class Registry(object):
             raise DuplicateRegistryError(
                 'Type {} for name {} is already present'.format(t, name))
         else:
-            logger.info('Function {} registered to {} with type {}'
-                        .format(func, name, t))
+            _logger.info('Function {} registered to {} with type {}'
+                         .format(func, name, t))
             self._reg[name][t] = func
+
+    def has_name(self, name):
+        return name in self._reg
 
     def exists(self, name, t):
         return name in self._reg and t in self._reg[name]

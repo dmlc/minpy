@@ -6,7 +6,7 @@ import operator
 from ..utils import log
 from .. import array
 
-logger = log.get_logger(__name__, log.logging.WARNING)
+_logger = log.get_logger(__name__, log.logging.WARNING)
 
 
 class Node(object):
@@ -38,8 +38,8 @@ class Node(object):
         return self._val
 
     def add_partial_derivative(self, func, res):
-        logger.info('Adding partial derivative to {}: {}'.format(id(self),
-                                                                 self))
+        _logger.info('Adding partial derivative to {}: {}'.format(id(self),
+                                                                  self))
         self._partial_derivatives.append((func, res))
 
     def partial_derivative(self, target):
@@ -53,8 +53,8 @@ class Node(object):
                     lambda x: x[0](x[1].partial_derivative(target)),
                     self._partial_derivatives), 0.0)
                 self._partial_derivative_cache[target] = res
-                logger.info('Partial derivative id: {}, shape: {}, value: {}'.
-                            format(id(self), self.val.shape, res))
+                _logger.info('Partial derivative id: {}, shape: {}, value: {}'.
+                             format(id(self), self.val.shape, res))
                 return res
 
 
@@ -87,7 +87,7 @@ class Primitive(object):
             IndexError: No corresponding gradient function.
             KeyError: No corresponding gradient function.
         """
-        logger.info('Calling {}'.format(self._func))
+        _logger.info('Calling {}'.format(self._func))
 
         def get_val(x):
             return x._val if isinstance(x, Node) else x

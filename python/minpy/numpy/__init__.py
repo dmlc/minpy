@@ -38,6 +38,9 @@ class Module(object):
             return self._registry
         elif name in _old_definitions:
             return _old_definitions[name]
-        raise DynamicLookupError()
+        elif self._registry.has_name(name):
+            return None  # TODO policy here
+        else:
+            raise DynamicLookupError()
 
 sys.modules[__name__] = Module()

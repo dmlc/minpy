@@ -4,7 +4,7 @@
 from .utils import log
 from . import array_variants as variants
 
-logger = log.get_logger(__name__)
+_logger = log.get_logger(__name__)
 
 
 class AmbiguousPolicyError(ValueError):

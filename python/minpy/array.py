@@ -9,7 +9,7 @@ import minpy.numpy
 import mxnet
 import numpy
 
-logger = log.get_logger(__name__)
+_logger = log.get_logger(__name__)
 
 
 class ArrayType(common.AutoNumber):
