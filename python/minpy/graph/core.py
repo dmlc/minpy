@@ -58,6 +58,9 @@ class Node(object):
                 return res
 
 
+# TODO move next to numpy_primitive and mxnet_primitive, probably need
+# different implementation
+"""
 class Primitive(object):
     """Primitive computation."""
     __slots__ = ['_func', '_grad_func', '_grad_func_kw', '_type']
@@ -65,9 +68,10 @@ class Primitive(object):
     def __init__(self, func):
         """Initialize.
 
-        Args:
-            func: A function that performs the action.
-        """
+    Args:
+        func:
+            A function that performs the action.
+    """
         self._func = func
         self._grad_func = {}
         self._grad_func_kw = {}
@@ -76,17 +80,21 @@ class Primitive(object):
     def __call__(self, *args, **kwargs):
         """Call wrapped function.
 
-        Args:
-            *args: Arguments for the wrapped function.
-            **kwargs: Arguments for the wrapped function.
+    Args:
+        *args:
+            Arguments for the wrapped function.
+        **kwargs:
+            Arguments for the wrapped function.
 
-        Returns:
-            A `Node` representing the result.
+    Returns:
+        A `Node` representing the result.
 
-        Raises:
-            IndexError: No corresponding gradient function.
-            KeyError: No corresponding gradient function.
-        """
+    Raises:
+        IndexError:
+            No corresponding gradient function.
+        KeyError:
+            No corresponding gradient function.
+    """
         _logger.info('Calling {}'.format(self._func))
 
         def get_val(x):
@@ -112,27 +120,32 @@ class Primitive(object):
     def def_grad(self, func, argnum=0):
         """Define gradient function.
 
-        Args:
-            func: Gradient function.
-            argnum: Index of the argument.
+    Args:
+        func:
+            Gradient function.
+        argnum:
+            Index of the argument.
 
-        Return:
-            self instance for multiple def_grad in one statement
-        """
+    Return:
+        self instance for multiple def_grad in one statement
+    """
         self._grad_func[argnum] = func
         return self
 
     def def_grad_kw(self, func, key):
         """Define gradient function.
 
-        Args:
-            func: Gradient function.
-            key: Key name of the argument.
-        """
+    Args:
+        func:
+            Gradient function.
+        key:
+            Key name of the argument.
+    """
         self._grad_func[key] = func
 
     def def_grad_zero(self, argnum=0):
         self._grad_func[argnum] = lambda *args, **kwargs: lambda g: 0.0
+"""
 
 
 def grad(func, argnum=0):
