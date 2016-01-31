@@ -4,6 +4,7 @@
 import functools
 import operator
 from ..utils import log
+from .. import array
 
 logger = log.get_logger(__name__, log.logging.WARNING)
 
@@ -12,15 +13,17 @@ class Node(object):
     """Node representing data with gradient information."""
     __slots__ = ['_val', '_partial_derivatives', '_partial_derivative_cache']
 
-    def __init__(self, val):
+    # TODO better use weakref here, but let's trust Python's GC for now
+    _val = None
+    _partial_derivatives = []
+    _partial_derivative_cache = []
+
+    def __init__(self, val: array.Array):
         """Initialize.
 
-        Args:
-            val: Value to wrap. Normally of minpy.array.Array type
+        :param array.Array val: Value to wrap.
         """
         self._val = val
-        self._partial_derivatives = []
-        self._partial_derivative_cache = {}
 
     def __str__(self):
         """Get string representation.
@@ -31,7 +34,7 @@ class Node(object):
         return 'Node({})'.format(self._val)
 
     @property
-    def val(self):
+    def val(self) -> array.Array:
         return self._val
 
     def add_partial_derivative(self, func, res):
