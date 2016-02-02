@@ -3,7 +3,6 @@
 """Logging utilities."""
 import logging
 
-
 class _Formatter(logging.Formatter):
     """Customized log formatter."""
 

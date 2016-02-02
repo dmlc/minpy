@@ -2,15 +2,12 @@
 # -*- coding: utf-8 -*-
 """Definition of grads of core functions"""
 from . import numpy_wrapper
-import minpy.registry as registry
-import minpy.array_variants as variants
 
 import operator
 import numpy as np
 
-numpy_wrapper.wrap_namespace(np.__dict__, registry.function_registry,
-                             variants.FunctionType.NUMPY)
-
+#numpy_wrapper.wrap_namespace(np.__dict__, registry.function_registry,
+                             #variants.FunctionType.NUMPY)
 
 def unbroadcast(ans, x, gradfun):
     """Unbroadcast to original shape.
@@ -85,4 +82,4 @@ def def_grads(reg):
                         argnum=1)
     get('negative').def_grad(lambda ans, x: operator.neg)
 
-def_grads(registry.function_registry)
+#def_grads(registry.function_registry)

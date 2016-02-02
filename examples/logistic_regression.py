@@ -1,4 +1,4 @@
-from minpy import core
+from minpy.core import grad
 import minpy.numpy as np
 
 def sigmoid(x):
@@ -19,7 +19,7 @@ inputs = np.random.rand(*xshape) - 0.5
 targets = np.random.randint(0, 2, size=tshape)
 weights = np.random.rand(*wshape) - 0.5
 
-training_gradient_fun = core.grad(training_loss)
+training_gradient_fun = grad(training_loss)
 
 print('Initial loss: {}'.format(training_loss(weights, inputs)))
 for i in range(100):

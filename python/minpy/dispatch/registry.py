@@ -7,45 +7,33 @@ import types
 
 _logger = log.get_logger(__name__)
 
-
-class FunctionType(common.AutoNumber):
-    """Enumeration of types of functions.
-
-    Semantically this is different from :class:`..array.ArrayType`,
-    but for now one data type corresponds to one function type.
-    """
-    NUMPY = ()
-    MXNET = ()
-
-
 class DuplicateRegistryError(ValueError):
     pass
 
-
 class Registry(object):
-    """Registry for functions under the same symbol."""
+    """Registry for primitives under the same symbol."""
 
     _reg = {}
 
-    def register(self, name: str, func: types.FunctionType, t: FunctionType):
-        """Register function.
+    #def register(self, name: str, func: types.FunctionType, t: FunctionType):
+    def register(self, name, prim):
+        """Register primitive.
 
-        :param str name: Name of the function.
-        :param function func: Function itself.
-        :param FunctionType t: Type of function.
+        :param str name: Name of the primitive
+        :param Primitive prim: Primitive
 
         :raises DuplicateRegistryError: Type already registered under the same
                                         name.
         """
         if name not in self._reg:
             self._reg[name] = {}
-        if t in self._reg[name]:
+        if prim.type in self._reg[name]:
             raise DuplicateRegistryError(
-                'Type {} for name {} is already present'.format(t, name))
+                'Type {} for name {} is already present'.format(prim.type, name))
         else:
             _logger.info('Function {} registered to {} with type {}'
-                         .format(func, name, t))
-            self._reg[name][t] = func
+                         .format(prim, name, t))
+            self._reg[name][t] = prim
 
     def has_name(self, name):
         return name in self._reg

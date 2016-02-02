@@ -4,17 +4,12 @@
 import types
 import numpy as np
 
-from ... import core
-
-
-# TODO Do not use Primitive here, refer to
-# [https://goo.gl/PgqOYS] last slide
-def wrap_namespace(ns, reg, t):
+def wrap_namespace(ns, reg, prim_wrapper):
     """Wrap namespace into a reg.
 
     :param ns: Namespace from which functions are to be wrapped.
     :param reg: Registry into which functions are to be wrapped.
-    :param t: Type of function.
+    :param prim_wrapper: Wrapper to convert a raw function to primitive
     """
     unchanged_types = {float, int, type(None), type}
     int_types = {np.int, np.int8, np.int16, np.int32, np.int64, np.integer}
@@ -22,10 +17,5 @@ def wrap_namespace(ns, reg, t):
 
     for name, obj in ns.items():
         if type(obj) in function_types:
-            prim = core.Primitive(obj)
-            prim._type = t
-            reg.register(name, prim, t)
-        # elif type(obj) is type and obj in int_types:
-            #reg.register(name, obj, t)
-        # elif type(obj) in unchanged_types:
-            #reg.register(name, obj, t)
+            prim = prim_wrapper(obj)
+            reg.register(name, prim)
