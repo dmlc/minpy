@@ -9,6 +9,7 @@ from ..utils import log
 from ..dispatch import registry
 from ..dispatch import policy
 from ..array_variants import * # import all array_variants names
+from .. import array
 
 '''
 # TODO why not globals() ?
@@ -36,13 +37,21 @@ class Module(object):
     _policy = policy.Policy()
 
     def __init__(self, old, name=None):
+
         self._logger = log.get_logger(name)
         self._old = old
-        #for var in variants:
-            #mod = importlib.import_module('minpy.array_variants.{}'.format(var))
-            #print mod
-            #print mod.__dict__
-            #print mod.def_grads
+        for vname in variants:
+            print vname
+            mod = importlib.import_module('minpy.array_variants.{}'.format(vname))
+            #TODO better wrapper?
+            def primitive_wrapper(func):
+                return array.Primitive(func, variants[vname][1])
+            # register all primitives of the module
+            mod.register_primitives(self._registry, primitive_wrapper)
+            def primitive_getter(name):
+                return self._registry.get(name, variants[vname][1])
+            # define gradients of primitives
+            mod.def_grads(self._registry, primitive_getter)
     
     def dispatch(self, name, *args, **kargs):
         pass

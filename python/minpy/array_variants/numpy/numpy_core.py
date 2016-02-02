@@ -6,9 +6,6 @@ from . import numpy_wrapper
 import operator
 import numpy as np
 
-#numpy_wrapper.wrap_namespace(np.__dict__, registry.function_registry,
-                             #variants.FunctionType.NUMPY)
-
 def unbroadcast(ans, x, gradfun):
     """Unbroadcast to original shape.
 
@@ -36,50 +33,49 @@ def unbroadcast(ans, x, gradfun):
     new_fun.__name__ = 'unbroadcast_{0}'.format(gradfun.__name__)
     return new_fun
 
+def register_primitives(reg, prim_wrapper):
+    numpy_wrapper.wrap_namespace(np.__dict__, reg, prim_wrapper)
 
-def def_grads(reg):
+def def_grads(reg, prims):
     def identity(x):
         return x
-
-    def get(name):
-        return reg.get(name, variants.FunctionType.NUMPY)
     # Dot.
-    get('dot').def_grad(lambda ans, a, b: lambda g: np.dot(g, b.T))
-    get('dot').def_grad(lambda ans, a, b: lambda g: np.dot(a.T, g), argnum=1)
+    prims('dot').def_grad(lambda ans, a, b: lambda g: np.dot(g, b.T))
+    prims('dot').def_grad(lambda ans, a, b: lambda g: np.dot(a.T, g), argnum=1)
 
     # Nonlinear functions.
-    get('tanh').def_grad(lambda ans, x: lambda g: g / np.cosh(x) ** 2)
-    get('log').def_grad(lambda ans, x: lambda g: g / x)
+    prims('tanh').def_grad(lambda ans, x: lambda g: g / np.cosh(x) ** 2)
+    prims('log').def_grad(lambda ans, x: lambda g: g / x)
 
-    get('sum').def_grad(lambda ans, x: lambda g: np.full(x.shape, g))
-    get('multiply').def_grad(lambda ans, x,
+    prims('sum').def_grad(lambda ans, x: lambda g: np.full(x.shape, g))
+    prims('multiply').def_grad(lambda ans, x,
                              y: unbroadcast(ans, x, lambda g: g * y))
-    get('multiply').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: x * g),
+    prims('multiply').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: x * g),
                              argnum=1)
-    get('add').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
-    get('add').def_grad(lambda ans, x, y: unbroadcast(ans, y, identity), argnum=1)
-    get('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
-    get('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, y, operator.neg),
+    prims('add').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
+    prims('add').def_grad(lambda ans, x, y: unbroadcast(ans, y, identity), argnum=1)
+    prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
+    prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, y, operator.neg),
                              argnum=1)
-    get('divide').def_grad(lambda ans, x,
+    prims('divide').def_grad(lambda ans, x,
                            y: unbroadcast(ans, x, lambda g: g / y))
-    get('divide').def_grad(lambda ans, x, y: unbroadcast(ans, y,
+    prims('divide').def_grad(lambda ans, x, y: unbroadcast(ans, y,
                                                          lambda g: -g * x / y ** 2),
                            argnum=1)
-    get('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, x,
+    prims('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, x,
                                                               lambda g: g / y))
-    get('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, y,
+    prims('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, y,
                                                               lambda g: -g * x /
                                                               y ** 2),
                                 argnum=1)
-    get('power').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y *
+    prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y *
                                                         x ** (y - 1)))
-    get('power').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g *
+    prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g *
                                                         np.log(x) * x ** y), argnum=1)
-    get('mod').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
-    get('mod').def_grad(lambda ans, x, y: unbroadcast(ans, y,
+    prims('mod').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
+    prims('mod').def_grad(lambda ans, x, y: unbroadcast(ans, y,
                                                       lambda g: -g * np.floor(x / y)),
                         argnum=1)
-    get('negative').def_grad(lambda ans, x: operator.neg)
+    prims('negative').def_grad(lambda ans, x: operator.neg)
 
 #def_grads(registry.function_registry)

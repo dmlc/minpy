@@ -1,7 +1,5 @@
 from ..utils import common
 
-variants=['numpy']
-
 class FunctionType(common.AutoNumber):
     """Enumeration of types of functions.
 
@@ -15,3 +13,8 @@ class ArrayType(common.AutoNumber):
     """Enumeration of types of arrays."""
     NUMPY = ()
     MXNET = ()
+
+variants = {
+        'numpy': (ArrayType.NUMPY, FunctionType.NUMPY),
+        #'mxnet': (ArrayType.MXNET, FunctionType.MXNET)
+        }

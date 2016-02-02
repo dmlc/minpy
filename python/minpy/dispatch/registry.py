@@ -32,8 +32,8 @@ class Registry(object):
                 'Type {} for name {} is already present'.format(prim.type, name))
         else:
             _logger.info('Function {} registered to {} with type {}'
-                         .format(prim, name, t))
-            self._reg[name][t] = prim
+                         .format(prim, name, prim.type))
+            self._reg[name][prim.type] = prim
 
     def has_name(self, name):
         return name in self._reg

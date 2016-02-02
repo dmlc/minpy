@@ -335,7 +335,7 @@ class Primitive(object):
 
     @property
     def type(self):
-        return _type;
+        return self._type;
 
     def __call__(self, *args, **kwargs):
         """Call wrapped function.
