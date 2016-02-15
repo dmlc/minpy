@@ -90,22 +90,6 @@ class Array(object):
             raise UnknownArrayTypeError(
                 'Array data of type {} unknown.'.format(t))
 
-    @staticmethod
-    #def to_real_type(arr: ArrayType) -> type:
-    def to_real_type(arr):
-        # TODO should not be used since one type enum may correspond to many real types
-        # (e.g. ArrayType.NUMPY -> (numpy.ndarray | numpy.float64 ...))
-        assert False
-        '''
-        if arr == ArrayType.NUMPY:
-            return numpy.ndarray
-        elif arr == ArrayType.MXNET:
-            return mxnet.nd.NDArray
-        else:
-            raise UnknownArrayTypeError(
-                'Array data of type {} unknown.'.format(arr))
-        '''
-
     def __str__(self):
         return str(self.force_get_data(ArrayType.NUMPY))
 
@@ -144,13 +128,13 @@ class Array(object):
         """Create data of given type."""
         if t not in self._data:
             if t == ArrayType.NUMPY:
-                _logger.info('Create numpy data of array #{}'.format(id(self)))
+                _logger.info('Copy from mxnet array to numpy array Node#{}'.format(id(self)))
                 mxarray = self.get_data(ArrayType.MXNET)
                 self._data[ArrayType.NUMPY] = mxarray.asnumpy()
             elif t == ArrayType.MXNET:
-                _logger.info('Create mxnet data of array #{}'.format(id(self)))
+                _logger.info('Copy from numpy array to mxnet array Node#{}'.format(id(self)))
                 nparray = self.get_data(ArrayType.NUMPY)
-                self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0))
+                self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0)) # TODO on which device ?
             else:
                 raise UnknownArrayTypeError(
                     'Array data of type {} unknown.'.format(t))
