@@ -6,4 +6,8 @@ import sys
 from .mocking import Module
 import numpy.random
 
-sys.modules[__name__] = Module(numpy.random.__dict__, 'random')
+_old = {
+    '__name__' : __name__,
+}
+
+sys.modules[__name__] = Module(_old, 'random')

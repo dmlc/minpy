@@ -24,8 +24,6 @@ training_gradient_fun = grad(training_loss)
 
 print('Initial loss: {}'.format(training_loss(weights, inputs)))
 
-import sys
-sys.exit(0)
 for i in range(100):
     gr = training_gradient_fun(weights, inputs)
     #print('Training gradient: {}'.format(gr))

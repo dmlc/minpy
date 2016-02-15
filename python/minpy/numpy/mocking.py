@@ -21,7 +21,7 @@ class Module(object):
     def __init__(self, old, name=None):
         self._registry = registry.Registry()
         self._policy = policy.PreferMXNetPolicy()
-        self._logger = log.get_logger(old['__name__'], logging.DEBUG)
+        self._logger = log.get_logger(old['__name__'])
         self._logger.info('Initialize module: {}'.format(old['__name__']))
         self._old = old
         for vname in variants:
@@ -52,7 +52,7 @@ class Module(object):
             self._logger.debug('Found primitive with name "{}" with type {}'.format(name, prim.typestr))
             return prim
         elif name in self._old:
-            self._logger.info('No entry found for {} in registry, fallback to plain numpy'.format(name))
+            self._logger.info('No entry found for {} in registry, fallback'.format(name))
             return self._old[name]
         else:
             raise DynamicLookupError()

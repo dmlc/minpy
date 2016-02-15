@@ -7,6 +7,11 @@ from .mocking import Module
 import numpy
 from .. import array
 
-_mod = Module(numpy.__dict__)
+_old = {
+    '__path__' : __path__,
+    '__name__' : __name__,
+}
+
+_mod = Module(_old)
 array.Array._ns = _mod
 sys.modules[__name__] = _mod

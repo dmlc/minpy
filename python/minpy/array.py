@@ -15,6 +15,8 @@ import functools
 import operator
 import logging
 
+import mxnet #FIXME: should not import this; use array_invariants instead
+
 _logger = log.get_logger(__name__)
 
 class Node(object):
@@ -105,7 +107,7 @@ class Array(object):
         '''
 
     def __str__(self):
-        return str(self.get_data(ArrayType.NUMPY))
+        return str(self.force_get_data(ArrayType.NUMPY))
 
     @property
     def node(self):
@@ -131,16 +133,24 @@ class Array(object):
                 'Array data of type {} not found.'.format(t))
         return self._data[t]
 
+    def force_get_data(self, t):
+        """Get array data of given type. Create data if missing"""
+        if t not in self._data:
+            self.create_data(t)
+        return self.get_data(t)
+
     #def create_data(self, t: ArrayType):
     def create_data(self, t):
         """Create data of given type."""
         if t not in self._data:
             if t == ArrayType.NUMPY:
+                _logger.info('Create numpy data of array #{}'.format(id(self)))
                 mxarray = self.get_data(ArrayType.MXNET)
                 self._data[ArrayType.NUMPY] = mxarray.asnumpy()
             elif t == ArrayType.MXNET:
+                _logger.info('Create mxnet data of array #{}'.format(id(self)))
                 nparray = self.get_data(ArrayType.NUMPY)
-                self._data[ArrayType.MXNET] = mxnet.nd.array(nparray)
+                self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray)
             else:
                 raise UnknownArrayTypeError(
                     'Array data of type {} unknown.'.format(t))
@@ -372,7 +382,7 @@ class Primitive(object):
         _logger.debug('Calling {} type {}'.format(self._func, self.typestr))
 
         def get_val(x):
-            return x.get_data(self._type) if isinstance(x, Array) else x
+            return x.force_get_data(self._type) if isinstance(x, Array) else x
         # Get underlying data.
         arg_values = tuple(map(get_val, args))
         kwargs_values = {x: get_val(kwargs[x]) for x in kwargs}
