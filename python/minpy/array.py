@@ -23,7 +23,7 @@ class Node(object):
     def __init__(self):
         """Initialize."""
         self._partial_derivatives = []
-        self._partial_derivative_cache = []
+        self._partial_derivative_cache = {}
     
     def add_partial_derivative(self, func, res):
         """ Add partial derivative information
@@ -31,7 +31,7 @@ class Node(object):
         :param function func: the function to calculate derivative with respect to res
         :param Node res: variable that represent the target of derivative
         """
-        _logger.info('Adding partial derivative to Node #{}'.format(id(self)))
+        _logger.debug('Adding partial derivative to Node #{}'.format(id(self)))
         assert(isinstance(res, Node))
         self._partial_derivatives.append((func, res))
 
@@ -356,7 +356,7 @@ class Primitive(object):
             KeyError:
                 No corresponding gradient function.
         """
-        _logger.info('Calling {}'.format(self._func))
+        _logger.debug('Calling {}'.format(self._func))
 
         def get_val(x):
             return x.get_data(self._type) if isinstance(x, Array) else x
