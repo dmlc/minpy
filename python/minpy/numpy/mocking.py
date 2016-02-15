@@ -45,9 +45,10 @@ class Module(object):
         # Special members for internal use.
         if name == '__registry__':
             return self._registry
-        elif name in self._old:
-            return self._old[name]
         elif self._registry.has_name(name):
             return policy.resolve_name(name, self._registry, self._policy)
+        elif name in self._old:
+            self._logger.info('No entry found for {} in registry, fallback to numpy'.format(name))
+            return self._old[name]
         else:
             raise DynamicLookupError()

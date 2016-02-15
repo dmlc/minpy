@@ -8,8 +8,7 @@ from .utils import common
 #import typing
 from .array_variants import FunctionType
 from .array_variants import ArrayType
-import mxnet
-import numpy
+from .array_variants import allowed_types
 import sys
 
 _logger = log.get_logger(__name__)
@@ -24,14 +23,6 @@ class Node(object):
     def __init__(self):
         """Initialize."""
         pass
-
-    def __str__(self):
-        """Get string representation.
-
-        Return:
-            A string representation.
-        """
-        return 'Node({})'.format(self)
 
     def add_partial_derivative(self, func, res):
         """ Add partial derivative information
@@ -87,13 +78,13 @@ class Array(object):
     _ns = None
 
     @staticmethod
-    #def to_array_type(arr: typing.Union[numpy.ndarray, mxnet.narray.NArray]
+    #def to_array_type(arr: typing.Union[numpy.ndarray, mxnet.narray.NDArray]
                       #) -> ArrayType:
     def to_array_type(arr):
         t = type(arr)
-        if t == numpy.ndarray:
+        if t in allowed_types['numpy']:
             return ArrayType.NUMPY
-        elif t == mxnet.nd.NArray:
+        elif t in allowed_types['mxnet']:
             return ArrayType.MXNET
         else:
             raise UnknownArrayTypeError(
@@ -102,13 +93,18 @@ class Array(object):
     @staticmethod
     #def to_real_type(arr: ArrayType) -> type:
     def to_real_type(arr):
+        # TODO should not be used since one type enum may correspond to many real types
+        # (e.g. ArrayType.NUMPY -> (numpy.ndarray | numpy.float64 ...))
+        assert False
+        '''
         if arr == ArrayType.NUMPY:
             return numpy.ndarray
         elif arr == ArrayType.MXNET:
-            return mxnet.nd.NArray
+            return mxnet.nd.NDArray
         else:
             raise UnknownArrayTypeError(
                 'Array data of type {} unknown.'.format(arr))
+        '''
 
     @property
     def node(self):
@@ -180,7 +176,7 @@ class Array(object):
         pass
 
     def __neg__(self):
-        return Array._ns.negate(self)
+        return Array._ns.negative(self)
 
     def __abs__(self):
         pass
