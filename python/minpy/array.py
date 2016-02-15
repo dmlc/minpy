@@ -9,7 +9,10 @@ from .utils import common
 from .array_variants import FunctionType
 from .array_variants import ArrayType
 from .array_variants import allowed_types
+
 import sys
+import functools
+import operator
 
 _logger = log.get_logger(__name__)
 
@@ -17,21 +20,18 @@ class Node(object):
     """Node representing data with gradient information."""
     __slots__ = ['_partial_derivatives', '_partial_derivative_cache']
 
-    _partial_derivatives = []
-    _partial_derivative_cache = []
-
     def __init__(self):
         """Initialize."""
-        pass
-
+        self._partial_derivatives = []
+        self._partial_derivative_cache = []
+    
     def add_partial_derivative(self, func, res):
         """ Add partial derivative information
 
         :param function func: the function to calculate derivative with respect to res
         :param Node res: variable that represent the target of derivative
         """
-        _logger.info('Adding partial derivative to {}: {}'.format(id(self),
-                                                                  self))
+        _logger.info('Adding partial derivative to Node #{}'.format(id(self)))
         assert(isinstance(res, Node))
         self._partial_derivatives.append((func, res))
 
@@ -71,9 +71,6 @@ class Array(object):
     underlying array object.
     """
     __slots__ = ['_node', '_data']
-
-    _node = Node()
-    _data = {}
 
     _ns = None
 
@@ -115,6 +112,8 @@ class Array(object):
         return self._node
 
     def __init__(self, data):
+        self._data = {}
+        self._node = Node()
         t = Array.to_array_type(data)
         self._data[t] = data
 
