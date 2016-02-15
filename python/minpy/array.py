@@ -13,6 +13,7 @@ from .array_variants import allowed_types
 import sys
 import functools
 import operator
+import logging
 
 _logger = log.get_logger(__name__)
 
@@ -337,7 +338,19 @@ class Primitive(object):
 
     @property
     def type(self):
-        return self._type;
+        return self._type
+
+    @property
+    def typestr(self):
+        if self._type == FunctionType.NUMPY:
+            return "numpy"
+        elif self._type == FunctionType.MXNET:
+            return "mxnet"
+        else:
+            return "N/A"
+
+    def __str__(self):
+        return self._func.__name__
 
     def __call__(self, *args, **kwargs):
         """Call wrapped function.
@@ -356,7 +369,7 @@ class Primitive(object):
             KeyError:
                 No corresponding gradient function.
         """
-        _logger.debug('Calling {}'.format(self._func))
+        _logger.debug('Calling {} type {}'.format(self._func, self.typestr))
 
         def get_val(x):
             return x.get_data(self._type) if isinstance(x, Array) else x

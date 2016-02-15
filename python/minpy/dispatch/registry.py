@@ -4,8 +4,9 @@
 from ..utils import log
 from ..utils import common
 import types
+import logging
 
-_logger = log.get_logger(__name__, log.logging.WARNING)
+_logger = log.get_logger(__name__)
 
 class DuplicateRegistryError(ValueError):
     pass
@@ -30,10 +31,10 @@ class Registry(object):
             self._reg[name] = {}
         if prim.type in self._reg[name]:
             raise DuplicateRegistryError(
-                'Type {} for name {} is already present'.format(prim.type, name))
+                'Type "{}" for name "{}" has already existed'.format(prim.typestr, name))
         else:
-            _logger.info('Function {} registered to {} with type {}'
-                         .format(prim, name, prim.type))
+            _logger.debug('Function "{}" registered with type {}'
+                         .format(name, prim.typestr))
             self._reg[name][prim.type] = prim
 
     def has_name(self, name):

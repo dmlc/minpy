@@ -12,17 +12,17 @@ class FunctionType(common.AutoNumber):
     Semantically this is different from :class:`..array.ArrayType`,
     but for now one data type corresponds to one function type.
     """
-    NUMPY = ()
-    MXNET = ()
+    NUMPY = 0
+    MXNET = 1
 
 class ArrayType(common.AutoNumber):
     """Enumeration of types of arrays."""
-    NUMPY = ()
-    MXNET = ()
+    NUMPY = 0
+    MXNET = 1
 
 variants = {
         'numpy': (ArrayType.NUMPY, FunctionType.NUMPY),
-        #'mxnet': (ArrayType.MXNET, FunctionType.MXNET)
+        'mxnet': (ArrayType.MXNET, FunctionType.MXNET)
         }
 
 allowed_types = {

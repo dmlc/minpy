@@ -45,7 +45,7 @@ class _Formatter(logging.Formatter):
 _handler = logging.StreamHandler()
 _handler.setFormatter(_Formatter())
 
-def get_logger(name=None, level=logging.INFO):
+def get_logger(name=None, level=logging.DEBUG):
     """Get customized logger.
 
     Args:

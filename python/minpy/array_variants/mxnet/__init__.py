@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
-import mxnet as mx
+from .mxnet_core import *
+import mxnet
 
-allowed_types = [mx.ndarray.NDArray]
+allowed_types = [mxnet.ndarray.NDArray]
