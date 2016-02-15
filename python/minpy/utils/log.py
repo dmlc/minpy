@@ -36,16 +36,14 @@ class _Formatter(logging.Formatter):
     def format(self, record):
         fmt = self._get_color(record.levelno)
         fmt += self._get_label(record.levelno)
-        fmt += '{asctime} {process:5d} {filename}:{lineno}:{funcName}' \
-               ' {name}]\x1b[0m'
-        fmt += ' {message}'
+        fmt += '[%(asctime)s %(process)d %(filename)s:%(lineno)d:%(funcName)s]\x1b[0m'
+        fmt += ' %(message)s'
+        self._fmt = fmt
         #self._style._fmt = fmt
         return super(_Formatter, self).format(record)
 
-
 _handler = logging.StreamHandler()
 _handler.setFormatter(_Formatter())
-
 
 def get_logger(name=None, level=logging.DEBUG):
     """Get customized logger.
@@ -58,10 +56,8 @@ def get_logger(name=None, level=logging.DEBUG):
         A logger.
     """
     logger = logging.getLogger(name)
-    if getattr(logger, '_init_done', None):
-        return logger
-    else:
+    if name and not getattr(logger, '_init_done', None):
         logger._init_done = True
         logger.addHandler(_handler)
         logger.setLevel(level)
-        return logger
+    return logger

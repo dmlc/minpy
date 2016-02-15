@@ -106,6 +106,9 @@ class Array(object):
                 'Array data of type {} unknown.'.format(arr))
         '''
 
+    def __str__(self):
+        return str(self.get_data(ArrayType.NUMPY))
+
     @property
     def node(self):
         """ get node which contains derivative information from this array """

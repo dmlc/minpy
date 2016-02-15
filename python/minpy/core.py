@@ -15,6 +15,5 @@ def grad(func, argnum=0):
             return x if isinstance(x, array.Array) else array.Array(x)
         arrays = tuple(map(make_array, args))
         result_array = func(*arrays)
-        print type(result_array)
         return arrays[argnum].node.partial_derivative(result_array.node)
     return wrapped
