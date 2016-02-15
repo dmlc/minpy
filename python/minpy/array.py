@@ -150,7 +150,7 @@ class Array(object):
             elif t == ArrayType.MXNET:
                 _logger.info('Create mxnet data of array #{}'.format(id(self)))
                 nparray = self.get_data(ArrayType.NUMPY)
-                self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray)
+                self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0))
             else:
                 raise UnknownArrayTypeError(
                     'Array data of type {} unknown.'.format(t))
