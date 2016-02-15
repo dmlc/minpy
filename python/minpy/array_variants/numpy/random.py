@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Wrapper for NumPy random functions."""
+from __future__ import absolute_import
+
 from . import numpy_wrapper
+import numpy
 
-from numpy import random
+def register_primitives(reg, prim_wrapper):
+    numpy_wrapper.wrap_namespace(numpy.random.__dict__, reg, prim_wrapper)
 
-#numpy_wrapper.wrap_namespace(random.__dict__, registry.function_registry,
-               #variants.FunctionType.NUMPY)
-
-def def_grads(reg):
-    def get(name):
-        return reg.get(name, variants.FunctionType.NUMPY)
-    get('random').def_grad_zero()
-    get('randn').def_grad_zero()
-
-#def_grads(registry.function_registry)
+def def_grads(reg, prims):
+    prims('random').def_grad_zero()
+    prims('randn').def_grad_zero()

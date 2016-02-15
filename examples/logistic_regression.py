@@ -1,5 +1,6 @@
 from minpy.core import grad
 import minpy.numpy as np
+import minpy.numpy.random as random
 
 def sigmoid(x):
     return 0.5 * (np.tanh(x) + 1)
@@ -15,9 +16,9 @@ def training_loss(weights, inputs):
 xshape = (256, 500)
 wshape = (500, 250)
 tshape = (256, 250)
-inputs = np.random.rand(*xshape) - 0.5
-targets = np.random.randint(0, 2, size=tshape)
-weights = np.random.rand(*wshape) - 0.5
+inputs = random.rand(*xshape) - 0.5
+targets = random.randint(0, 2, size=tshape)
+weights = random.rand(*wshape) - 0.5
 
 training_gradient_fun = grad(training_loss)
 

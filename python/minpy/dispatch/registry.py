@@ -5,7 +5,7 @@ from ..utils import log
 from ..utils import common
 import types
 
-_logger = log.get_logger(__name__)
+_logger = log.get_logger(__name__, log.logging.WARNING)
 
 class DuplicateRegistryError(ValueError):
     pass
@@ -13,7 +13,8 @@ class DuplicateRegistryError(ValueError):
 class Registry(object):
     """Registry for primitives under the same symbol."""
 
-    _reg = {}
+    def __init__(self):
+        self._reg = {}
 
     #def register(self, name: str, func: types.FunctionType, t: FunctionType):
     def register(self, name, prim):

@@ -11,38 +11,24 @@ from ..dispatch import policy
 from ..array_variants import * # import all array_variants names
 from .. import array
 
-'''
-# TODO why not globals() ?
-_old_definitions = {
-    '__name__': __name__,
-    '__package__': __package__,
-    '__file__': __file__,
-}
-
-try:
-    _old_definitions['__cached__'] = __cached__
-    _old_definitions['__loader__'] = __loader__
-    _old_definitions['__spec__'] = __loader__
-except NameError:
-    pass
-'''
-
 class DynamicLookupError(KeyError):
     pass
 
 class Module(object):
     """Module level dynamic lookup."""
 
-    _registry = registry.Registry()
-    _policy = policy.Policy()
-
     def __init__(self, old, name=None):
-
+        self._registry = registry.Registry()
+        self._policy = policy.PreferMXNetPolicy()
         self._logger = log.get_logger(name)
+        self._logger.info('Initialize module: {}'.format(old['__name__']))
         self._old = old
         for vname in variants:
-            print vname
-            mod = importlib.import_module('minpy.array_variants.{}'.format(vname))
+            if name == None:
+                modname = 'minpy.array_variants.{}'.format(vname)
+            else:
+                modname = 'minpy.array_variants.{}.{}'.format(vname, name)
+            mod = importlib.import_module(modname)
             #TODO better wrapper?
             def primitive_wrapper(func):
                 return array.Primitive(func, variants[vname][1])
@@ -52,10 +38,8 @@ class Module(object):
                 return self._registry.get(name, variants[vname][1])
             # define gradients of primitives
             mod.def_grads(self._registry, primitive_getter)
+        self._logger.info('Import {} primitives'.format(len(self._registry._reg)))
     
-    def dispatch(self, name, *args, **kargs):
-        pass
-
     def __getattr__(self, name):
         self._logger.info('Look up name {}'.format(name))
         # Special members for internal use.
@@ -64,6 +48,6 @@ class Module(object):
         elif name in self._old:
             return self._old[name]
         elif self._registry.has_name(name):
-            return None  # TODO policy here
+            return policy.resolve_name(name, self._registry, self._policy)
         else:
             raise DynamicLookupError()

@@ -21,14 +21,12 @@ class PreferMXNetPolicy(Policy):
     """Perfer using MXNet functions."""
 
     def decide(self, candidates, *args, **kwargs):
-        if FunctionType.MXNET in candidates.keys():
+        if FunctionType.MXNET in candidates:
             return FunctionType.MXNET
         else:
             return FunctionType.NUMPY
 
-default_policy = Policy()
-
-def resolve_name(name, reg, policy=default_policy, *args, **kwargs):
+def resolve_name(name, reg, plc, *args, **kwargs):
     """Resolve a function name.
 
     Args:
@@ -36,11 +34,11 @@ def resolve_name(name, reg, policy=default_policy, *args, **kwargs):
         args: Arguments.
         kwargs: Keyword arguments.
         reg: Registry for functions.
-        policy: Resolving policy.
+        plc: Resolving policy.
 
     Returns:
         A function after resolution.
     """
     available = reg.iter_available_types(name)
-    preference = policy.decide(available, args, kwargs)
+    preference = plc.decide(available, args, kwargs)
     return reg.get(name, preference)

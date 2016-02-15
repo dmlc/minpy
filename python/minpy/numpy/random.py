@@ -2,5 +2,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from minpy.array_variants.numpy.random import *
-from minpy.array_variants.mxnet.random import *
+import sys
+from .mocking import Module
+import numpy.random
+
+sys.modules[__name__] = Module(numpy.random.__dict__, 'random')
