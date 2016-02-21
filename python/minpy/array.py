@@ -2,6 +2,13 @@
 # -*- coding: utf-8 -*-
 """Base type for arrays."""
 from __future__ import absolute_import
+from __future__ import print_function
+
+import sys
+import enum
+import functools
+import operator
+import logging
 
 from .utils import log
 from .utils import common
@@ -9,11 +16,6 @@ from .utils import common
 from .array_variants import FunctionType
 from .array_variants import ArrayType
 from .array_variants import allowed_types
-
-import sys
-import functools
-import operator
-import logging
 
 import mxnet #FIXME: should not import this; use array_invariants instead
 
@@ -27,7 +29,7 @@ class Node(object):
         """Initialize."""
         self._partial_derivatives = []
         self._partial_derivative_cache = {}
-    
+
     def add_partial_derivative(self, func, res):
         """ Add partial derivative information
 
@@ -78,8 +80,6 @@ class Array(object):
     _ns = None
 
     @staticmethod
-    #def to_array_type(arr: typing.Union[numpy.ndarray, mxnet.narray.NDArray]
-                      #) -> ArrayType:
     def to_array_type(arr):
         t = type(arr)
         if t in allowed_types['numpy']:
@@ -91,7 +91,7 @@ class Array(object):
                 'Array data of type {} unknown.'.format(t))
 
     def __str__(self):
-        return str(self.force_get_data(ArrayType.NUMPY))
+        return str(self.get_data(ArrayType.NUMPY))
 
     @property
     def node(self):
@@ -103,41 +103,43 @@ class Array(object):
         self._node = Node()
         t = Array.to_array_type(data)
         self._data[t] = data
+        self._synchronization_status = t
 
     def has_type(self, t):
         """Return whether array data of given type exists in the underlying storage.
         """
         return t in self._data.keys()
 
+    def _synchronize_data(self):
+        if self._synchronization_status == ArrayType.MXNET:
+            _logger.info('Copy from mxnet array to numpy array Node#{}'.format(id(self)))
+            mxarray = self._data[ArrayType.MXNET]
+            self._data[ArrayType.NUMPY] = mxarray.asnumpy()
+        elif self._synchronization_status == ArrayType.NUMPY:
+            _logger.info('Copy from numpy array to mxnet array Node#{}'.format(id(self)))
+            nparray = self._data[ArrayType.NUMPY]
+            self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0)) # TODO on which device ?
+        self._synchronization_status = None
+
     def get_data(self, t):
-        """Get array data of given type. Raise exception if the type is missing.
-        """
-        if t not in self._data:
-            raise ArrayTypeMissingError(
-                'Array data of type {} not found.'.format(t))
+        """Get array data of given type."""
+        if self._synchronization_status is not None and self._synchronization_status != t:
+            self._synchronize_data()
         return self._data[t]
 
-    def force_get_data(self, t):
-        """Get array data of given type. Create data if missing"""
-        if t not in self._data:
-            self.create_data(t)
-        return self.get_data(t)
+    def as_numpy(self):
+        """Get raw NumPy array.
 
-    #def create_data(self, t: ArrayType):
-    def create_data(self, t):
-        """Create data of given type."""
-        if t not in self._data:
-            if t == ArrayType.NUMPY:
-                _logger.info('Copy from mxnet array to numpy array Node#{}'.format(id(self)))
-                mxarray = self.get_data(ArrayType.MXNET)
-                self._data[ArrayType.NUMPY] = mxarray.asnumpy()
-            elif t == ArrayType.MXNET:
-                _logger.info('Copy from numpy array to mxnet array Node#{}'.format(id(self)))
-                nparray = self.get_data(ArrayType.NUMPY)
-                self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0)) # TODO on which device ?
-            else:
-                raise UnknownArrayTypeError(
-                    'Array data of type {} unknown.'.format(t))
+        This will return a shared state array. Please manually copy on write.
+        """
+        return self.get_data(ArrayType.NUMPY)
+
+    def get_data_mutable(self, t):
+        """Get exclusive access to array data of given type."""
+        if self._synchronization_status is not None and self._synchronization_status != t:
+            self._synchronize_data()
+        self._synchronization_status = t
+        return self._data[t]
 
     @property
     def shape(self):
@@ -366,7 +368,7 @@ class Primitive(object):
         _logger.debug('Calling {} type {}'.format(self._func, self.typestr))
 
         def get_val(x):
-            return x.force_get_data(self._type) if isinstance(x, Array) else x
+            return x.get_data(self._type) if isinstance(x, Array) else x
         # Get underlying data.
         arg_values = tuple(map(get_val, args))
         kwargs_values = {x: get_val(kwargs[x]) for x in kwargs}
