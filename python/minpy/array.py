@@ -121,10 +121,16 @@ class Array(object):
             self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0)) # TODO on which device ?
         self._synchronization_status = None
 
-    def get_data(self, t):
-        """Get array data of given type."""
+    def enforce_data(self, t):
+        """Enforce array data of given type."""
         if self._synchronization_status is not None and self._synchronization_status != t:
             self._synchronize_data()
+            self._synchronization_status = None
+        return self
+
+    def get_data(self, t):
+        """Get array data of given type."""
+        enforce_data(t)
         return self._data[t]
 
     def as_numpy(self):
@@ -389,6 +395,18 @@ class Primitive(object):
                         result.node)
         return result
 
+    def _enforce_input_type(self, f):
+        def enforce(x):
+            if self._type == FunctionType.NUMPY:
+                x.enforce_data(ArrayType.NUMPY)
+            elif self._type == FunctionType.MXNET:
+                x.enforce_data(ArrayType.MXNET)
+
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            return f(*tuple(map(enforce, args)), **{x: enforce(kwargs[x]) for x in kwargs})
+        return wrapper
+
     def def_grad(self, func, argnum=0):
         """Define gradient function.
         Args:
@@ -400,7 +418,7 @@ class Primitive(object):
         Return:
             self instance for multiple def_grad in one statement
         """
-        self._grad_func[argnum] = func
+        self._grad_func[argnum] = self._enforce_input_type(func)
         return self
 
     def def_grad_kw(self, func, key):
@@ -411,7 +429,7 @@ class Primitive(object):
             key:
                 Key name of the argument.
         """
-        self._grad_func[key] = func
+        self._grad_func[key] = self._enforce_input_type(func)
 
     def def_grad_zero(self, argnum=0):
         self._grad_func[argnum] = lambda *args, **kwargs: lambda g: 0.0
