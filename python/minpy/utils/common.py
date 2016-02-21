@@ -39,12 +39,3 @@ def enforce_type(T, method=False):
         return wrapped
     return decorator
 
-
-class AutoNumber(enum.Enum):
-    """Automatically assign increasing number to enumerations."""
-
-    def __new__(cls):
-        value = len(cls.__members__) + 1
-        obj = object.__new__(cls)
-        obj._value_ = value
-        return obj

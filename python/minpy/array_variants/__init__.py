@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+import enum
 
 from ..utils import common
 from . import numpy
 from . import mxnet
 
-class FunctionType(common.AutoNumber):
+@enum.unique
+class FunctionType(enum.Enum):
     """Enumeration of types of functions.
 
     Semantically this is different from :class:`..array.ArrayType`,
@@ -15,7 +17,8 @@ class FunctionType(common.AutoNumber):
     NUMPY = 0
     MXNET = 1
 
-class ArrayType(common.AutoNumber):
+@enum.unique
+class ArrayType(enum.Enum):
     """Enumeration of types of arrays."""
     NUMPY = 0
     MXNET = 1
