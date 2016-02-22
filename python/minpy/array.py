@@ -7,6 +7,7 @@ from __future__ import print_function
 import sys
 import enum
 import functools
+import itertools
 import operator
 import logging
 
@@ -30,15 +31,16 @@ class Node(object):
         self._partial_derivatives = []
         self._partial_derivative_cache = {}
 
-    def add_partial_derivative(self, func, res):
+    def add_partial_derivative(self, grad_func, res, prim):
         """ Add partial derivative information
 
-        :param function func: the function to calculate derivative with respect to res
+        :param function grad_func: the function to calculate derivative with respect to res
         :param Node res: variable that represent the target of derivative
+        :param Primitive prim: the primitive that the gradient function belongs to
         """
         _logger.debug('Adding partial derivative to Node #{}'.format(id(self)))
         assert(isinstance(res, Node))
-        self._partial_derivatives.append((func, res))
+        self._partial_derivatives.append((grad_func, res, prim))
 
     def partial_derivative(self, target):
         """ Add partial derivative information
@@ -52,12 +54,14 @@ class Node(object):
             if self is target:  # Partial derivative of self is one.
                 return 1.0
             else:
-                res = functools.reduce(operator.add, map(
-                    lambda x: x[0](x[1].partial_derivative(target)),
-                    self._partial_derivatives), 0.0)
+                def call(rec):
+                    _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
+                    return rec[0](rec[1].partial_derivative(target))
+                res = functools.reduce(
+                        operator.add,
+                        map(call, self._partial_derivatives),
+                        0.0)
                 self._partial_derivative_cache[target] = res
-                #_logger.info('Partial derivative id: {}, shape: {}, value: {}'.
-                             #format(id(self), self.val.shape, res))
                 return res
 
 class ArrayTypeMissingError(ValueError):
@@ -66,7 +70,10 @@ class ArrayTypeMissingError(ValueError):
 class UnknownArrayTypeError(ValueError):
     pass
 
-class Array(object):
+class Value(object):
+    pass
+
+class Array(Value):
     """Base array type.
 
     It provides convenient methods for arithmetic operations. The Array class
@@ -75,9 +82,17 @@ class Array(object):
     2. Redirect normal member functions to correct member functions of
     underlying array object.
     """
-    __slots__ = ['_node', '_data', '_synchronization_status']
+    __slots__ = ['_node', '_data', '_latest_version', '_marked_for_bp']
 
     _ns = None
+
+    def __init__(self, data, marked=False):
+        self._data = {}
+        self._node = Node()
+        t = Array.to_array_type(data)
+        self._data[t] = data
+        self._latest_version = t
+        self._marked_for_bp = marked
 
     @staticmethod
     def to_array_type(arr):
@@ -98,53 +113,45 @@ class Array(object):
         """ get node which contains derivative information from this array """
         return self._node
 
-    def __init__(self, data):
-        self._data = {}
-        self._node = Node()
-        t = Array.to_array_type(data)
-        self._data[t] = data
-        self._synchronization_status = t
-
     def has_type(self, t):
         """Return whether array data of given type exists in the underlying storage.
         """
         return t in self._data.keys()
 
     def _synchronize_data(self):
-        if self._synchronization_status == ArrayType.MXNET:
+        if self._latest_version == ArrayType.MXNET:
             _logger.info('Copy from mxnet array to numpy array Node#{}'.format(id(self)))
             mxarray = self._data[ArrayType.MXNET]
             self._data[ArrayType.NUMPY] = mxarray.asnumpy()
-        elif self._synchronization_status == ArrayType.NUMPY:
+        elif self._latest_version == ArrayType.NUMPY:
             _logger.info('Copy from numpy array to mxnet array Node#{}'.format(id(self)))
             nparray = self._data[ArrayType.NUMPY]
             self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0)) # TODO on which device ?
-        self._synchronization_status = None
+        self._latest_version = None
 
     def enforce_data(self, t):
         """Enforce array data of given type."""
-        if self._synchronization_status is not None and self._synchronization_status != t:
+        if self._latest_version is not None and self._latest_version != t:
             self._synchronize_data()
-            self._synchronization_status = None
-        return self
+            self._latest_version = None
 
     def get_data(self, t):
         """Get array data of given type."""
         self.enforce_data(t)
         return self._data[t]
 
-    def as_numpy(self):
+    def asnumpy(self):
         """Get raw NumPy array.
 
-        This will return a shared state array. Please manually copy on write.
+        This will return a copied array of numpy.ndarray type
         """
-        return self.get_data(ArrayType.NUMPY)
+        return numpy.array(self.get_data(ArrayType.NUMPY))
 
     def get_data_mutable(self, t):
         """Get exclusive access to array data of given type."""
-        if self._synchronization_status is not None and self._synchronization_status != t:
+        if self._latest_version is not None and self._latest_version != t:
             self._synchronize_data()
-        self._synchronization_status = t
+        self._latest_version = t
         return self._data[t]
 
     @property
@@ -380,19 +387,35 @@ class Primitive(object):
         kwargs_values = {x: get_val(kwargs[x]) for x in kwargs}
         # Call the real function with raw value.
         result_value = self._func(*arg_values, **kwargs_values)
-        # Wrap the result raw value with wrapper and node.
-        result = Array(result_value)
-        # Record partial derivative paths, only for `Array` type values.
-        for i, arg in enumerate(args):
-            if isinstance(arg, Array):
-                arg.node.add_partial_derivative(
-                        self._grad_func[i](result_value, *arg_values, **kwargs_values),
-                        result.node)
-        for x in kwargs:
-            if isinstance(arg, Array):
-                arg.node.add_partial_derivative(
-                        self._grad_func_kw[x](result_value, *arg_values, **kwargs_values),
-                        result.node)
+        # whether the result is on the bp path
+        def scan(accum, x):
+            if isinstance(x, Array):
+                return operator.or_(accum, x._marked_for_bp)
+            else:
+                return accum
+        # Check whether the result value is on the path of bp phase
+        # If all the input arguments are not on the bp path, the result value is not as well.
+        need_bp = functools.reduce(scan,
+                         itertools.chain(args, kwargs.values()),
+                         False)
+        result_value_type = type(result_value)
+        if need_bp:
+            # Wrap the result raw value with wrapper and node.
+            result = Array(result_value, marked=True)
+            # Record partial derivative paths, only for `Array` type values.
+            # If no gradient function is defined, also omit it
+            for i, arg in enumerate(args):
+                if isinstance(arg, Array) and i < len(self._grad_func):
+                    arg.node.add_partial_derivative(
+                            self._grad_func[i](result_value, *arg_values, **kwargs_values),
+                            result.node, self)
+            for x in kwargs:
+                if isinstance(arg, Array) and x in self._grad_func_kw:
+                    arg.node.add_partial_derivative(
+                            self._grad_func_kw[x](result_value, *arg_values, **kwargs_values),
+                            result.node, self)
+        else:
+            result = result_value
         return result
 
     def _enforce_input_type(self, f):

@@ -23,7 +23,7 @@ class ArrayType(enum.Enum):
 
 variants = {
         'numpy': (ArrayType.NUMPY, FunctionType.NUMPY),
-        'mxnet': (ArrayType.MXNET, FunctionType.MXNET)
+        #'mxnet': (ArrayType.MXNET, FunctionType.MXNET)
         }
 
 allowed_types = {
