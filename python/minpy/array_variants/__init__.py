@@ -7,7 +7,6 @@ from ..utils import common
 from . import numpy
 from . import mxnet
 
-@enum.unique
 class FunctionType(enum.Enum):
     """Enumeration of types of functions.
 
@@ -17,7 +16,6 @@ class FunctionType(enum.Enum):
     NUMPY = 0
     MXNET = 1
 
-@enum.unique
 class ArrayType(enum.Enum):
     """Enumeration of types of arrays."""
     NUMPY = 0

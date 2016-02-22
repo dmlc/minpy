@@ -75,7 +75,7 @@ class Array(object):
     2. Redirect normal member functions to correct member functions of
     underlying array object.
     """
-    __slots__ = ['_node', '_data']
+    __slots__ = ['_node', '_data', '_synchronization_status']
 
     _ns = None
 
@@ -130,7 +130,7 @@ class Array(object):
 
     def get_data(self, t):
         """Get array data of given type."""
-        enforce_data(t)
+        self.enforce_data(t)
         return self._data[t]
 
     def as_numpy(self):
@@ -402,7 +402,7 @@ class Primitive(object):
             elif self._type == FunctionType.MXNET:
                 x.enforce_data(ArrayType.MXNET)
 
-        @wraps(f)
+        @functools.wraps(f)
         def wrapper(*args, **kwargs):
             return f(*tuple(map(enforce, args)), **{x: enforce(kwargs[x]) for x in kwargs})
         return wrapper
@@ -418,7 +418,8 @@ class Primitive(object):
         Return:
             self instance for multiple def_grad in one statement
         """
-        self._grad_func[argnum] = self._enforce_input_type(func)
+        #self._grad_func[argnum] = self._enforce_input_type(func)
+        self._grad_func[argnum] = func
         return self
 
     def def_grad_kw(self, func, key):
@@ -429,7 +430,9 @@ class Primitive(object):
             key:
                 Key name of the argument.
         """
-        self._grad_func[key] = self._enforce_input_type(func)
+        #self._grad_func[key] = self._enforce_input_type(func)
+        self._grad_func[key] = func
+        return self
 
     def def_grad_zero(self, argnum=0):
         self._grad_func[argnum] = lambda *args, **kwargs: lambda g: 0.0
