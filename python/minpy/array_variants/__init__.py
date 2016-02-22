@@ -26,7 +26,12 @@ variants = {
         #'mxnet': (ArrayType.MXNET, FunctionType.MXNET)
         }
 
-allowed_types = {
-        'numpy': numpy.allowed_types,
-        'mxnet': mxnet.allowed_types
+array_types = {
+        'numpy': numpy.array_type,
+        'mxnet': mxnet.array_type,
+}
+number_types = {
+        'native': [int, float],
+        'numpy': numpy.number_type,
+        'mxnet': mxnet.number_type,
 }

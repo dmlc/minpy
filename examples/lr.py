@@ -11,7 +11,7 @@ def predict(weights, inputs):
 def training_loss(weights, inputs):
     preds = predict(weights, inputs)
     label_probabilities = preds * targets + (1 - preds) * (1 - targets)
-    #print 'size', label_probabilities.shape, np.sum(label_probabilities)
+    #print 'size', label_probabilities.shape, np.count_nonzero(label_probabilities)
     return -np.sum(np.log(label_probabilities))
 
 xshape = (256, 500)

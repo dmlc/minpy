@@ -13,5 +13,5 @@ _old = {
 }
 
 _mod = Module(_old)
-array.Array._ns = _mod
+array.Value._ns = _mod
 sys.modules[__name__] = _mod

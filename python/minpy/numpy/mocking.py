@@ -55,4 +55,4 @@ class Module(object):
             self._logger.info('No entry found for {} in registry, fallback'.format(name))
             return self._old[name]
         else:
-            raise DynamicLookupError()
+            raise DynamicLookupError('Cannot found name "{}"'.format(name))

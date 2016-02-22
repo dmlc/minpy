@@ -16,7 +16,8 @@ from .utils import common
 #import typing
 from .array_variants import FunctionType
 from .array_variants import ArrayType
-from .array_variants import allowed_types
+from .array_variants import array_types
+from .array_variants import number_types
 
 import mxnet #FIXME: should not import this; use array_invariants instead
 
@@ -71,7 +72,214 @@ class UnknownArrayTypeError(ValueError):
     pass
 
 class Value(object):
-    pass
+    _ns = None
+
+    @staticmethod
+    def wrap(d, *args, **kwargs):
+        t = type(d)
+        if t in itertools.chain(*array_types.values()):
+            return Array(d, *args, **kwargs)
+        elif t in itertools.chain(*number_types.values()):
+            return Number(d, *args, **kwargs)
+        else:
+            raise UnknownArrayTypeError('cannot wrap type: {}'.format(t))
+
+    def get_data(self, t):
+        assert(False)
+        pass
+
+    # TODO special function redirection and __getattr__ redirection
+    def __getattr__(self, name):
+        # TODO la magie
+        pass
+
+    def __cmp__(self, other):
+        pass
+
+    def __eq__(self, other):
+        pass
+
+    def __ne__(self, other):
+        pass
+
+    def __lt__(self, other):
+        pass
+
+    def __gt__(self, other):
+        pass
+
+    def __le__(self, other):
+        pass
+
+    def __ge__(self, other):
+        pass
+
+    def __pos__(self):
+        pass
+
+    def __neg__(self):
+        return Value._ns.negative(self)
+
+    def __abs__(self):
+        pass
+
+    def __invert__(self):
+        pass
+
+    def __round__(self, n):
+        pass
+
+    def __floor__(self):
+        pass
+
+    def __ceil__(self):
+        pass
+
+    def __trunc__(self):
+        pass
+
+    def __add__(self, other):
+        return Value._ns.add(self, other)
+
+    def __sub__(self, other):
+        return Value._ns.subtract(self, other)
+
+    def __mul__(self, other):
+        return Value._ns.multiply(self, other)
+
+    def __floordiv__(self, other):
+        pass
+
+    def __div__(self, other):
+        return Value._ns.divide(self, other)
+
+    def __truediv__(self, other):
+        return Value._ns.true_divide(self, other)
+
+    def __mod__(self, other):
+        return Value._ns.mod(self, other)
+
+    def __divmod__(self, other):
+        pass
+
+    def __pow__(self, other):
+        return Value._ns.power(self, other)
+
+    def __lshift__(self, other):
+        pass
+
+    def __rshift__(self, other):
+        pass
+
+    def __and__(self, other):
+        pass
+
+    def __or__(self, other):
+        pass
+
+    def __xor__(self, other):
+        pass
+
+    def __radd__(self, other):
+        return Value._ns.add(other, self)
+
+    def __rsub__(self, other):
+        return Value._ns.subtract(other, self)
+
+    def __rmul__(self, other):
+        return Value._ns.multiply(other, self)
+
+    def __rfloordiv__(self, other):
+        pass
+
+    def __rdiv__(self, other):
+        return Value._ns.divide(other, self)
+
+    def __rtruediv__(self, other):
+        return Value._ns.true_divide(other, self)
+
+    def __rmod__(self, other):
+        return Value._ns.mod(other, self)
+
+    def __rdivmod__(self, other):
+        return Value._ns.mod(other, self)
+
+    def __rpow__(self, other):
+        return Value._ns.power(other, self)
+
+    def __rlshift__(self, other):
+        pass
+
+    def __rrshift__(self, other):
+        pass
+
+    def __rand__(self, other):
+        pass
+
+    def __ror__(self, other):
+        pass
+
+    def __rxor__(self, other):
+        pass
+
+    def __iadd__(self, other):
+        return Value._ns.add(other, self)
+
+    def __isub__(self, other):
+        return Value._ns.subtract(other, self)
+
+    def __imul__(self, other):
+        return Value._ns.multiply(other, self)
+
+    def __ifloordiv__(self, other):
+        pass
+
+    def __idiv__(self, other):
+        return Value._ns.divide(other, self)
+
+    def __itruediv__(self, other):
+        return Value._ns.true_divide(other, self)
+
+    def __imod__(self, other):
+        return Value._ns.mod(other, self)
+
+    def __ipow__(self, other):
+        return Value._ns.power(other, self)
+
+    def __ilshift__(self, other):
+        pass
+
+    def __irshift__(self, other):
+        pass
+
+    def __iand__(self, other):
+        pass
+
+    def __ior__(self, other):
+        pass
+
+    def __ixor__(self, other):
+        pass
+
+class Number(Value):
+    """Class for numbers with derivative information"""
+    __slots__ = ['_node', '_val', '_marked_for_bp']
+    def __init__(self, val, marked=False):
+        self._node = Node()
+        self._val = val
+        self._marked_for_bp = marked
+
+    def __str__(self):
+        return str(self._val)
+
+    def get_data(self, t):
+        """Get array data of given type."""
+        return self._val
+
+    @property
+    def node(self):
+        """ get node which contains derivative information from this array """
+        return self._node
 
 class Array(Value):
     """Base array type.
@@ -84,8 +292,6 @@ class Array(Value):
     """
     __slots__ = ['_node', '_data', '_latest_version', '_marked_for_bp']
 
-    _ns = None
-
     def __init__(self, data, marked=False):
         self._data = {}
         self._node = Node()
@@ -97,9 +303,9 @@ class Array(Value):
     @staticmethod
     def to_array_type(arr):
         t = type(arr)
-        if t in allowed_types['numpy']:
+        if t in array_types['numpy']:
             return ArrayType.NUMPY
-        elif t in allowed_types['mxnet']:
+        elif t in array_types['mxnet']:
             return ArrayType.MXNET
         else:
             raise UnknownArrayTypeError(
@@ -158,179 +364,6 @@ class Array(Value):
     def shape(self):
         return self._data.values()[0].shape
 
-    # TODO special function redirection and __getattr__ redirection
-    def __getattr__(self, name):
-        # TODO la magie
-        pass
-
-    def __cmp__(self, other):
-        pass
-
-    def __eq__(self, other):
-        pass
-
-    def __ne__(self, other):
-        pass
-
-    def __lt__(self, other):
-        pass
-
-    def __gt__(self, other):
-        pass
-
-    def __le__(self, other):
-        pass
-
-    def __ge__(self, other):
-        pass
-
-    def __pos__(self):
-        pass
-
-    def __neg__(self):
-        return Array._ns.negative(self)
-
-    def __abs__(self):
-        pass
-
-    def __invert__(self):
-        pass
-
-    def __round__(self, n):
-        pass
-
-    def __floor__(self):
-        pass
-
-    def __ceil__(self):
-        pass
-
-    def __trunc__(self):
-        pass
-
-    def __add__(self, other):
-        return Array._ns.add(self, other)
-
-    def __sub__(self, other):
-        return Array._ns.subtract(self, other)
-
-    def __mul__(self, other):
-        return Array._ns.multiply(self, other)
-
-    def __floordiv__(self, other):
-        pass
-
-    def __div__(self, other):
-        return Array._ns.divide(self, other)
-
-    def __truediv__(self, other):
-        return Array._ns.true_divide(self, other)
-
-    def __mod__(self, other):
-        return Array._ns.mod(self, other)
-
-    def __divmod__(self, other):
-        pass
-
-    def __pow__(self, other):
-        return Array._ns.power(self, other)
-
-    def __lshift__(self, other):
-        pass
-
-    def __rshift__(self, other):
-        pass
-
-    def __and__(self, other):
-        pass
-
-    def __or__(self, other):
-        pass
-
-    def __xor__(self, other):
-        pass
-
-    def __radd__(self, other):
-        return Array._ns.add(other, self)
-
-    def __rsub__(self, other):
-        return Array._ns.subtract(other, self)
-
-    def __rmul__(self, other):
-        return Array._ns.multiply(other, self)
-
-    def __rfloordiv__(self, other):
-        pass
-
-    def __rdiv__(self, other):
-        return Array._ns.divide(other, self)
-
-    def __rtruediv__(self, other):
-        return Array._ns.true_divide(other, self)
-
-    def __rmod__(self, other):
-        return Array._ns.mod(other, self)
-
-    def __rdivmod__(self, other):
-        return Array._ns.mod(other, self)
-
-    def __rpow__(self, other):
-        return Array._ns.power(other, self)
-
-    def __rlshift__(self, other):
-        pass
-
-    def __rrshift__(self, other):
-        pass
-
-    def __rand__(self, other):
-        pass
-
-    def __ror__(self, other):
-        pass
-
-    def __rxor__(self, other):
-        pass
-
-    def __iadd__(self, other):
-        return Array._ns.add(other, self)
-
-    def __isub__(self, other):
-        return Array._ns.subtract(other, self)
-
-    def __imul__(self, other):
-        return Array._ns.multiply(other, self)
-
-    def __ifloordiv__(self, other):
-        pass
-
-    def __idiv__(self, other):
-        return Array._ns.divide(other, self)
-
-    def __itruediv__(self, other):
-        return Array._ns.true_divide(other, self)
-
-    def __imod__(self, other):
-        return Array._ns.mod(other, self)
-
-    def __ipow__(self, other):
-        return Array._ns.power(other, self)
-
-    def __ilshift__(self, other):
-        pass
-
-    def __irshift__(self, other):
-        pass
-
-    def __iand__(self, other):
-        pass
-
-    def __ior__(self, other):
-        pass
-
-    def __ixor__(self, other):
-        pass
-
 class Primitive(object):
     """Primitive computation."""
     __slots__ = ['_func', '_grad_func', '_grad_func_kw', '_type']
@@ -370,7 +403,7 @@ class Primitive(object):
                 Arguments for the wrapped function.
 
         Returns:
-            An `Array` representing the result.
+            An `Value` representing the result.
 
         Raises:
             IndexError:
@@ -381,7 +414,7 @@ class Primitive(object):
         _logger.debug('Calling {} type {}'.format(self._func, self.typestr))
 
         def get_val(x):
-            return x.get_data(self._type) if isinstance(x, Array) else x
+            return x.get_data(self._type) if isinstance(x, Value) else x
         # Get underlying data.
         arg_values = tuple(map(get_val, args))
         kwargs_values = {x: get_val(kwargs[x]) for x in kwargs}
@@ -389,7 +422,7 @@ class Primitive(object):
         result_value = self._func(*arg_values, **kwargs_values)
         # whether the result is on the bp path
         def scan(accum, x):
-            if isinstance(x, Array):
+            if isinstance(x, Value):
                 return operator.or_(accum, x._marked_for_bp)
             else:
                 return accum
@@ -401,16 +434,16 @@ class Primitive(object):
         result_value_type = type(result_value)
         if need_bp:
             # Wrap the result raw value with wrapper and node.
-            result = Array(result_value, marked=True)
-            # Record partial derivative paths, only for `Array` type values.
+            result = Value.wrap(result_value, marked=True)
+            # Record partial derivative paths, only for `Value` type values.
             # If no gradient function is defined, also omit it
             for i, arg in enumerate(args):
-                if isinstance(arg, Array) and i < len(self._grad_func):
+                if isinstance(arg, Value) and i < len(self._grad_func):
                     arg.node.add_partial_derivative(
                             self._grad_func[i](result_value, *arg_values, **kwargs_values),
                             result.node, self)
             for x in kwargs:
-                if isinstance(arg, Array) and x in self._grad_func_kw:
+                if isinstance(arg, Value) and x in self._grad_func_kw:
                     arg.node.add_partial_derivative(
                             self._grad_func_kw[x](result_value, *arg_values, **kwargs_values),
                             result.node, self)
