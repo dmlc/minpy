@@ -12,7 +12,7 @@ def grad(func, argnum=0):
     @functools.wraps(func)
     def wrapped(*args):
         def make_array(x):
-            return x if isinstance(x, array.Array) else array.Array(x)
+            return x if isinstance(x, array.Value) else array.Value.wrap(x)
         arrays = tuple(map(make_array, args))
         arrays[argnum]._marked_for_bp = True
         result_array = func(*arrays)
