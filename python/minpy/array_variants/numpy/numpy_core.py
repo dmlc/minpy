@@ -46,6 +46,7 @@ def def_grads(reg, prims):
     # Nonlinear functions.
     prims('tanh').def_grad(lambda ans, x: lambda g: g / np.cosh(x) ** 2)
     prims('log').def_grad(lambda ans, x: lambda g: g / x)
+    prims('exp').def_grad(lambda ans, x: lambda g: ans * g)
 
     prims('sum').def_grad(lambda ans, x: lambda g: np.full(x.shape, g))
     prims('multiply').def_grad(lambda ans, x,

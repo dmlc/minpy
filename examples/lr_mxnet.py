@@ -22,11 +22,9 @@ weights = random.rand(*wshape) - 0.5
 
 training_gradient_fun = grad(training_loss)
 
-print('Initial loss: {}'.format(training_loss(weights, inputs)))
-
 for i in range(100):
+    if i % 10 == 0:
+        print('Trained loss #{}: {}'.format(i, training_loss(weights, inputs)))
     gr = training_gradient_fun(weights, inputs)
     #print('Training gradient: {}'.format(gr))
     weights -= gr * 0.1
-    if i % 10 == 0:
-        print('Trained loss: {}'.format(training_loss(weights, inputs)))
