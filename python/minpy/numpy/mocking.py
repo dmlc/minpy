@@ -41,6 +41,9 @@ class Module(object):
             # define gradients of primitives
             mod.def_grads(self._registry, primitive_getter)
         self._logger.info('Import {} primitives'.format(len(self._registry._reg)))
+
+    def set_policy(self, plc):
+        self._policy = plc
     
     def __getattr__(self, name):
         self._logger.debug('Look up name {}'.format(name))

@@ -1,6 +1,9 @@
 from minpy.core import grad
 import minpy.numpy as np
 import minpy.numpy.random as random
+import minpy.dispatch.policy as policy
+
+np.set_policy(policy.OnlyNumpyPolicy())
 
 def sigmoid(x):
     return 0.5 * (np.tanh(x) + 1)
@@ -14,19 +17,25 @@ def training_loss(weights, inputs):
     #print 'size', label_probabilities.shape, np.count_nonzero(label_probabilities)
     return -np.sum(np.log(label_probabilities))
 
+def training_accuracy(weights, inputs):
+    preds = predict(weights, inputs)
+    error = np.count_nonzero(np.argmax(preds, axis=1) - np.argmax(targets, axis=1))
+    return (256 - error) * 100 / 256.0
+
 xshape = (256, 500)
 wshape = (500, 250)
 tshape = (256, 250)
 inputs = random.rand(*xshape) - 0.5
-targets = random.randint(0, 2, size=tshape)
+targets = np.zeros(tshape)
+truth = random.randint(0, 250, 256)
+targets[np.arange(256), truth] = 1
 weights = random.rand(*wshape) - 0.5
 
 training_gradient_fun = grad(training_loss)
 
-for i in range(100):
-    if i % 10 == 0:
-        print('Trained loss #{}: {}'.format(i, training_loss(weights, inputs)))
+for i in range(10):
+    print('Trained loss accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))
     gr = training_gradient_fun(weights, inputs)
+    #print gr
     #print('Training gradient: {}'.format(gr))
     weights -= gr * 0.1
-    #print gr

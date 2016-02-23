@@ -21,7 +21,7 @@ from .array_variants import number_types
 
 import mxnet #FIXME: should not import this; use array_invariants instead
 
-_logger = log.get_logger(__name__)
+_logger = log.get_logger(__name__, logging.INFO)
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -225,28 +225,28 @@ class Value(object):
         pass
 
     def __iadd__(self, other):
-        return Value._ns.add(other, self)
+        return Value._ns.add(self, add)
 
     def __isub__(self, other):
-        return Value._ns.subtract(other, self)
+        return Value._ns.subtract(self, other)
 
     def __imul__(self, other):
-        return Value._ns.multiply(other, self)
+        return Value._ns.multiply(self, other)
 
     def __ifloordiv__(self, other):
         pass
 
     def __idiv__(self, other):
-        return Value._ns.divide(other, self)
+        return Value._ns.divide(self, other)
 
     def __itruediv__(self, other):
-        return Value._ns.true_divide(other, self)
+        return Value._ns.true_divide(self, other)
 
     def __imod__(self, other):
-        return Value._ns.mod(other, self)
+        return Value._ns.mod(self, other)
 
     def __ipow__(self, other):
-        return Value._ns.power(other, self)
+        return Value._ns.power(self, other)
 
     def __ilshift__(self, other):
         pass
@@ -366,6 +366,14 @@ class Array(Value):
     def shape(self):
         return self._data.values()[0].shape
 
+    def __setitem__(self, index, val):
+        def get_val(x):
+            return x.get_data(ArrayType.NUMPY) if isinstance(x, Value) else x
+        # TODO hack
+        index_value = tuple(map(get_val, index))
+        val_value = get_val(val)
+        self.get_data_mutable(ArrayType.NUMPY).__setitem__(index_value, val_value)
+
 class Primitive(object):
     """Primitive computation."""
     __slots__ = ['_func', '_grad_func', '_grad_func_kw', '_type']
@@ -433,7 +441,6 @@ class Primitive(object):
         need_bp = functools.reduce(scan,
                          itertools.chain(args, kwargs.values()),
                          False)
-        result_value_type = type(result_value)
         # Wrap the result raw value with wrapper and node.
         result = Value.wrap(result_value, marked=need_bp)
         if need_bp:

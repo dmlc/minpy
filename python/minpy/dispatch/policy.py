@@ -19,12 +19,19 @@ class Policy(object):
 
 class PreferMXNetPolicy(Policy):
     """Perfer using MXNet functions."""
-
     def decide(self, candidates, *args, **kwargs):
         if FunctionType.MXNET in candidates:
             return FunctionType.MXNET
         else:
             return FunctionType.NUMPY
+
+class OnlyNumpyPolicy(Policy):
+    """Perfer using MXNet functions."""
+    def decide(self, candidates, *args, **kwargs):
+        if FunctionType.NUMPY in candidates:
+            return FunctionType.NUMPY
+        else:
+            raise ValueError("Cannot find proper functions among: {}".format(candidates))
 
 def resolve_name(name, reg, plc, *args, **kwargs):
     """Resolve a function name.

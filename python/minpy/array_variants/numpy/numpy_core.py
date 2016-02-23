@@ -33,8 +33,12 @@ def unbroadcast(ans, x, gradfun):
     new_fun.__name__ = 'unbroadcast_{0}'.format(gradfun.__name__)
     return new_fun
 
+def getitem(d, index):
+    return d[index]
+
 def register_primitives(reg, prim_wrapper):
     numpy_wrapper.wrap_namespace(np.__dict__, reg, prim_wrapper)
+    reg.register('getitem', prim_wrapper(getitem))
 
 def def_grads(reg, prims):
     def identity(x):
