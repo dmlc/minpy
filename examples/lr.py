@@ -3,7 +3,7 @@ import minpy.numpy as np
 import minpy.numpy.random as random
 import minpy.dispatch.policy as policy
 
-np.set_policy(policy.OnlyNumpyPolicy())
+#np.set_policy(policy.OnlyNumpyPolicy())
 
 def sigmoid(x):
     return 0.5 * (np.tanh(x) + 1)
@@ -36,6 +36,4 @@ training_gradient_fun = grad(training_loss)
 for i in range(10):
     print('Trained loss accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))
     gr = training_gradient_fun(weights, inputs)
-    #print gr
-    #print('Training gradient: {}'.format(gr))
     weights -= gr * 0.1
