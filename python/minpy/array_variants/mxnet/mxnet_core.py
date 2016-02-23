@@ -35,9 +35,9 @@ def def_grads(reg, prims):
     prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
     prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, y, operator.neg), argnum=1)
     prims('divide').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
-    prims('divide').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / y * y), argnum=1)
+    prims('divide').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / (y * y)), argnum=1)
     prims('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
-    prims('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / y * y), argnum=1)
+    prims('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / (y * y)), argnum=1)
     # power
     #prims.power.def_grad(lambda ans, x, y : unbroadcast(ans, x, lambda g : g * y * x ** (y - 1)))
     #prims.power.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : g * ndarray.log(x) * x ** y), argnum=1)

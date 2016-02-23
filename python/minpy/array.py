@@ -49,21 +49,21 @@ class Node(object):
         :param Node target: target variable to compute partial derivative
         """
         assert(isinstance(target, Node))
-        if target in self._partial_derivative_cache:
-            return self._partial_derivative_cache[target]
-        else:
+        if not target in self._partial_derivative_cache:
             if self is target:  # Partial derivative of self is one.
-                return 1.0
+                self._partial_derivative_cache[target] = Value.wrap(1.0)
             else:
                 def call(rec):
                     _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
-                    return rec[0](rec[1].partial_derivative(target))
+                    grad = rec[1].partial_derivative(target)
+                    grad_value = grad.get_data(rec[2]._type)
+                    return rec[0](grad_value)
                 res = functools.reduce(
                         operator.add,
                         map(call, self._partial_derivatives),
                         0.0)
-                self._partial_derivative_cache[target] = res
-                return res
+                self._partial_derivative_cache[target] = Value.wrap(res)
+        return self._partial_derivative_cache[target]
 
 class ArrayTypeMissingError(ValueError):
     pass
@@ -77,7 +77,9 @@ class Value(object):
     @staticmethod
     def wrap(d, *args, **kwargs):
         t = type(d)
-        if t in itertools.chain(*array_types.values()):
+        if isinstance(d, Value):
+            return d
+        elif t in array_types.values():
             return Array(d, *args, **kwargs)
         elif t in itertools.chain(*number_types.values()):
             return Number(d, *args, **kwargs)
@@ -303,9 +305,9 @@ class Array(Value):
     @staticmethod
     def to_array_type(arr):
         t = type(arr)
-        if t in array_types['numpy']:
+        if t == array_types['numpy']:
             return ArrayType.NUMPY
-        elif t in array_types['mxnet']:
+        elif t == array_types['mxnet']:
             return ArrayType.MXNET
         else:
             raise UnknownArrayTypeError(
@@ -432,9 +434,9 @@ class Primitive(object):
                          itertools.chain(args, kwargs.values()),
                          False)
         result_value_type = type(result_value)
+        # Wrap the result raw value with wrapper and node.
+        result = Value.wrap(result_value, marked=need_bp)
         if need_bp:
-            # Wrap the result raw value with wrapper and node.
-            result = Value.wrap(result_value, marked=True)
             # Record partial derivative paths, only for `Value` type values.
             # If no gradient function is defined, also omit it
             for i, arg in enumerate(args):
@@ -447,8 +449,6 @@ class Primitive(object):
                     arg.node.add_partial_derivative(
                             self._grad_func_kw[x](result_value, *arg_values, **kwargs_values),
                             result.node, self)
-        else:
-            result = result_value
         return result
 
     def _enforce_input_type(self, f):
