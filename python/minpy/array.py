@@ -18,10 +18,12 @@ from .array_variants import FunctionType
 from .array_variants import ArrayType
 from .array_variants import array_types
 from .array_variants import number_types
+ 
+ #FIXME: should not import these; use array_invariants instead
+import mxnet
+import numpy
 
-import mxnet #FIXME: should not import this; use array_invariants instead
-
-_logger = log.get_logger(__name__, logging.DEBUG)
+_logger = log.get_logger(__name__, logging.INFO)
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -57,7 +59,6 @@ class Node(object):
                     _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
                     grad = rec[1].partial_derivative(target)
                     grad_value = grad.get_data(rec[2]._type)
-                    print(grad_value)
                     return rec[0](grad_value)
                 res = functools.reduce(
                         operator.add,
