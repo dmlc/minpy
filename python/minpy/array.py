@@ -21,7 +21,7 @@ from .array_variants import number_types
 
 import mxnet #FIXME: should not import this; use array_invariants instead
 
-_logger = log.get_logger(__name__, logging.INFO)
+_logger = log.get_logger(__name__, logging.DEBUG)
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -57,6 +57,7 @@ class Node(object):
                     _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
                     grad = rec[1].partial_derivative(target)
                     grad_value = grad.get_data(rec[2]._type)
+                    print(grad_value)
                     return rec[0](grad_value)
                 res = functools.reduce(
                         operator.add,
@@ -88,11 +89,6 @@ class Value(object):
 
     def get_data(self, t):
         assert(False)
-        pass
-
-    # TODO special function redirection and __getattr__ redirection
-    def __getattr__(self, name):
-        # TODO la magie
         pass
 
     def __cmp__(self, other):
