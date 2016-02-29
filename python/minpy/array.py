@@ -78,6 +78,8 @@ class Value(object):
 
     @staticmethod
     def wrap(d, *args, **kwargs):
+        if d is None:
+            return None
         t = type(d)
         if isinstance(d, Value):
             return d
@@ -363,13 +365,17 @@ class Array(Value):
     def shape(self):
         return self._data.values()[0].shape
 
+    def __getitem__(self, index):
+        return Value._ns.getitem(self, index)
+
     def __setitem__(self, index, val):
-        def get_val(x):
-            return x.get_data(ArrayType.NUMPY) if isinstance(x, Value) else x
+        Value._ns.setitem(self, index, val)
+        #def get_val(x):
+            #return x.get_data(ArrayType.NUMPY) if isinstance(x, Value) else x
         # TODO hack
-        index_value = tuple(map(get_val, index))
-        val_value = get_val(val)
-        self.get_data_mutable(ArrayType.NUMPY).__setitem__(index_value, val_value)
+        #index_value = tuple(map(get_val, index))
+        #val_value = get_val(val)
+        #self.get_data_mutable(ArrayType.NUMPY).__setitem__(index_value, val_value)
 
 class Primitive(object):
     """Primitive computation."""
@@ -421,7 +427,12 @@ class Primitive(object):
         _logger.debug('Calling {} type {}'.format(self._func, self.typestr))
 
         def get_val(x):
-            return x.get_data(self._type) if isinstance(x, Value) else x
+            try:
+                xv = Value.wrap(x)
+                return xv.get_data(self._type)
+            except: # if wrap failed, just return the original value
+                pass
+            return x
         # Get underlying data.
         arg_values = tuple(map(get_val, args))
         kwargs_values = {x: get_val(kwargs[x]) for x in kwargs}
