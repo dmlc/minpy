@@ -366,16 +366,27 @@ class Array(Value):
         return self._data.values()[0].shape
 
     def __getitem__(self, index):
-        return Value._ns.getitem(self, index)
+        """ Get item only supports indexing type of numpy arrays right now,
+        since mxnet.ndarray does not support int type & indexing
+        """
+        np_index = None
+        if isinstance(index, tuple):
+            np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
+        else:
+            np_index = Value.Wrap(index).get_data(ArrayType.NUMPY)
+        return Value.wrap(self.get_data(ArrayType.NUMPY)[np_index])
 
     def __setitem__(self, index, val):
-        Value._ns.setitem(self, index, val)
-        #def get_val(x):
-            #return x.get_data(ArrayType.NUMPY) if isinstance(x, Value) else x
-        # TODO hack
-        #index_value = tuple(map(get_val, index))
-        #val_value = get_val(val)
-        #self.get_data_mutable(ArrayType.NUMPY).__setitem__(index_value, val_value)
+        """ Set item only supports indexing type of numpy arrays right now,
+        since mxnet.ndarray does not support int type & indexing
+        """
+        np_index = None
+        if isinstance(index, tuple):
+            np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
+        else:
+            np_index = Value.Wrap(index).get_data(ArrayType.NUMPY)
+        np_val = Value.wrap(val).get_data(ArrayType.NUMPY)
+        self.get_data_mutable(ArrayType.NUMPY)[np_index] = np_val
 
 class Primitive(object):
     """Primitive computation."""
