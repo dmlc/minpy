@@ -369,6 +369,8 @@ class Array(Value):
         """ Get item only supports indexing type of numpy arrays right now,
         since mxnet.ndarray does not support int type & indexing
         """
+        #XXX: Ideally, we should use the namespace dispatcher to select appropriate getitem.
+        #     However, we don't have good support for int array now
         np_index = None
         if isinstance(index, tuple):
             np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
@@ -380,6 +382,8 @@ class Array(Value):
         """ Set item only supports indexing type of numpy arrays right now,
         since mxnet.ndarray does not support int type & indexing
         """
+        #XXX: Ideally, we should use the namespace dispatcher to select appropriate setitem.
+        #     However, we don't have good support for int array now
         np_index = None
         if isinstance(index, tuple):
             np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
