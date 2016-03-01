@@ -39,10 +39,10 @@ def getitem(d, index):
 def setitem(d, index, val):
     d[index] = val
 
-def register_primitives(reg, prim_wrapper):
-    numpy_wrapper.wrap_namespace(np.__dict__, reg, prim_wrapper)
-    reg.register('getitem', prim_wrapper(getitem))
-    reg.register('setitem', prim_wrapper(setitem))
+def register_primitives(reg, make_prim):
+    numpy_wrapper.wrap_namespace(np.__dict__, reg, make_prim)
+    reg.register('getitem', make_prim(getitem))
+    reg.register('setitem', make_prim(setitem, mutate_args=[0]))
 
 def def_grads(reg, prims):
     def identity(x):

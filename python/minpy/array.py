@@ -23,7 +23,7 @@ from .array_variants import number_types
 import mxnet
 import numpy
 
-_logger = log.get_logger(__name__, logging.INFO)
+_logger = log.get_logger(__name__)
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -379,9 +379,9 @@ class Array(Value):
 
 class Primitive(object):
     """Primitive computation."""
-    __slots__ = ['_func', '_grad_func', '_grad_func_kw', '_type']
+    __slots__ = ['_func', '_grad_func', '_grad_func_kw', '_type', '_mutate_args', '_mutate_kw']
 
-    def __init__(self, func, ty):
+    def __init__(self, func, ty, mutate_args=[], mutate_kw=[]):
         """Initialize.
         Args:
             func: A function that performs the action.
@@ -390,6 +390,8 @@ class Primitive(object):
         self._grad_func = {}
         self._grad_func_kw = {}
         self._type = ty
+        self._mutate_args = mutate_args
+        self._mutate_kw = mutate_kw
 
     @property
     def type(self):
@@ -426,16 +428,19 @@ class Primitive(object):
         """
         _logger.debug('Calling {} type {}'.format(self._func, self.typestr))
 
-        def get_val(x):
+        def get_val(x, mutate):
             try:
                 xv = Value.wrap(x)
-                return xv.get_data(self._type)
+                if mutate:
+                    return xv.get_data_mutable(self._type)
+                else:
+                    return xv.get_data(self._type)
             except: # if wrap failed, just return the original value
                 pass
             return x
         # Get underlying data.
-        arg_values = tuple(map(get_val, args))
-        kwargs_values = {x: get_val(kwargs[x]) for x in kwargs}
+        arg_values = tuple(get_val(args[i], i in self._mutate_args) for i in range(len(args)))
+        kwargs_values = {k: get_val(kwargs[k], k in self._mutate_kw) for k in kwargs}
         # Call the real function with raw value.
         result_value = self._func(*arg_values, **kwargs_values)
         # whether the result is on the bp path

@@ -32,7 +32,8 @@ class Module(object):
             mod = importlib.import_module(modname)
             self._logger.info('Importing from {}'.format(modname))
             #TODO better wrapper?
-            primitive_wrapper = lambda func : array.Primitive(func, variants[vname][1])
+            primitive_wrapper = lambda func, *args, **kwargs:\
+                array.Primitive(func, variants[vname][1], *args, **kwargs)
             # register all primitives of the module
             before = len(self._registry._reg)
             mod.register_primitives(self._registry, primitive_wrapper)
@@ -44,6 +45,10 @@ class Module(object):
 
     def set_policy(self, plc):
         self._policy = plc
+
+    def look_up(self, name):
+        prim =  policy.resolve_name(name, self._registry, self._policy)
+        return prim.typestr
     
     def __getattr__(self, name):
         self._logger.debug('Look up name {}'.format(name))
