@@ -7,23 +7,14 @@ from ..utils import common
 from . import numpy
 from . import mxnet
 
-class FunctionType(enum.Enum):
-    """Enumeration of types of functions.
-
-    Semantically this is different from :class:`..array.ArrayType`,
-    but for now one data type corresponds to one function type.
-    """
-    NUMPY = 0
-    MXNET = 1
-
 class ArrayType(enum.Enum):
     """Enumeration of types of arrays."""
     NUMPY = 0
     MXNET = 1
 
 variants = {
-        'numpy': (ArrayType.NUMPY, FunctionType.NUMPY),
-        'mxnet': (ArrayType.MXNET, FunctionType.MXNET)
+        'numpy': ArrayType.NUMPY,
+        'mxnet': ArrayType.MXNET
         }
 
 array_types = {

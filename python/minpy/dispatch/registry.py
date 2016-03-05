@@ -17,7 +17,6 @@ class Registry(object):
     def __init__(self):
         self._reg = {}
 
-    #def register(self, name: str, func: types.FunctionType, t: FunctionType):
     def register(self, name, prim):
         """Register primitive.
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Policy for selecting appropriate function to call."""
 from ..utils import log
-from ..array_variants import FunctionType
+from ..array_variants import ArrayType
 
 _logger = log.get_logger(__name__)
 
@@ -20,16 +20,16 @@ class Policy(object):
 class PreferMXNetPolicy(Policy):
     """Perfer using MXNet functions."""
     def decide(self, candidates, *args, **kwargs):
-        if FunctionType.MXNET in candidates:
-            return FunctionType.MXNET
+        if ArrayType.MXNET in candidates:
+            return ArrayType.MXNET
         else:
-            return FunctionType.NUMPY
+            return ArrayType.NUMPY
 
 class OnlyNumpyPolicy(Policy):
     """Perfer using MXNet functions."""
     def decide(self, candidates, *args, **kwargs):
-        if FunctionType.NUMPY in candidates:
-            return FunctionType.NUMPY
+        if ArrayType.NUMPY in candidates:
+            return ArrayType.NUMPY
         else:
             raise ValueError("Cannot find proper functions among: {}".format(candidates))
 

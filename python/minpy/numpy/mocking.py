@@ -33,12 +33,12 @@ class Module(object):
             self._logger.info('Importing from {}'.format(modname))
             #TODO better wrapper?
             primitive_wrapper = lambda func, *args, **kwargs:\
-                array.Primitive(func, variants[vname][1], *args, **kwargs)
+                array.Primitive(func, variants[vname], *args, **kwargs)
             # register all primitives of the module
             before = len(self._registry._reg)
             mod.register_primitives(self._registry, primitive_wrapper)
             self._logger.info('Got {} primitives from {}'.format(len(self._registry._reg) - before, modname))
-            primitive_getter = lambda name : self._registry.get(name, variants[vname][1])
+            primitive_getter = lambda name : self._registry.get(name, variants[vname])
             # define gradients of primitives
             mod.def_grads(self._registry, primitive_getter)
         self._logger.info('Import {} primitives'.format(len(self._registry._reg)))

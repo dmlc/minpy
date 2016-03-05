@@ -14,7 +14,6 @@ import logging
 from .utils import log
 from .utils import common
 #import typing
-from .array_variants import FunctionType
 from .array_variants import ArrayType
 from .array_variants import array_types
 from .array_variants import number_types
@@ -414,9 +413,9 @@ class Primitive(object):
 
     @property
     def typestr(self):
-        if self._type == FunctionType.NUMPY:
+        if self._type == ArrayType.NUMPY:
             return "numpy"
-        elif self._type == FunctionType.MXNET:
+        elif self._type == ArrayType.MXNET:
             return "mxnet"
         else:
             return "N/A"
@@ -450,7 +449,7 @@ class Primitive(object):
                     return xv.get_data_mutable(self._type)
                 else:
                     return xv.get_data(self._type)
-            except: # if wrap failed, just return the original value
+            except UnknownArrayTypeError: # if wrap failed, just return the original value
                 pass
             return x
         # Get underlying data.
@@ -488,9 +487,9 @@ class Primitive(object):
 
     def _enforce_input_type(self, f):
         def enforce(x):
-            if self._type == FunctionType.NUMPY:
+            if self._type == ArrayType.NUMPY:
                 x.enforce_data(ArrayType.NUMPY)
-            elif self._type == FunctionType.MXNET:
+            elif self._type == ArrayType.MXNET:
                 x.enforce_data(ArrayType.MXNET)
 
         @functools.wraps(f)
