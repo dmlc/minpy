@@ -34,6 +34,7 @@ def quick_grad_check(fun, arg0, extra_args=(), kwargs={}, verbose=True,
         assert abs((analytic_grad - numeric_grad).get_data(None)) < atol and abs((analytic_grad - numeric_grad).get_data(None)) < abs((analytic_grad * rtol).get_data(None)), \
             "Check failed! nd={0}, ad={1}".format(numeric_grad, analytic_grad)
     elif isinstance(numeric_grad, minpy.array.Array):
+        assert nnp.prod(nnp.shape(analytic_grad.asnumpy())[:]) == 1, "Currently only support check loss"
         assert abs((analytic_grad - numeric_grad).asnumpy()) < atol and abs((analytic_grad - numeric_grad).asnumpy()) < abs((analytic_grad * rtol).asnumpy()), \
             "Check failed! nd={0}, ad={1}".format(numeric_grad, analytic_grad)
     else:
