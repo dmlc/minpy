@@ -479,8 +479,8 @@ class Primitive(object):
                             self._grad_func[i](result_value, *arg_values, **kwargs_values),
                             result.node, self)
             for x in kwargs:
-                if isinstance(arg, Value) and x in self._grad_func_kw:
-                    arg.node.add_partial_derivative(
+                if isinstance(kwargs[x], Value) and x in self._grad_func_kw:
+                    kwargs[x].node.add_partial_derivative(
                             self._grad_func_kw[x](result_value, *arg_values, **kwargs_values),
                             result.node, self)
         return result
@@ -521,7 +521,7 @@ class Primitive(object):
                 Key name of the argument.
         """
         #self._grad_func[key] = self._enforce_input_type(func)
-        self._grad_func[key] = func
+        self._grad_func_kw[key] = func
         return self
 
     def def_grad_zero(self, argnum=0):
