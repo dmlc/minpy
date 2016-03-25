@@ -2,7 +2,7 @@ import minpy.numpy as np
 import minpy.numpy.random as npr
 
 def sigmoid(x):
-    return 0.5*(np.tanh(x) + 1.0)   # Output ranges from 0 to 1.
+    return 0.5*(np.tanh(x / 2.0) + 1.0)   # Output ranges from 0 to 1.
 
 def activations(weights, *args):
     cat_state = np.concatenate(args + (np.ones((args[0].shape[0],1)),), axis=1)

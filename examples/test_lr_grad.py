@@ -2,7 +2,7 @@ from minpy.core import grad
 import minpy.numpy as np
 import minpy.numpy.random as random
 import minpy.dispatch.policy as policy
-
+import gradient_checker
 #np.set_policy(policy.OnlyNumpyPolicy())
 
 def sigmoid(x):
@@ -31,9 +31,4 @@ truth = random.randint(0, 250, 256)
 targets[np.arange(256), truth] = 1
 weights = random.rand(*wshape) - 0.5
 
-training_gradient_fun = grad(training_loss)
-
-for i in range(20):
-    print('Trained loss accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))
-    gr = training_gradient_fun(weights, inputs)
-    weights -= gr * 0.01
+gradient_checker.quick_grad_check(training_loss, weights, inputs)

@@ -1,30 +1,36 @@
 from minpy import core
 import minpy.numpy as np
+import minpy.numpy.random as random
 import mxnet as mx
 
 def sigmoid(x):
     return np.multiply(0.5, np.add(np.tanh(x), 1))
 
+xshape = (256, 500)
+#needs to reverse. because of mixnet's setting
+wshape = (250, 500)
+tshape = (256, 250)
+inputs = random.rand(*xshape) - 0.5
+targets = np.zeros(tshape)
+truth = random.randint(0, 250, 256)
+targets[np.arange(256), truth] = 1
+weights = np.random.rand(*wshape) - 0.5
+
 x = mx.sym.Variable(name='x')
-fc = mx.sym.FullyConnected(name='fc', data=x)
-#fc = mx.sym.FullyConnected(name='fc', data=x, num_hidden=inputs.shape[1])
-act = mx.sym.Activation(data=fc, act_type='sigmoid'）
-f = core.function(act)
+fc = mx.sym.FullyConnected(name='fc', data=x, num_hidden=250)
+act = mx.sym.Activation(data=fc, act_type='sigmoid')
+
+f = core.function(act, [('x', xshape)])
 
 def predict(weights, inputs):
-    return f(x=inputs, fc_weight=weights, ctx=mx.cpu())
+    #return f( data=[('x', inputs)], weight=[('fc_weight', weights)], ctx=mx.cpu())
+    return f(x = inputs, fc_weight = weights)
 
 def training_loss(weights, inputs):
     preds = predict(weights, inputs)
     label_probabilities = preds * targets + (1 - preds) * (1 - targets)
     return -np.sum(np.log(label_probabilities))
 
-xshape = (256, 500)
-wshape = (500, 250)
-tshape = (256, 250)
-inputs = np.random.rand(*xshape) - 0.5
-targets = np.random.randint(0, 2, size=tshape)
-weights = np.random.rand(*wshape) - 0.5
 
 training_gradient_fun = core.grad(training_loss)
 
