@@ -9,11 +9,30 @@ from mxnet import ndarray
 from . import mxnet_wrapper
 
 def unbroadcast(ans, x, gradfun):
-    # TODO currently no broadcasting for mx.ndarray
-    return gradfun
+    def newgradfun(g):
+        gg = g
+        for axis, (i, j) in enumerate(zip(g.shape, x.shape)):
+            if i != j:
+                gg = ndarray.sum(gg, axis=axis, keepdims=True)
+        return gradfun(gg)
+    return newgradfun
 
 def register_primitives(reg, prim_wrapper):
     mxnet_wrapper.wrap_namespace(mxnet.ndarray.__dict__, reg, prim_wrapper)
+
+def gen_sum_grad(ans, x, axis, keepdims):
+    xshape = x.shape
+    if axis is None:
+        return lambda g: ndarray.full(x.shape, g, x.context)
+    if type(axis) is int:
+        axis = [axis]
+    elif type(axis) is tuple:
+        axis = list(axis)
+    for a in axis:
+        xshape[a] = 1
+    def sum_grad(g):
+        return ndarray.zeros(x.shape) + g.reshape(xshape)
+    return sum_grad
 
 def def_grads(reg, prims):
     def identity(x):
@@ -26,7 +45,7 @@ def def_grads(reg, prims):
     prims('exp').def_grad(lambda ans, x: lambda g: g * ans)
     prims('log').def_grad(lambda ans, x: lambda g: g / x)
     # reduce
-    prims('sum').def_grad(lambda ans, x: lambda g: ndarray.full(x.shape, g, x.context))
+    prims('sum').def_grad(lambda ans, x, axis=None, keepdims=False: gen_sum_grad(ans, x, axis, keepdims))
     # + - * /
     prims('multiply').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y))
     prims('multiply').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: x * g), argnum=1)
