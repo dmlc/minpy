@@ -9,12 +9,17 @@ from mxnet import ndarray
 from . import mxnet_wrapper
 
 def unbroadcast(ans, x, gradfun):
+    padded_shape = (1,) * (len(ans.shape) - len(x.shape)) + x.shape
     def newgradfun(g):
-        gg = g
-        for axis, (i, j) in enumerate(zip(g.shape, x.shape)):
+        gg = gradfun(g)
+        if gg.shape != padded_shape:
+            gg = gg.reshape(padded_shape)
+        for axis, (i, j) in enumerate(zip(g.shape, padded_shape)):
             if i != j:
                 gg = ndarray.sum(gg, axis=axis, keepdims=True)
-        return gradfun(gg)
+        if gg.shape != x.shape:
+            gg = gg.reshape(x.shape)
+        return gg
     return newgradfun
 
 def register_primitives(reg, prim_wrapper):

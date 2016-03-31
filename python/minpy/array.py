@@ -22,7 +22,7 @@ from .array_variants import number_types
 import mxnet
 import numpy
 
-_logger = log.get_logger(__name__)
+_logger = log.get_logger(__name__, logging.INFO)
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -72,6 +72,9 @@ class ArrayTypeMissingError(ValueError):
 class UnknownArrayTypeError(ValueError):
     pass
 
+class NoImplementationError(ValueError):
+    pass
+
 class Value(object):
     _ns = None
 
@@ -94,48 +97,56 @@ class Value(object):
         pass
 
     def __cmp__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __eq__(self, other):
-        pass
+        return Value._ns.equal(self, other)
 
     def __ne__(self, other):
-        pass
+        return Value._ns.not_equal(self, other)
 
     def __lt__(self, other):
-        pass
+        return Value._ns.less(self, other)
 
     def __gt__(self, other):
-        pass
+        return Value._ns.greater(self, other)
 
     def __le__(self, other):
-        pass
+        return Value._ns.less_equal(self, other)
 
     def __ge__(self, other):
-        pass
+        return Value._ns.greater_equal(self, other)
 
     def __pos__(self):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __neg__(self):
         return Value._ns.negative(self)
 
     def __abs__(self):
-        pass
+        raise NoImplementationError('Not implemented')
+        #return Value._ns.abs(self)
 
     def __invert__(self):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __round__(self, n):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __floor__(self):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __ceil__(self):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __trunc__(self):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __add__(self, other):
@@ -148,6 +159,7 @@ class Value(object):
         return Value._ns.multiply(self, other)
 
     def __floordiv__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __div__(self, other):
@@ -160,24 +172,30 @@ class Value(object):
         return Value._ns.mod(self, other)
 
     def __divmod__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __pow__(self, other):
         return Value._ns.power(self, other)
 
     def __lshift__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __rshift__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __and__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __or__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __xor__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __radd__(self, other):
@@ -190,6 +208,7 @@ class Value(object):
         return Value._ns.multiply(other, self)
 
     def __rfloordiv__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __rdiv__(self, other):
@@ -208,18 +227,23 @@ class Value(object):
         return Value._ns.power(other, self)
 
     def __rlshift__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __rrshift__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __rand__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __ror__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __rxor__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __iadd__(self, other):
@@ -232,6 +256,7 @@ class Value(object):
         return Value._ns.multiply(self, other)
 
     def __ifloordiv__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __idiv__(self, other):
@@ -247,18 +272,23 @@ class Value(object):
         return Value._ns.power(self, other)
 
     def __ilshift__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __irshift__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __iand__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __ior__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
     def __ixor__(self, other):
+        raise NoImplementationError('Not implemented')
         pass
 
 class Number(Value):
@@ -274,6 +304,10 @@ class Number(Value):
 
     def get_data(self, t):
         """Get array data of given type."""
+        return self._val
+
+    @property
+    def val(self):
         return self._val
 
     @property
@@ -323,6 +357,9 @@ class Array(Value):
         """Return whether array data of given type exists in the underlying storage.
         """
         return t in self._data.keys()
+
+    def reshape(self, new_shape):
+        return Value._ns.reshape(self, new_shape)
 
     def _synchronize_data(self):
         if self._latest_version == ArrayType.MXNET:
@@ -390,6 +427,10 @@ class Array(Value):
             np_index = Value.Wrap(index).get_data(ArrayType.NUMPY)
         np_val = Value.wrap(val).get_data(ArrayType.NUMPY)
         self.get_data_mutable(ArrayType.NUMPY)[np_index] = np_val
+
+    @property
+    def T(self):
+        return Value._ns.transpose(self)
 
 class Primitive(object):
     """Primitive computation."""

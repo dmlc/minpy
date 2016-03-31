@@ -4,7 +4,6 @@ from __future__ import absolute_import
 
 import sys
 from .mocking import Module
-import numpy.random
 
 _old = {
     '__name__' : __name__,
