@@ -6,27 +6,35 @@ from __future__ import absolute_import
 import operator
 import mxnet
 from mxnet import ndarray
+from mxnet.ndarray import NDArray
 from . import mxnet_wrapper
 
 def unbroadcast(ans, x, gradfun):
-    padded_shape = (1,) * (len(ans.shape) - len(x.shape)) + x.shape
-    def newgradfun(g):
-        gg = gradfun(g)
-        if gg.shape != padded_shape:
-            gg = gg.reshape(padded_shape)
-        for axis, (i, j) in enumerate(zip(g.shape, padded_shape)):
-            if i != j:
-                gg = ndarray.sum(gg, axis=axis, keepdims=True)
-        if gg.shape != x.shape:
-            gg = gg.reshape(x.shape)
-        return gg
-    return newgradfun
+    if isinstance(ans, NDArray) and isinstance(x, NDArray):
+        padded_shape = (1,) * (len(ans.shape) - len(x.shape)) + x.shape
+        def newgradfun(g):
+            gg = gradfun(g)
+            if gg.shape != padded_shape:
+                gg = gg.reshape(padded_shape)
+            for axis, (i, j) in enumerate(zip(g.shape, padded_shape)):
+                if i != j:
+                    gg = ndarray.sum(gg, axis=axis, keepdims=True)
+            if gg.shape != x.shape:
+                gg = gg.reshape(x.shape)
+            return gg
+        return newgradfun
+    elif isinstance(ans, NDArray): # x is numerical value
+        def newgradfun(g):
+            gg = gradfun(g)
+            return ndarray.sum(gg)
+    else: # both ans and x are numerical value
+        return gradfun
 
 def register_primitives(reg, prim_wrapper):
     mxnet_wrapper.wrap_namespace(mxnet.ndarray.__dict__, reg, prim_wrapper)
 
 def gen_sum_grad(ans, x, axis, keepdims):
-    xshape = x.shape
+    xshape = list(x.shape)
     if axis is None:
         return lambda g: ndarray.full(x.shape, g, x.context)
     if type(axis) is int:
@@ -36,7 +44,7 @@ def gen_sum_grad(ans, x, axis, keepdims):
     for a in axis:
         xshape[a] = 1
     def sum_grad(g):
-        return ndarray.zeros(x.shape) + g.reshape(xshape)
+        return ndarray.zeros(x.shape, ctx=g.context) + g.reshape(tuple(xshape))
     return sum_grad
 
 def def_grads(reg, prims):
