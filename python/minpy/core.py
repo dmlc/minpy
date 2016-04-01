@@ -25,6 +25,20 @@ def grad(func, argnum=0):
         return grad_val
     return wrapped
 
+def grad_and_loss(func, argnum=0):
+    @functools.wraps(func)
+    def wrapped(*args):
+        def make_array(x):
+            return x if isinstance(x, array.Value) else array.Value.wrap(x)
+        arrays = tuple(map(make_array, args))
+        arrays[argnum]._marked_for_bp = True
+        result_array = func(*arrays)
+        _logger.debug('---Forward pass finished. Start backward pass')
+        grad_val = arrays[argnum].node.partial_derivative(result_array.node)
+        arrays[argnum]._marked_for_bp = False
+        return grad_val, result_array
+    return wrapped
+
 class MxnetSymbolArgErrorLackName(ValueError):
     pass
 

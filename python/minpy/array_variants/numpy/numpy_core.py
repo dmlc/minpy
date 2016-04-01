@@ -19,7 +19,6 @@ def unbroadcast(ans, x, gradfun):
     """
     if isinstance(x, np.ndarray):
         shape = x.shape
-
         def new_fun(g):
             result = gradfun(g)
             while len(shape) < np.ndim(result):
@@ -29,15 +28,15 @@ def unbroadcast(ans, x, gradfun):
                     result = np.sum(result, axis=axis, keepdims=True)
             assert np.shape(result) == shape
             return result
-    elif isinstance(ans, np.ndarray):
+    elif isinstance(ans, np.ndarray): # x is numerical value
         new_fun = lambda g: np.sum(gradfun(g))
-    else:
+    else: # both ans and x are numerical value
         return gradfun
     new_fun.__name__ = 'unbroadcast_{0}'.format(gradfun.__name__)
     return new_fun
 
 def gen_sum_grad(ans, x, axis, keepdims):
-    xshape = x.shape
+    xshape = list(x.shape)
     if axis is None:
         return lambda g: np.full(xshape, g)
     if type(axis) is int:
@@ -47,7 +46,8 @@ def gen_sum_grad(ans, x, axis, keepdims):
     for a in axis:
         xshape[a] = 1
     def sum_grad(g):
-        return np.zeros(x.shape) + g.reshape(xshape)
+        return np.zeros(x.shape) + g.reshape(tuple(xshape))
+    sum_grad.__name__ = 'broadcast {} to {}'.format(x.shape, ans.shape)
     return sum_grad
 
 def def_grads(reg, prims):

@@ -40,7 +40,6 @@ class Node(object):
         :param Node res: variable that represent the target of derivative
         :param Primitive prim: the primitive that the gradient function belongs to
         """
-        _logger.debug('Adding partial derivative to Node #{}'.format(id(self)))
         assert(isinstance(res, Node))
         self._partial_derivatives.append((grad_func, res, prim))
 
@@ -55,9 +54,9 @@ class Node(object):
                 self._partial_derivative_cache[target] = Value.wrap(1.0)
             else:
                 def call(rec):
-                    _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
                     grad = rec[1].partial_derivative(target)
                     grad_value = grad.get_data(rec[2]._type)
+                    _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
                     return rec[0](grad_value)
                 res = functools.reduce(
                         operator.add,
@@ -315,6 +314,10 @@ class Number(Value):
         """ get node which contains derivative information from this array """
         return self._node
 
+    @property
+    def marked_for_bp(self):
+        return self._marked_for_bp
+
 class Array(Value):
     """Base array type.
 
@@ -347,6 +350,10 @@ class Array(Value):
 
     def __str__(self):
         return str(self.get_data(ArrayType.NUMPY))
+
+    @property
+    def marked_for_bp(self):
+        return self._marked_for_bp
 
     @property
     def node(self):
@@ -515,12 +522,16 @@ class Primitive(object):
             # Record partial derivative paths, only for `Value` type values.
             # If no gradient function is defined, also omit it
             for i, arg in enumerate(args):
-                if isinstance(arg, Value) and i < len(self._grad_func):
+                if isinstance(arg, Value) and arg.marked_for_bp and i < len(self._grad_func):
+                    _logger.debug('Adding partial derivative to func {} on #{} arg'
+                            .format(self._func, i))
                     arg.node.add_partial_derivative(
                             self._grad_func[i](result_value, *arg_values, **kwargs_values),
                             result.node, self)
             for x in kwargs:
-                if isinstance(kwargs[x], Value) and x in self._grad_func_kw:
+                if isinstance(kwargs[x], Value) and x.marked_for_bp and x in self._grad_func_kw:
+                    _logger.debug('Adding partial derivative to func {} on kwarg "{}"'
+                            .format(self._func, x))
                     kwargs[x].node.add_partial_derivative(
                             self._grad_func_kw[x](result_value, *arg_values, **kwargs_values),
                             result.node, self)

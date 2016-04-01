@@ -15,10 +15,17 @@ def make_data(num_samples=10000, num_features=500, num_classes=5):
         y[i*num_cls_samples:(i+1)*num_cls_samples,i] = 1
     return x, y
 
+def make_weight(num_features=500, num_classes=5):
+    w = np.random.randn(num_features, num_classes)
+    return w
+
 def get_data():
     x = np.load('x.npy')
     y = np.load('y.npy')
     return x, y
+
+def get_weight():
+    return np.load('w.npy')
 
 def plot_data(x, y, num_classes=5):
     t = np.argmax(y, axis=1)
@@ -33,5 +40,6 @@ if __name__ == '__main__':
     #print x, y
     #np.save('x', x)
     #np.save('y', y)
+    #np.save('w', make_weight())
     x, y = get_data()
     plot_data(x, y)

@@ -14,8 +14,6 @@ def unbroadcast(ans, x, gradfun):
         padded_shape = (1,) * (len(ans.shape) - len(x.shape)) + x.shape
         def newgradfun(g):
             gg = gradfun(g)
-            if gg.shape != padded_shape:
-                gg = gg.reshape(padded_shape)
             for axis, (i, j) in enumerate(zip(g.shape, padded_shape)):
                 if i != j:
                     gg = ndarray.sum(gg, axis=axis, keepdims=True)
@@ -67,9 +65,13 @@ def def_grads(reg, prims):
     prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
     prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, y, operator.neg), argnum=1)
     prims('divide').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
-    prims('divide').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / (y * y)), argnum=1)
+    prims('divide').def_grad(
+            lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / (y * y)),
+            argnum=1)
     prims('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
-    prims('true_divide').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / (y * y)), argnum=1)
+    prims('true_divide').def_grad(
+            lambda ans, x, y: unbroadcast(ans, y, lambda g: - g * x / (y * y)),
+            argnum=1)
     # power
     #prims.power.def_grad(lambda ans, x, y : unbroadcast(ans, x, lambda g : g * y * x ** (y - 1)))
     #prims.power.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : g * ndarray.log(x) * x ** y), argnum=1)
