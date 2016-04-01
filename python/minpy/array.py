@@ -22,7 +22,7 @@ from .array_variants import number_types
 import mxnet
 import numpy
 
-_logger = log.get_logger(__name__, logging.INFO)
+_logger = log.get_logger(__name__, logging.WARN)
 
 class Node(object):
     """Node representing data with gradient information."""
