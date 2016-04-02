@@ -328,6 +328,7 @@ class Array(Value):
     underlying array object.
     """
     __slots__ = ['_node', '_data', '_latest_version', '_marked_for_bp']
+    __array_priority__ = 100.0  # highest priority when compute with numpy.ndarray
 
     def __init__(self, data, marked=False):
         self._data = {}
