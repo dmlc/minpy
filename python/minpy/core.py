@@ -87,11 +87,14 @@ def function(symbol, input_shapes):
       # TODO: Handle with multiple outputs, including the order of outputs 
       return executor.outputs[0]
 
+    func.__name__ = 'mxnet_symbol'
+
     def def_grad_kw(keyname):
       def grad_wrapper(ans, *arg_values, **kwargs_values):
-        def grad_func(global_grad):
-          executor.backward(out_grads=global_grad)
-          return executor.grad_arrays[param_names.index(keyname)]
+        def grad_func(g):
+          executor.backward(out_grads=g)
+          ret = executor.grad_arrays[param_names.index(keyname)]
+          return ret
         return grad_func
       return grad_wrapper
 

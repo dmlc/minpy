@@ -529,12 +529,12 @@ class Primitive(object):
                     arg.node.add_partial_derivative(
                             self._grad_func[i](result_value, *arg_values, **kwargs_values),
                             result.node, self)
-            for x in kwargs:
-                if isinstance(kwargs[x], Value) and x.marked_for_bp and x in self._grad_func_kw:
+            for k, arg in kwargs.items():
+                if isinstance(arg, Value) and arg.marked_for_bp and k in self._grad_func_kw:
                     _logger.debug('Adding partial derivative to func {} on kwarg "{}"'
-                            .format(self._func, x))
-                    kwargs[x].node.add_partial_derivative(
-                            self._grad_func_kw[x](result_value, *arg_values, **kwargs_values),
+                            .format(self._func, k))
+                    arg.node.add_partial_derivative(
+                            self._grad_func_kw[k](result_value, *arg_values, **kwargs_values),
                             result.node, self)
         return result
 
