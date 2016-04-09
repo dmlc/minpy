@@ -9,11 +9,15 @@ This repository aims at prototyping a pure `numpy` interface above [mxnet](https
 * Graceful fallback for missing operations.
 * Transparent device and partition specification.
 
+How to get started?
+-------------------
+The project is still a work-in-progress. You could look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents and installation instructions are coming soon!
+
 What we really want?
 -------------------
 In one word, if you have a `numpy` code, you could replace the `import` by:
 ```python
-import minpy as np
+import minpy.numpy as np
 
 # other numpy codes remain the same
 ```
