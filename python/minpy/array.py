@@ -432,7 +432,7 @@ class Array(Value):
         if isinstance(index, tuple):
             np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
         else:
-            np_index = Value.Wrap(index).get_data(ArrayType.NUMPY)
+            np_index = Value.wrap(index).get_data(ArrayType.NUMPY)
         np_val = Value.wrap(val).get_data(ArrayType.NUMPY)
         self.get_data_mutable(ArrayType.NUMPY)[np_index] = np_val
 
