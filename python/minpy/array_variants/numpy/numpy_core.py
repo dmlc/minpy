@@ -87,3 +87,4 @@ def def_grads(reg, prims):
             lambda ans, x, y: unbroadcast(ans, y, lambda g: -g * np.floor(x / y)),
             argnum=1)
     prims('negative').def_grad(lambda ans, x: operator.neg)
+    prims('abs').def_grad(lambda ans, x: lambda: np.sign(x) * g)

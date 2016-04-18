@@ -80,3 +80,4 @@ def def_grads(reg, prims):
     #prims.mod.def_grad(lambda ans, x, y : unbroadcast(ans, y, lambda g : - g * ndarray.floor(x/y)), argnum=1)
     # negate
     prims('negative').def_grad(lambda ans, x: operator.neg)
+    prims('abs').def_grad(lambda ans, x: lambda g: mxnet.nd.sign(x) * g)
