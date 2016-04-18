@@ -81,3 +81,10 @@ def def_grads(reg, prims):
     # negate
     prims('negative').def_grad(lambda ans, x: operator.neg)
     prims('abs').def_grad(lambda ans, x: lambda g: mxnet.nd.sign(x) * g)
+    prims('sign').def_grad_zero()
+    prims('round').def_grad_zero()
+    prims('ceil').def_grad_zero()
+    prims('floor').def_grad_zero()
+    prims('sqrt').def_grad(lambda ans, x: lambda g: g * 0.5 / mxnet.nd.sqrt(x))
+    prims('sin').def_grad(lambda ans, x: lambda g: g * mxnet.nd.cos(x))
+    prims('cos').def_grad(lambda ans, x: lambda g: -g * mxnet.nd.sin(x))
