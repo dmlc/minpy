@@ -60,7 +60,7 @@ class TwoLayerNet(ModelBase):
     self.params['W2'] = random.randn(hidden_dim, num_classes) * weight_scale 
     self.params['b2'] = np.zeros((num_classes))
 
-  def loss(self, X, y=None):
+  def loss_and_derivative(self, X, y=None):
     """
     Compute loss and gradient for a minibatch of data.
 
@@ -218,7 +218,7 @@ class FullyConnectedNet(object):
       self.params[k] = v.astype(dtype)
 
 
-  def loss(self, X, y=None):
+  def loss_and_derivative(self, X, y=None):
     """
     Compute loss and gradient for the fully-connected net.
 
