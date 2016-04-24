@@ -7,6 +7,7 @@ Types of input values to loss() function, i.e. training/testing data & targets, 
 
 import numpy as py_np
 
+from model import ModelBase
 from cs231n.layers import *
 from cs231n.layer_utils import *
 
@@ -21,7 +22,7 @@ from minpy.core import grad_and_loss
 
 #import minpy.dispatch.policy as policy
 
-class TwoLayerNet(object):
+class TwoLayerNet(ModelBase):
   """
   A two-layer fully-connected neural network with ReLU nonlinearity and
   softmax loss that uses a modular layer design. We assume an input dimension
