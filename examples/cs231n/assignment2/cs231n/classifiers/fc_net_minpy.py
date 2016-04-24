@@ -7,8 +7,8 @@ Types of input values to loss() function, i.e. training/testing data & targets, 
 
 import numpy as py_np
 
-from cs231n.layers_minpy import *
-from cs231n.layer_utils_minpy import *
+from cs231n.layers import *
+from cs231n.layer_utils import *
 
 #call minpy package
 configfile = '~/NewMinpy/minpy/python/minpy'
