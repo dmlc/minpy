@@ -95,3 +95,5 @@ def def_grads(reg, prims):
     prims('sqrt').def_grad(lambda ans, x: lambda g: g * 0.5 / np.sqrt(x))
     prims('sin').def_grad(lambda ans, x: lambda g: g * np.cos(x))
     prims('cos').def_grad(lambda ans, x: lambda g: -g * np.sin(x))
+    prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y * np.power(x, y - 1)))
+    prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g * np.log(x) * ans), argnum=1)
