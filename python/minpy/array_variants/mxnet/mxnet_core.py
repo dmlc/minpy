@@ -32,6 +32,7 @@ def register_primitives(reg, prim_wrapper):
     mxnet_wrapper.wrap_namespace(mxnet.ndarray.__dict__, reg, prim_wrapper)
     # Additional primitives due to naming issues in MXNet.
     reg.register('power', prim_wrapper(NDArray._power))
+    reg.register('maximum', prim_wrapper(NDArray._maximum))
 
 def gen_sum_grad(ans, x, axis, keepdims):
     xshape = list(x.shape)

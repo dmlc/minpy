@@ -97,3 +97,5 @@ def def_grads(reg, prims):
     prims('cos').def_grad(lambda ans, x: lambda g: -g * np.sin(x))
     prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y * np.power(x, y - 1)))
     prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g * np.log(x) * ans), argnum=1)
+    prims('maximum').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * (x == ans)))
+    prims('maximum').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g * (y == ans)), argnum=1)
