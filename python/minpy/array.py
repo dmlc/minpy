@@ -415,12 +415,7 @@ class Array(Value):
         """
         #XXX: Ideally, we should use the namespace dispatcher to select appropriate getitem.
         #     However, we don't have good support for int array now
-        np_index = None
-        if isinstance(index, tuple):
-            np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
-        else:
-            np_index = Value.Wrap(index).get_data(ArrayType.NUMPY)
-        return Value.wrap(self.get_data(ArrayType.NUMPY)[np_index])
+        return Value.wrap(self.get_data(ArrayType.NUMPY).__getitem__(index))
 
     def __setitem__(self, index, val):
         """ Set item only supports indexing type of numpy arrays right now,
@@ -428,13 +423,10 @@ class Array(Value):
         """
         #XXX: Ideally, we should use the namespace dispatcher to select appropriate setitem.
         #     However, we don't have good support for int array now
-        np_index = None
-        if isinstance(index, tuple):
-            np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
-        else:
-            np_index = Value.wrap(index).get_data(ArrayType.NUMPY)
-        np_val = Value.wrap(val).get_data(ArrayType.NUMPY)
-        self.get_data_mutable(ArrayType.NUMPY)[np_index] = np_val
+        self.get_data_mutable(ArrayType.NUMPY).__setitem__(index, Value.wrap(val).get_data(ArrayType.NUMPY))
+
+    def __delitem__(self, index):
+        self.get_data_mutable(ArrayType.NUMPY).__delitem(index)
 
     @property
     def T(self):
