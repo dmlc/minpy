@@ -47,7 +47,7 @@ class Module(object):
         self._policy = plc
 
     def look_up(self, name):
-        prim =  policy.resolve_name(name, self._registry, self._policy)
+        prim = policy.resolve_name(name, self._registry, self._policy)
         return prim.typestr
     
     def __getattr__(self, name):
@@ -56,7 +56,7 @@ class Module(object):
         if name == '__registry__':
             return self._registry
         elif self._registry.has_name(name):
-            prim =  policy.resolve_name(name, self._registry, self._policy)
+            prim = policy.resolve_name(name, self._registry, self._policy)
             self._logger.debug('Found primitive with name "{}" with type {}'.format(name, prim.typestr))
             return prim
         elif name in self._old:

@@ -410,22 +410,26 @@ class Array(Value):
         return self._data.values()[0].shape
 
     def __getitem__(self, index):
-        """ Get item only supports indexing type of numpy arrays right now,
-        since mxnet.ndarray does not support int type & indexing
+        """NumPy indexing operations.
+
+        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit conversion to NumPy array.
         """
-        #XXX: Ideally, we should use the namespace dispatcher to select appropriate getitem.
-        #     However, we don't have good support for int array now
-        return Value.wrap(self.get_data(ArrayType.NUMPY).__getitem__(index))
+        return Value._ns._minpy_indexing_delegate(self, index)
 
     def __setitem__(self, index, val):
-        """ Set item only supports indexing type of numpy arrays right now,
-        since mxnet.ndarray does not support int type & indexing
+        """NumPy indexing operations.
+
+        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit conversion to NumPy array.
+        Also note that this operation breaks gradient chain.
         """
-        #XXX: Ideally, we should use the namespace dispatcher to select appropriate setitem.
-        #     However, we don't have good support for int array now
         self.get_data_mutable(ArrayType.NUMPY).__setitem__(index, Value.wrap(val).get_data(ArrayType.NUMPY))
 
     def __delitem__(self, index):
+        """NumPy indexing operations.
+
+        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit conversion to NumPy array.
+        Also note that this operation breaks gradient chain.
+        """
         self.get_data_mutable(ArrayType.NUMPY).__delitem(index)
 
     @property

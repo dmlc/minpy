@@ -6,8 +6,18 @@ from . import numpy_wrapper
 import operator
 import numpy as np
 
-def register_primitives(reg, make_prim):
-    numpy_wrapper.wrap_namespace(np.__dict__, reg, make_prim)
+def _minpy_indexing_delegate(arr, index):
+    return arr[index]
+
+def _minpy_indexing_delegate_grad(arr, index, g):
+    ret = np.zeros(arr.shape)
+    ret[index] = g
+    return ret
+
+def register_primitives(reg, prim_wrapper):
+    numpy_wrapper.wrap_namespace(np.__dict__, reg, prim_wrapper)
+    # Indexing entry point.
+    reg.register('_minpy_indexing_delegate', prim_wrapper(_minpy_indexing_delegate))
 
 def unbroadcast(ans, x, gradfun):
     """Unbroadcast to original shape.
@@ -99,3 +109,4 @@ def def_grads(reg, prims):
     prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g * np.log(x) * ans), argnum=1)
     prims('maximum').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * (x == ans)))
     prims('maximum').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g * (y == ans)), argnum=1)
+    prims('_minpy_indexing_delegate').def_grad(lambda ans, x, index: lambda g: _minpy_indexing_delegate_grad(x, index, g))
