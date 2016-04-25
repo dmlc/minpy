@@ -104,8 +104,7 @@ class TwoLayerNet(ModelBase):
 
     grad_function = grad_and_loss(train_loss, range(2, 6))
 
-    loss, grads_array
-      = grad_function(X, y, *self.params_array)
+    loss, grads_array = grad_function(X, y, *self.params_array)
 
     grads = {}
     for i in range(len(params_list_name)):

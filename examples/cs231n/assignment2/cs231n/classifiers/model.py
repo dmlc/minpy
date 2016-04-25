@@ -23,12 +23,12 @@ class ModelBase(object):
       minpy_kwargs[key] = NumpyVarToMinpy(value)
 
     minpy_res = self.loss_and_derivative(*minpy_args, **minpy_kwargs)
-    if len(minpy_res) == 1
+    if len(minpy_res) == 1:
       minpy_res = [minpy_res]
 
     numpy_res = [NumpyVarToMinpy(v) for v in minpy_res]
-    if len(minpy_res) == 1
+    if len(minpy_res) == 1:
       return numpy_res[0]
-    else
+    else:
       return numpy_res[0], numpy_res[1]
     

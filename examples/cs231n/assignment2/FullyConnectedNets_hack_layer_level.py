@@ -7,12 +7,6 @@ from cs231n.solver import Solver
 import time
 
 import numpy as np
-import sys
-import os
-
-#call minpy package
-configfile = '~/NewMinpy/minpy/python/minpy'
-sys.path.append(os.path.dirname(os.path.expanduser(configfile)))
 
 import minpy 
 import minpy.numpy as minpy_np

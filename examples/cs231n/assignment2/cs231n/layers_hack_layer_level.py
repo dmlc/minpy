@@ -1,10 +1,4 @@
 import numpy as py_np
-import sys
-import os
-
-#call minpy package
-configfile = '~/NewMinpy/minpy/python/minpy'
-sys.path.append(os.path.dirname(os.path.expanduser(configfile)))
 
 import minpy 
 import minpy.numpy as np
