@@ -19,15 +19,15 @@ def grad(func, argnum=0):
         arrays = tuple(map(make_array, args))
         argnums = [argnum] if type(argnum) is int else argnum
         for i in argnums:
-          arrays[i]._marked_for_bp = True
+            arrays[i]._marked_for_bp = True
         result_array = func(*arrays)
-        _logger.debug('---Forward pass finished. Start backward pass')
+        _logger.debug('Forward pass finished. Start backward pass.')
         grad_vals = []
         for i in argnums:
-          grad_vals.append(arrays[i].node.partial_derivative(result_array.node))
-          arrays[i]._marked_for_bp = False
+            grad_vals.append(arrays[i].node.partial_derivative(result_array.node))
+            arrays[i]._marked_for_bp = False
         if len(grad_vals) == 1:
-          grad_vals = grad_vals[0]
+            grad_vals = grad_vals[0]
         return grad_vals
     return wrapped
 
@@ -51,10 +51,10 @@ def grad_and_loss(func, argnum=0):
         return grad_vals, result_array
     return wrapped
 
-class MxnetSymbolArgErrorLackName(ValueError):
+class MXNetSymbolArgErrorLackName(ValueError):
     pass
 
-class MxnetSymbolArgErrorUnknownName(ValueError):
+class MXNetSymbolArgErrorUnknownName(ValueError):
     pass
 
 def function(symbol, input_shapes):
@@ -83,14 +83,14 @@ def function(symbol, input_shapes):
     def func(*args, **kwargs):
       
       if len(args) > 0:
-        raise MxnetSymbolArgErrorLackName('find arg with no name specified')
+        raise MXNetSymbolArgErrorLackName('find arg with no name specified')
 
       # Set Data & Parameters
       for name, value in kwargs.items():
         if name in executor.arg_dict:
           value.copyto(executor.arg_dict[name])
         else:
-          raise MxnetSymbolArgErrorUnknownName('find arg name: %s not in executors arg_list' % name)
+          raise MXNetSymbolArgErrorUnknownName('find arg name: %s not in executors arg_list' % name)
 
       # forward
       # TODO: is_train flag

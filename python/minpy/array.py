@@ -26,10 +26,11 @@ _logger = log.get_logger(__name__, logging.WARN)
 
 class Node(object):
     """Node representing data with gradient information."""
-    __slots__ = ['_partial_derivatives', '_partial_derivative_cache']
+    __slots__ = ['_value', '_partial_derivatives', '_partial_derivative_cache']
 
-    def __init__(self):
+    def __init__(self, value):
         """Initialize."""
+        self._value = value
         self._partial_derivatives = []
         self._partial_derivative_cache = {}
 
@@ -51,7 +52,7 @@ class Node(object):
         assert(isinstance(target, Node))
         if not target in self._partial_derivative_cache:
             if self is target:  # Partial derivative of self is one.
-                self._partial_derivative_cache[target] = Value.wrap(1.0)
+                self._partial_derivative_cache[target] = Value.wrap(1.0 if isinstance(self._value, Number) else numpy.ones(self._value.shape))
             else:
                 def call(rec):
                     grad = rec[1].partial_derivative(target)
@@ -294,7 +295,7 @@ class Number(Value):
     """Class for numbers with derivative information"""
     __slots__ = ['_node', '_val', '_marked_for_bp']
     def __init__(self, val, marked=False):
-        self._node = Node()
+        self._node = Node(self)
         self._val = val
         self._marked_for_bp = marked
 
@@ -332,7 +333,7 @@ class Array(Value):
 
     def __init__(self, data, marked=False):
         self._data = {}
-        self._node = Node()
+        self._node = Node(self)
         t = Array.to_array_type(data)
         self._data[t] = data
         self._latest_version = t
@@ -407,7 +408,10 @@ class Array(Value):
 
     @property
     def shape(self):
-        return self._data.values()[0].shape
+        if ArrayType.NUMPY in self._data:
+            return self._data[ArrayType.NUMPY].shape
+        else:
+            return self._data[ArrayType.MXNET].shape
 
     def __getitem__(self, index):
         """NumPy indexing operations.
