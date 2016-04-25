@@ -88,4 +88,4 @@ def def_grads(reg, prims):
     prims('sin').def_grad(lambda ans, x: lambda g: g * mxnet.nd.cos(x))
     prims('cos').def_grad(lambda ans, x: lambda g: -g * mxnet.nd.sin(x))
     prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y * mxnet.nd.power(x, y - 1)))
-    prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * mxnet.nd.log(x) * ans), argnum=1)
+    prims('power').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g * mxnet.nd.log(x) * ans), argnum=1)
