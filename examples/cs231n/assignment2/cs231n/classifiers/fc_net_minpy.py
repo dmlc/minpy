@@ -114,7 +114,7 @@ class TwoLayerNet(ModelBase):
     return loss, grads
 
 
-class FullyConnectedNet(object):
+class FullyConnectedNet(ModelBase):
   """
   A fully-connected neural network with an arbitrary number of hidden layers,
   ReLU nonlinearities, and a softmax loss function. This will also implement
