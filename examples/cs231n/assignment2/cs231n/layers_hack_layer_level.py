@@ -565,8 +565,11 @@ def svm_loss(x, y, mode):
   #margins = np.maximum(0, x - correct_class_scores[:, np.newaxis] + 1.0)
   margins = np.maximum(0, x - np.expand_dims(correct_class_scores, axis = 1) + 1.0)
 
+  #margins[np.arange(N), y] = 0
+  #loss = np.sum(margins) / N
+  loss = (np.sum(margins) - np.sum(margins[np.arange(N), y])) / N
   margins[np.arange(N), y] = 0
-  loss = np.sum(margins) / N
+
   num_pos = np.sum(margins > 0, axis=1)
   dx = np.zeros_like(x)
   dx[margins > 0] = 1

@@ -23,7 +23,7 @@ import minpy.dispatch.policy as policy
 
 def rel_error(x, y):
   """ returns relative error """
-  return np.mean(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
+  return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
 
 data = get_CIFAR10_data()
 for k, v in data.iteritems():
@@ -133,6 +133,7 @@ def Test_Test_Forward():
   test_sum_forward()
 
 def Test_SVM():
+  np.random.seed(31)
   num_classes, num_inputs = 10, 50
   x = 0.001 * np.random.randn(num_inputs, num_classes)
   y = np.random.randint(num_classes, size=num_inputs)
@@ -149,8 +150,8 @@ def Test_SVM():
   # Test svm_loss function. Loss should be around 9 and dx error should be 1e-9
   print 'Testing svm_loss:'
   print 'loss: ', loss
-  print 'numerical error: ', dx_num
-  print 'analytical error: ', dx
+  #print 'numerical error: ', dx_num
+  #print 'analytical error: ', dx
   # Note: relative error would we large, because numeriacal error is unstable in gpu mode.
   print 'dx error: ', rel_error(dx_num, dx)
  

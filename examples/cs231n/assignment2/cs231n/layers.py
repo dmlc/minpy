@@ -318,10 +318,7 @@ def svm_loss(x, y):
   #margins = np.maximum(0, x - correct_class_scores[:, np.newaxis] + 1.0)
   margins = np.maximum(0, x - np.expand_dims(correct_class_scores, axis = 1) + 1.0)
 
-  # TODO(Haoran): rewrite without calling __setitem__
-  margins[np.arange(N), y] = 0
-  loss = np.sum(margins) / N
-  num_pos = np.sum(margins > 0, axis=1)
+  loss = (np.sum(margins) - np.sum(margins[np.arange(N), y])) / N
 
   return loss
 
