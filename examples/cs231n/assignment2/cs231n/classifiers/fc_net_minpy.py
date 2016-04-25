@@ -11,12 +11,8 @@ from model import ModelBase
 from cs231n.layers import *
 from cs231n.layer_utils import *
 
-#call minpy package
-configfile = '~/NewMinpy/minpy/python/minpy'
-sys.path.append(os.path.dirname(os.path.expanduser(configfile)))
-
 import minpy
-import minpy.numpy as np
+import minpy.numpy as mp
 import minpy.numpy.random as random
 from minpy.core import grad_and_loss
 
@@ -56,9 +52,9 @@ class TwoLayerNet(ModelBase):
     self.reg = reg
 
     self.params['W1'] = random.randn(input_dim, hidden_dim) * weight_scale 
-    self.params['b1'] = np.zeros((hidden_dim))
+    self.params['b1'] = mp.zeros((hidden_dim))
     self.params['W2'] = random.randn(hidden_dim, num_classes) * weight_scale 
-    self.params['b2'] = np.zeros((num_classes))
+    self.params['b2'] = mp.zeros((num_classes))
 
   def loss_and_derivative(self, X, y=None):
     """
@@ -90,8 +86,8 @@ class TwoLayerNet(ModelBase):
         return scores
    
       loss, d_scores = softmax_loss(scores, y)
-      loss += np.sum(W1 ** 2) * 0.5 * self.reg
-      loss += np.sum(W2 ** 2) * 0.5 * self.reg
+      loss += mp.sum(W1 ** 2) * 0.5 * self.reg
+      loss += mp.sum(W2 ** 2) * 0.5 * self.reg
       return loss
 
     self.params_array = []
@@ -137,7 +133,7 @@ class FullyConnectedNet(ModelBase):
 
   def __init__(self, hidden_dims, input_dim=3*32*32, num_classes=10,
                dropout=0, use_batchnorm=False, reg=0.0,
-               weight_scale=1e-2, dtype=np.float32, seed=None):
+               weight_scale=1e-2, seed=None):
     """
     Initialize a new FullyConnectedNet.
     
@@ -162,7 +158,7 @@ class FullyConnectedNet(ModelBase):
     self.use_dropout = dropout > 0
     self.reg = reg
     self.num_layers = 1 + len(hidden_dims)
-    self.dtype = dtype
+    #self.dtype = dtype
     self.params = {}
 
     ############################################################################
@@ -189,7 +185,7 @@ class FullyConnectedNet(ModelBase):
         out_d = num_classes
 
       self.params[self.GetWeightName(l)] = random.randn(input_d, out_d) * weight_scale
-      self.params[self.GetBiasName(l)] = np.zeros((out_d))
+      self.params[self.GetBiasName(l)] = mp.zeros((out_d))
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -213,8 +209,8 @@ class FullyConnectedNet(ModelBase):
       self.bn_params = [{'mode': 'train'} for i in xrange(self.num_layers - 1)]
     
     # Cast all parameters to the correct datatype
-    for k, v in self.params.iteritems():
-      self.params[k] = v.astype(dtype)
+    #for k, v in self.params.iteritems():
+      #self.params[k] = v.astype(dtype)
 
 
   def loss_and_derivative(self, X, y=None):
