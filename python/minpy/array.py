@@ -17,7 +17,7 @@ from .utils import common
 from .array_variants import ArrayType
 from .array_variants import array_types
 from .array_variants import number_types
- 
+
  #FIXME: should not import these; use array_invariants instead
 import mxnet
 import numpy

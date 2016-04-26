@@ -49,7 +49,7 @@ class Module(object):
     def look_up(self, name):
         prim =  policy.resolve_name(name, self._registry, self._policy)
         return prim.typestr
-    
+
     def __getattr__(self, name):
         self._logger.debug('Look up name {}'.format(name))
         # Special members for internal use.
