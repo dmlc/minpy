@@ -31,7 +31,7 @@ def affine_forward(x, w, b):
 
   #TODO(Haoran): remove reshape outside loss function
   x_plain = mp.reshape(x, (x.shape[0], -1))
-  out = mp.dot(x_plain, w) + mp.repeat(mp.expand_dims(b, axis=0), x_plain.shape[0], axis = 0)
+  out = mp.dot(x_plain, w) + b
 
   return out
 
@@ -310,8 +310,9 @@ def svm_loss(x, y):
   N = x.shape[0]
   correct_class_scores = x[mp.arange(N), y]
   
+  #TODO: Support broadcast case: (X,) (X, Y)
   #margins = mp.maximum(0, x - correct_class_scores[:, mp.newaxis] + 1.0)
-  margins = mp.maximum(0, x - mp.expand_dims(correct_class_scores, axis = 1) + 1.0)
+  margins = mp.transpose(mp.maximum(0, mp.transpose(x) - mp.transpose(correct_class_scores) + 1.0))
 
   loss = (mp.sum(margins) - mp.sum(margins[mp.arange(N), y])) / N
 

@@ -30,9 +30,7 @@ def affine_forward(x, w, b):
   """
 
   x_plain = mp.reshape(x, (x.shape[0], -1))
-
-  # Note: GPU has no automatically broadcast feature?
-  out = mp.dot(x_plain, w) + mp.repeat(mp.expand_dims(b, axis=0), x_plain.shape[0], axis = 0)
+  out = mp.dot(x_plain, w) + b
 
   cache = (x, w, b) 
   
@@ -100,7 +98,7 @@ def test_sum_forward():
 
   x_plain = mp.reshape(x, (x.shape[0], -1))
   out0 = mp.dot(x_plain, w)
-  out = out0 + mp.repeat(mp.expand_dims(b, axis=0), out0.shape[0], axis = 0)
+  out = out0 + b
 
   np_out = MinpyVarToNumpy(out)
 
@@ -556,8 +554,9 @@ def svm_loss(x, y, mode):
   N = x.shape[0]
   correct_class_scores = x[mp.arange(N), y]
   
-  #margins = mp.maximum(0, x - correct_class_scores[:, mp.newaxis] + 1.0)
-  margins = mp.maximum(0, x - mp.expand_dims(correct_class_scores, axis = 1) + 1.0)
+  #TODO: Support broadcast case: (X,) (X, Y)
+  #margins = mp.maximum(0, x - correct_class_scores + 1.0)
+  margins = mp.transpose(mp.maximum(0, mp.transpose(x) - mp.transpose(correct_class_scores) + 1.0))
 
   #margins[mp.arange(N), y] = 0
   #loss = mp.sum(margins) / N
@@ -591,7 +590,8 @@ def softmax_loss(x, y):
   #print "x.shape", x.shape
 
   #Somehow Buggy. Max doesn't work.
-  probs = mp.exp(x - mp.expand_dims(mp.max(x, axis=1), axis = 1))
+  probs = mp.exp(x - mp.max(x, axis=1))
+  #probs /= mp.expand_dims(mp.sum(probs, axis=1), axis = 1)
   probs /= mp.expand_dims(mp.sum(probs, axis=1), axis = 1)
   N = x.shape[0]
   loss = -mp.sum(mp.log(probs[mp.arange(N), y])) / N
