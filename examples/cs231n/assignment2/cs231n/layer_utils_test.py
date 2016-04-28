@@ -1,4 +1,4 @@
-from cs231n.layers_hack_layer_level import *
+from cs231n.layers_test import *
 #from cs231n.fast_layers import *
 
 
