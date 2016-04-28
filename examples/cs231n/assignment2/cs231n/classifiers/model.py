@@ -26,6 +26,7 @@ class ModelBase(object):
     if len(minpy_res) == 1:
       minpy_res = [minpy_res]
 
+    # TODO(Haoran): handle grad dicitonary
     numpy_res = [NumpyVarToMinpy(v) for v in minpy_res]
     if len(minpy_res) == 1:
       return numpy_res[0]
