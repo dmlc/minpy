@@ -78,17 +78,19 @@ class TwoLayerNet(ModelBase):
     # Note: types of X, y are mxnet.ndarray
 
     def train_loss(X, y, W1, W2, b1, b2):
-      l1, l1_cache = affine_relu_forward(X, W1, b1)
-      l2, l2_cache = affine_forward(l1, W2, b2)
-      scores = l2 
+      l1 = affine_relu_forward(X, W1, b1)
+      l2 = affine_forward(l1, W2, b2)
+      scores = l2
 
       if y is None:
         return scores
    
-      loss, d_scores = softmax_loss(scores, y)
-      loss += mp.sum(W1 ** 2) * 0.5 * self.reg
-      loss += mp.sum(W2 ** 2) * 0.5 * self.reg
-      return loss
+      #[TODO]: softmax is not supported yet
+      # loss, d_scores = softmax_loss(scores, y)
+      loss = svm_loss(scores, y)
+      loss_with_reg = loss + mp.sum(W1 ** 2) * 0.5 * self.reg + mp.sum(W2 ** 2) * 0.5 * self.reg
+
+      return loss_with_reg 
 
     self.params_array = []
     params_list_name = ['W1', 'W2', 'b1', 'b2']
@@ -100,7 +102,7 @@ class TwoLayerNet(ModelBase):
 
     grad_function = grad_and_loss(train_loss, range(2, 6))
 
-    loss, grads_array = grad_function(X, y, *self.params_array)
+    grads_array, loss = grad_function(X, y, *self.params_array)
 
     grads = {}
     for i in range(len(params_list_name)):
