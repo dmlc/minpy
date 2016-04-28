@@ -418,7 +418,12 @@ class Array(Value):
 
         Currently `mxnet.ndarray` does not support full indexing, so there is an implicit conversion to NumPy array.
         """
-        return Value._ns._minpy_indexing_delegate(self, index)
+        np_index = None
+        if isinstance(index, tuple):
+            np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
+        else:
+            np_index = Value.Wrap(index).get_data(ArrayType.NUMPY)
+        return Value._ns._minpy_indexing_delegate(self, np_index)
 
     def __setitem__(self, index, val):
         """NumPy indexing operations.
@@ -426,7 +431,12 @@ class Array(Value):
         Currently `mxnet.ndarray` does not support full indexing, so there is an implicit conversion to NumPy array.
         Also note that this operation breaks gradient chain.
         """
-        self.get_data_mutable(ArrayType.NUMPY).__setitem__(index, Value.wrap(val).get_data(ArrayType.NUMPY))
+        np_index = None
+        if isinstance(index, tuple):
+            np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
+        else:
+            np_index = Value.wrap(index).get_data(ArrayType.NUMPY)
+        self.get_data_mutable(ArrayType.NUMPY).__setitem__(np_index, Value.wrap(val).get_data(ArrayType.NUMPY))
 
     def __delitem__(self, index):
         """NumPy indexing operations.
