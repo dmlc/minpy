@@ -420,9 +420,9 @@ class Array(Value):
         """
         np_index = None
         if isinstance(index, tuple):
-            np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
+            np_index = tuple(x if type(x) is slice else Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
         else:
-            np_index = Value.Wrap(index).get_data(ArrayType.NUMPY)
+            np_index = x if type(x) is slice else Value.Wrap(index).get_data(ArrayType.NUMPY)
         return Value._ns._minpy_indexing_delegate(self, np_index)
 
     def __setitem__(self, index, val):
@@ -433,9 +433,9 @@ class Array(Value):
         """
         np_index = None
         if isinstance(index, tuple):
-            np_index = tuple(Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
+            np_index = tuple(x if type(x) is slice else Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
         else:
-            np_index = Value.wrap(index).get_data(ArrayType.NUMPY)
+            np_index = x if type(x) is slice else Value.wrap(index).get_data(ArrayType.NUMPY)
         self.get_data_mutable(ArrayType.NUMPY).__setitem__(np_index, Value.wrap(val).get_data(ArrayType.NUMPY))
 
     def __delitem__(self, index):
