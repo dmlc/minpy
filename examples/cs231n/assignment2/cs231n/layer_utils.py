@@ -1,4 +1,4 @@
-from cs231n.layers import *
+from cs231n.layers import affine_forward, relu_forward
 #from cs231n.fast_layers import *
 
 def affine_relu_forward(x, w, b):

@@ -8,8 +8,8 @@ Types of input values to loss() function, i.e. training/testing data & targets, 
 import numpy as py_np
 
 from model import ModelBase
-from cs231n.layers import *
-from cs231n.layer_utils import *
+from cs231n.layers import affine_forward
+from cs231n.layer_utils import affine_relu_forward
 
 import minpy
 import minpy.numpy as mp
