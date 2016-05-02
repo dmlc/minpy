@@ -1,14 +1,12 @@
-import numpy as np
-
 import minpy 
-import minpy.numpy as mp
+import minpy.numpy as np
 import minpy.core
 import minpy.array
 from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
 
-#mp.set_policy(policy.OnlyNumpyPolicy())
-#mp.set_policy(policy.PreferMXNetPolicy())
+#np.set_policy(policy.OnlyNumpyPolicy())
+#np.set_policy(policy.PreferMXNetPolicy())
 
 def affine_forward(x, w, b):
   """
@@ -29,8 +27,8 @@ def affine_forward(x, w, b):
   - cache: (x, w, b)
   """
 
-  x_plain = mp.reshape(x, (x.shape[0], -1))
-  out = mp.dot(x_plain, w) + b
+  x_plain = np.reshape(x, (x.shape[0], -1))
+  out = np.dot(x_plain, w) + b
 
   cache = (x, w, b) 
   
@@ -58,14 +56,14 @@ def affine_backward(dout, cache):
   - db: Gradient with respect to b, of shape (M,)
   """
   x, w, b = cache
-  x_plain = mp.reshape(x, (x.shape[0], -1))
+  x_plain = np.reshape(x, (x.shape[0], -1))
 
-  db = mp.sum(dout, axis=0)
+  db = np.sum(dout, axis=0)
 
-  dx_plain = mp.dot(dout, mp.transpose(w))
+  dx_plain = np.dot(dout, np.transpose(w))
 
-  dx = mp.reshape(dx_plain, x.shape)
-  dw = mp.dot(mp.transpose(x_plain), dout)
+  dx = np.reshape(dx_plain, x.shape)
+  dw = np.dot(np.transpose(x_plain), dout)
 
   return dx, dw, db
 
@@ -81,30 +79,30 @@ def relu_forward(x):
   - out: Output, of the same shape as x
   - cache: x
   """
-  out = mp.maximum(0, x)
+  out = np.maximum(0, x)
   cache = x
 
   return out, cache
 
 def test_sum_forward():
 
-  np_x = py_mp.zeros((2, 10))
-  np_w = py_mp.zeros((10, 3))
-  np_b = py_mp.zeros(3)
+  np_x = py_np.zeros((2, 10))
+  np_w = py_np.zeros((10, 3))
+  np_b = py_np.zeros(3)
 
   x = NumpyVarToMinpy(np_x)
   w = NumpyVarToMinpy(np_w)
   b = NumpyVarToMinpy(np_b)
 
-  x_plain = mp.reshape(x, (x.shape[0], -1))
-  out0 = mp.dot(x_plain, w)
+  x_plain = np.reshape(x, (x.shape[0], -1))
+  out0 = np.dot(x_plain, w)
   out = out0 + b
 
   np_out = MinpyVarToNumpy(out)
 
-  var = py_mp.random.randn(2, 3)
+  var = py_np.random.randn(2, 3)
   tmp = NumpyVarToMinpy(var)
-  sum_tmp = mp.sum(tmp, axis = 0)
+  sum_tmp = np.sum(tmp, axis = 0)
 
   sum_py = MinpyVarToNumpy(sum_tmp)
 
@@ -176,8 +174,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
   momentum = bn_param.get('momentum', 0.9)
 
   N, D = x.shape
-  running_mean = bn_param.get('running_mean', mp.zeros(D, dtype=x.dtype))
-  running_var = bn_param.get('running_var', mp.zeros(D, dtype=x.dtype))
+  running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
+  running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
 
   out, cache = None, None
   if mode == 'train':
@@ -300,7 +298,7 @@ def dropout_forward(x, dropout_param):
   """
   p, mode = dropout_param['p'], dropout_param['mode']
   if 'seed' in dropout_param:
-    mp.random.seed(dropout_param['seed'])
+    np.random.seed(dropout_param['seed'])
 
   mask = None
   out = None
@@ -380,7 +378,7 @@ def conv_forward_naive(x, w, b, conv_param):
   out = None
   #############################################################################
   # TODO: Implement the convolutional forward pass.                           #
-  # Hint: you can use the function mp.pad for padding.                        #
+  # Hint: you can use the function np.pad for padding.                        #
   #############################################################################
   pass
   #############################################################################
@@ -547,26 +545,26 @@ def svm_loss(x, y, mode):
   - dx: Gradient of the loss with respect to x
   """
   if mode == 'cpu':
-    mp.set_policy(policy.OnlyNumpyPolicy())
+    np.set_policy(policy.OnlyNumpyPolicy())
   else:
-    mp.set_policy(policy.PreferMXNetPolicy())
+    np.set_policy(policy.PreferMXNetPolicy())
 
   N = x.shape[0]
-  correct_class_scores = x[mp.arange(N), y]
+  correct_class_scores = x[np.arange(N), y]
   
   #TODO: Support broadcast case: (X,) (X, Y)
-  #margins = mp.maximum(0, x - correct_class_scores + 1.0)
-  margins = mp.transpose(mp.maximum(0, mp.transpose(x) - mp.transpose(correct_class_scores) + 1.0))
+  #margins = np.maximum(0, x - correct_class_scores + 1.0)
+  margins = np.transpose(np.maximum(0, np.transpose(x) - np.transpose(correct_class_scores) + 1.0))
 
-  #margins[mp.arange(N), y] = 0
-  #loss = mp.sum(margins) / N
-  loss = (mp.sum(margins) - mp.sum(margins[mp.arange(N), y])) / N
-  margins[mp.arange(N), y] = 0
+  #margins[np.arange(N), y] = 0
+  #loss = np.sum(margins) / N
+  loss = (np.sum(margins) - np.sum(margins[np.arange(N), y])) / N
+  margins[np.arange(N), y] = 0
 
-  num_pos = mp.sum(margins > 0, axis=1)
-  dx = mp.zeros_like(x)
+  num_pos = np.sum(margins > 0, axis=1)
+  dx = np.zeros_like(x)
   dx[margins > 0] = 1
-  dx[mp.arange(N), y] -= num_pos
+  dx[np.arange(N), y] -= num_pos
   dx /= N
 
   return loss, dx
@@ -585,19 +583,19 @@ def softmax_loss(x, y):
   - loss: Scalar giving the loss
   - dx: Gradient of the loss with respect to x
   """
-  #mp.expand_dims(correct_class_scores, axis = 1)
-  #probs = mp.exp(x - mp.max(x, axis=1, keepdims=True))
+  #np.expand_dims(correct_class_scores, axis = 1)
+  #probs = np.exp(x - np.max(x, axis=1, keepdims=True))
   #print "x.shape", x.shape
 
   #Somehow Buggy. Max doesn't work.
-  probs = mp.exp(x - mp.max(x, axis=1))
-  #probs /= mp.expand_dims(mp.sum(probs, axis=1), axis = 1)
-  probs /= mp.expand_dims(mp.sum(probs, axis=1), axis = 1)
+  probs = np.exp(x - np.max(x, axis=1))
+  #probs /= np.expand_dims(np.sum(probs, axis=1), axis = 1)
+  probs /= np.expand_dims(np.sum(probs, axis=1), axis = 1)
   N = x.shape[0]
-  loss = -mp.sum(mp.log(probs[mp.arange(N), y])) / N
+  loss = -np.sum(np.log(probs[np.arange(N), y])) / N
 
   dx = probs.copy()
-  dx[mp.arange(N), y] -= 1
+  dx[np.arange(N), y] -= 1
   dx /= N
 
   return loss, dx
