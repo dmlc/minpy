@@ -13,11 +13,13 @@ import logging
 
 from .utils import log
 from .utils import common
+from .utils.minprof import minprof
 #import typing
 from .array_variants import ArrayType
 from .array_variants import array_types
 from .array_variants import number_types
- 
+
+
  #FIXME: should not import these; use array_invariants instead
 import mxnet
 import numpy
@@ -55,10 +57,12 @@ class Node(object):
                 self._partial_derivative_cache[target] = Value.wrap(1.0 if isinstance(self._value, Number) else numpy.ones(self._value.shape))
             else:
                 def call(rec):
+                    # if you want to do profiling, try to use "with minprof(<some info>): ... "
                     grad = rec[1].partial_derivative(target)
                     grad_value = grad.get_data(rec[2]._type)
                     _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
-                    return rec[0](grad_value)
+                    res = rec[0](grad_value)
+                    return res
                 res = functools.reduce(
                         operator.add,
                         map(call, self._partial_derivatives),
@@ -516,6 +520,9 @@ class Primitive(object):
         kwargs_values = {k: get_val(kwargs[k], k in self._mutate_kw) for k in kwargs}
         # Call the real function with raw value.
         result_value = self._func(*arg_values, **kwargs_values)
+        # if you want to do profiling, try to use minprof(<func>):
+        # result_value = minprof(self._func)(*arg_values, **kwargs_values)
+
         # whether the result is on the bp path
         def scan(accum, x):
             if isinstance(x, Value):
