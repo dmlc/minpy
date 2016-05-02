@@ -533,14 +533,20 @@ class Primitive(object):
             # Record partial derivative paths, only for `Value` type values.
             # If no gradient function is defined, also omit it
             for i, arg in enumerate(args):
-                if isinstance(arg, Value) and arg.marked_for_bp and i < len(self._grad_func):
+                if isinstance(arg, Value) and arg.marked_for_bp:
+                    if i >= len(self._grad_func):
+                      _logger.info('Warning: partial derivative of func {0} on #{1} arg is not defined'.format( self._func.__name__, i))
+                      continue
                     _logger.debug('Adding partial derivative to func {} on #{} arg'
                             .format(self._func, i))
                     arg.node.add_partial_derivative(
                             self._grad_func[i](result_value, *arg_values, **kwargs_values),
                             result.node, self)
             for k, arg in kwargs.items():
-                if isinstance(arg, Value) and arg.marked_for_bp and k in self._grad_func_kw:
+                if isinstance(arg, Value) and arg.marked_for_bp:
+                    if k not in self._grad_func_kw:
+                      _logger.info('Warning: partial derivative of func {0} on kwarg "{1}" is not defined'.format(self._func.__name__, k))
+                      continue
                     _logger.debug('Adding partial derivative to func {} on kwarg "{}"'
                             .format(self._func, k))
                     arg.node.add_partial_derivative(
