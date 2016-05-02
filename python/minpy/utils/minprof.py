@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-# USAGE: - you can set MINPROF_FLAG to enable the profiler
-#        - you can add @minprof before the function you want to profiling
+# USAGE: - set MINPROF_FLAG to enable the profiler
+#        - add @minprof before the function you want to profiling
+#        - use minprof(<func>) to wrap a function
+#        - use with(<some info>): ... to wrap a code snippet
 
 # TODO: nest, recursive, timeunit, sort
 # TODO: GPU
@@ -92,37 +94,20 @@ def read_lines(filename, begin_lineno, end_lineno):
 class FuncCallProfiler():
 
     class Timer():
-        def __init__(self, profiler):
+        def __init__(self, profiler, info=None):
             self.profiler = profiler
+            self.info = info
             self.filename = None
             self.begin_lineno = None
             self.end_lineno = None
             self.code_snippet = None
-        #     self.info = info
-        # def __call__(self, func):
-        #     code = func.__code__
-        #     if code not in self.profiler.code_map:
-        #         self.profiler.code_map[code] = []
-        #     @functools.wraps(func)
-        #     def wrapper(*args, **kwargs):
-        #         #self.functions.append(func.__code__)
-        #         begin_time = time.time()
-        #         try:
-        #             result = func(*args, **kwargs)
-        #         finally:
-        #             end_time = time.time()
-        #         self.profiler.code_map[code].append((1, begin_time, end_time))
-        #         return result
-        #     return wrapper
 
         def __enter__(self):
             # print 'timer enter'
             x = getframeinfo(stack()[1][0])
             self.filename = x.filename
             self.begin_lineno = x.lineno
-
             self.begin_time = time.time()
-
 
         def __exit__(self, type, value, traceback):
             # print 'timer exit'
@@ -132,7 +117,10 @@ class FuncCallProfiler():
             self.end_lineno = x.lineno
             self.code_snippet = read_lines(self.filename, self.begin_lineno, self.end_lineno)
 
-            code = (self.filename, self.begin_lineno, self.code_snippet[0].strip()+'...')
+            if self.info is None:
+                code = (self.filename, self.begin_lineno, self.code_snippet[0].strip()+'...')
+            else:
+                code = (self.filename, self.begin_lineno, self.info)
             #print(code)
             if code not in self.profiler.code_map:
                 self.profiler.code_map[code] = []
@@ -153,9 +141,21 @@ class FuncCallProfiler():
         # decorator don't use info
         if func is None:
             return FuncCallProfiler.Timer(self)
+        if isinstance(func, str):
+            return FuncCallProfiler.Timer(self, info=func)
         self.add_function(func)
         wrapper = self.wrap_function(func)
         return wrapper
+
+    def extract_code(self, func, stackdepth):
+        try:
+            code = func.__code__
+        except AttributeError:
+            frameinfo = getframeinfo(stack()[stackdepth][0])
+            #print(frameinfo)
+            #print(func.__name__)
+            code = (frameinfo.filename, frameinfo.lineno, func.__name__)
+        return code
 
 
     def add_function(self, func):
@@ -163,23 +163,18 @@ class FuncCallProfiler():
         given Python function.
         """
         #logger.info("prof add function: %s" % func.__code__)
-        try:
-            code = func.__code__
-        except AttributeError:
-            import warnings
-            warnings.warn("Could not extract a code object for the object %r" % (func, ))
-            return
+        code = self.extract_code(func, 3)
         if code not in self.code_map:
             self.code_map[code] = []
 
     def wrap_function(self, func):
         """ Wrap a function to profile it.
         """
-        @functools.wraps(func)
+        #@functools.wraps(func)
         def wrapper(*args, **kwargs):
             #self.functions.append(func.__code__)
             #logger.info("prof warpper call %s" % func.__code__)
-            code = func.__code__
+            code = self.extract_code(func, 2)
             begin_time = time.time()
             try:
                 result = func(*args, **kwargs)
@@ -237,6 +232,8 @@ def show_func(filename, first_lineno, func_name, timings, stream=None):
     else:
         percall = total_time / nhits
     template = '%10s %10.4f %10.4f    %-s:%s(%s)'
+    if len(filename) > 40:
+        filename = '...' + filename[-40:]
     text = template % (nhits, total_time * 1000, percall * 1000, filename, first_lineno, func_name)
     stream.write(text)
     stream.write("\n")
