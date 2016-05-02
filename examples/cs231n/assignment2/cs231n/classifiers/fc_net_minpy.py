@@ -8,11 +8,11 @@ Types of input values to loss() function, i.e. training/testing data & targets, 
 import numpy as py_np
 
 from model import ModelBase
-from cs231n.layers import *
-from cs231n.layer_utils import *
+from cs231n.layers import affine_forward
+from cs231n.layer_utils import affine_relu_forward
 
 import minpy
-import minpy.numpy as mp
+import minpy.numpy as np
 import minpy.numpy.random as random
 from minpy.core import grad_and_loss
 
@@ -52,9 +52,9 @@ class TwoLayerNet(ModelBase):
     self.reg = reg
 
     self.params['W1'] = random.randn(input_dim, hidden_dim) * weight_scale 
-    self.params['b1'] = mp.zeros((hidden_dim))
+    self.params['b1'] = np.zeros((hidden_dim))
     self.params['W2'] = random.randn(hidden_dim, num_classes) * weight_scale 
-    self.params['b2'] = mp.zeros((num_classes))
+    self.params['b2'] = np.zeros((num_classes))
 
   def loss_and_derivative(self, X, y=None):
     """
@@ -88,7 +88,7 @@ class TwoLayerNet(ModelBase):
       #[TODO]: softmax is not supported yet
       # loss, d_scores = softmax_loss(scores, y)
       loss = svm_loss(scores, y)
-      loss_with_reg = loss + mp.sum(W1 ** 2) * 0.5 * self.reg + mp.sum(W2 ** 2) * 0.5 * self.reg
+      loss_with_reg = loss + np.sum(W1 ** 2) * 0.5 * self.reg + np.sum(W2 ** 2) * 0.5 * self.reg
 
       return loss_with_reg 
 
@@ -187,7 +187,7 @@ class FullyConnectedNet(ModelBase):
         out_d = num_classes
 
       self.params[self.GetWeightName(l)] = random.randn(input_d, out_d) * weight_scale
-      self.params[self.GetBiasName(l)] = mp.zeros((out_d))
+      self.params[self.GetBiasName(l)] = np.zeros((out_d))
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
