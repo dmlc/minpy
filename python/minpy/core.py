@@ -115,3 +115,34 @@ def function(symbol, input_shapes):
     for name in param_names:
         prim.def_grad_kw(def_grad_kw(name), name)
     return prim
+
+def NumpyVarToMinpy(var):
+  return array.Value.wrap(var)
+
+def MinpyVarToNumpy(var):
+  return array.Value.wrap(var).get_data(ArrayType.NUMPY)
+
+def converter(func):
+  @functools.wraps(func)
+  def wrapper(self, *args, **kwargs):
+    mpy_args = [NumpyVarToMinpy(v) for v in args]
+    mpy_kwargs = {}
+    for key, value in mpy_kwargs.iteritems():
+      mpy_kwargs[key] = NumpyVarToMinpy(value)
+
+    mpy_res = func(self, *mpy_args, **mpy_kwargs)
+    if len(mpy_res) == 1:
+      loss_mpy = mpy_res
+    else:
+      loss_mpy = mpy_res[0]
+    loss_npy = MpyVarToNumpy(loss_mpy)
+
+    if len(mpy_res) == 1:
+      return loss_npy
+    else:
+      grad_dict_mpy = mpy_res[1]
+      grad_dict_npy = {}
+      for key, value in grad_dict_mpy.iteritems():
+        grad_dict_npy[key] = MinpyVarToNumpy(value)
+      return loss_npy, grad_dict_npy
+  return wrapper

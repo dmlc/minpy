@@ -14,7 +14,7 @@ from cs231n.layer_utils import affine_relu_forward
 import minpy
 import minpy.numpy as np
 import minpy.numpy.random as random
-from minpy.core import grad_and_loss
+from minpy.core import grad_and_loss, converter
 
 #import minpy.dispatch.policy as policy
 
@@ -56,6 +56,7 @@ class TwoLayerNet(ModelBase):
     self.params['W2'] = random.randn(hidden_dim, num_classes) * weight_scale 
     self.params['b2'] = np.zeros((num_classes))
 
+  @converter
   def loss_and_derivative(self, X, y=None):
     """
     Compute loss and gradient for a minibatch of data.
@@ -214,7 +215,7 @@ class FullyConnectedNet(ModelBase):
     #for k, v in self.params.iteritems():
       #self.params[k] = v.astype(dtype)
 
-
+  @converter
   def loss_and_derivative(self, X, y=None):
     """
     Compute loss and gradient for the fully-connected net.

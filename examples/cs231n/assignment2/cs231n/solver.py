@@ -162,7 +162,7 @@ class Solver(object):
     y_batch = self.y_train[batch_mask]
 
     # Compute loss and gradient
-    loss, grads = self.model.loss(X_batch, y_batch)
+    loss, grads = self.model.loss_and_derivative(X_batch, y_batch)
 
     self.loss_history.append(loss)
 
