@@ -131,13 +131,13 @@ def converter(func):
       mpy_kwargs[key] = NumpyVarToMinpy(value)
 
     mpy_res = func(self, *mpy_args, **mpy_kwargs)
-    if len(mpy_res) == 1:
+    if type(mpy_res) is not tuple: 
       loss_mpy = mpy_res
     else:
       loss_mpy = mpy_res[0]
-    loss_npy = MpyVarToNumpy(loss_mpy)
+    loss_npy = MinpyVarToNumpy(loss_mpy)
 
-    if len(mpy_res) == 1:
+    if type(mpy_res) is not tuple:
       return loss_npy
     else:
       grad_dict_mpy = mpy_res[1]

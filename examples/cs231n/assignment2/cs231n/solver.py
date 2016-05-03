@@ -208,7 +208,7 @@ class Solver(object):
     for i in xrange(num_batches):
       start = i * batch_size
       end = (i + 1) * batch_size
-      scores = self.model.loss(X[start:end])
+      scores = self.model.loss_and_derivative(X[start:end])
       y_pred.append(np.argmax(scores, axis=1))
     y_pred = np.hstack(y_pred)
     acc = np.mean(y_pred == y)
@@ -261,6 +261,7 @@ class Solver(object):
           self.best_params = {}
           for k, v in self.model.params.iteritems():
             self.best_params[k] = v.copy()
+
 
     # At the end of training swap the best params into the model
     self.model.params = self.best_params
