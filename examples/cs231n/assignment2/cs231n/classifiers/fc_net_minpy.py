@@ -80,6 +80,7 @@ class TwoLayerNet(ModelBase):
     """  
     # Note: types of X, y are mxnet.ndarray
 
+
     def train_loss(X, y, W1, W2, b1, b2):
       l1 = affine_relu_forward(X, W1, b1)
       l2 = affine_forward(l1, W2, b2)
@@ -105,7 +106,8 @@ class TwoLayerNet(ModelBase):
 
     grad_function = grad_and_loss(train_loss, range(2, 6))
 
-    grads_array, loss = grad_function(X, y, *self.params_array)
+    X_plain = np.reshape(X, (X.shape[0], -1))
+    grads_array, loss = grad_function(X_plain, y, *self.params_array)
 
     grads = {}
     for i in range(len(params_list_name)):

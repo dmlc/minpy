@@ -27,9 +27,7 @@ def affine_forward(x, w, b):
   - cache: (x, w, b)
   """
 
-  #TODO(Haoran): remove reshape outside loss function
-  x_plain = np.reshape(x, (x.shape[0], -1))
-  out = np.dot(x_plain, w) + b
+  out = np.dot(x, w) + b
 
   return out
 
