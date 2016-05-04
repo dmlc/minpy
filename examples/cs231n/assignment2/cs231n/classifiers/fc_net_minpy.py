@@ -52,11 +52,9 @@ class TwoLayerNet(ModelBase):
     self.reg = reg
 
     self.params['W1'] = random.randn(input_dim, hidden_dim) * weight_scale 
-    #self.params['b1'] = np.zeros((hidden_dim))
-    self.params['b1'] = random.randn(hidden_dim) * weight_scale - weight_scale*0.5
+    self.params['b1'] = np.zeros((hidden_dim))
     self.params['W2'] = random.randn(hidden_dim, num_classes) * weight_scale 
-    #self.params['b2'] = np.zeros((num_classes))
-    self.params['b2'] = random.randn(num_classes)* weight_scale - weight_scale*0.5
+    self.params['b2'] = np.zeros((num_classes))
 
   @converter
   def loss_and_derivative(self, X, y=None):
@@ -101,12 +99,12 @@ class TwoLayerNet(ModelBase):
     for param_name in params_list_name:
       self.params_array.append(self.params[param_name])
 
+    X_plain = np.reshape(X, (X.shape[0], -1))
     if y is None:
-      return train_loss(X, y, *self.params_array)
+      return train_loss(X_plain, y, *self.params_array)
 
     grad_function = grad_and_loss(train_loss, range(2, 6))
 
-    X_plain = np.reshape(X, (X.shape[0], -1))
     grads_array, loss = grad_function(X_plain, y, *self.params_array)
 
     grads = {}
