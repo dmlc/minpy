@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 """Logging utilities."""
 import logging
+import sys
+
+PY3 = sys.version_info[0] == 3
 
 class _Formatter(logging.Formatter):
     """Customized log formatter."""
@@ -39,7 +42,8 @@ class _Formatter(logging.Formatter):
         fmt += '[%(asctime)s %(process)d %(filename)s:%(lineno)d:%(funcName)s]\x1b[0m'
         fmt += ' %(message)s'
         self._fmt = fmt
-        # self._style._fmt = fmt
+        if PY3:
+            self._style._fmt = fmt
         return super(_Formatter, self).format(record)
 
 _handler = logging.StreamHandler()
