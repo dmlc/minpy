@@ -46,6 +46,8 @@ def resolve_name(name, reg, plc, *args, **kwargs):
     Returns:
         A function after resolution.
     """
-    available = reg.iter_available_types(name)
+    args_len = len(args)
+    kwargs_keys = list(kwargs.keys())
+    available = reg.iter_available_types(name, args_len, kwargs_keys)
     preference = plc.decide(available, args, kwargs)
     return reg.get(name, preference)

@@ -39,15 +39,15 @@ def grad_and_loss(func, argnum=0):
         arrays = tuple(map(make_array, args))
         argnums = [argnum] if type(argnum) is int else argnum
         for i in argnums:
-          arrays[i]._marked_for_bp = True
+            arrays[i]._marked_for_bp = True
         result_array = func(*arrays)
         _logger.debug('---Forward pass finished. Start backward pass')
         grad_vals = []
         for i in argnums:
-          grad_vals.append(arrays[i].node.partial_derivative(result_array.node))
-          arrays[i]._marked_for_bp = False
+            grad_vals.append(arrays[i].node.partial_derivative(result_array.node))
+            arrays[i]._marked_for_bp = False
         if len(grad_vals) == 1:
-          grad_vals = grad_vals[0]
+            grad_vals = grad_vals[0]
         return grad_vals, result_array
     return wrapped
 

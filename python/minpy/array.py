@@ -584,6 +584,7 @@ class Primitive(object):
         Return:
             self instance for multiple def_grad in one statement
         """
+        # XXX(minjie): why comment enforce_input_type?
         #self._grad_func[argnum] = self._enforce_input_type(func)
         self._grad_func[argnum] = func
         return self
@@ -602,3 +603,9 @@ class Primitive(object):
 
     def def_grad_zero(self, argnum=0):
         self._grad_func[argnum] = lambda *args, **kwargs: lambda g: 0.0
+
+    def gradable(self, args_len, kwargs_keys):
+        ret = args_len <= len(self._grad_func)
+        for i in kwargs_keys:
+            ret = ret and (i in self._grad_func_kw)
+        return ret
