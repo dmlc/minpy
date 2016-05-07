@@ -306,11 +306,7 @@ def softmax_loss(x, y):
   Returns a tuple of:
   - loss: Scalar giving the loss
   """
-  #np.expand_dims(correct_class_scores, axis = 1)
-  #probs = np.exp(x - np.max(x, axis=1, keepdims=True))
-  #print "x.shape", x.shape
-
-  #Somehow Buggy. Max doesn't work.
+  #Missing Max Operator 
   probs = np.exp(x - np.expand_dims(np.max(x, axis=1), axis = 1))
   probs = probs / np.expand_dims(np.sum(probs, axis=1), axis = 1)
   N = x.shape[0]
