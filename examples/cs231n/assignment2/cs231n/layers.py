@@ -305,7 +305,6 @@ def softmax_loss(x, y):
 
   Returns a tuple of:
   - loss: Scalar giving the loss
-  - dx: Gradient of the loss with respect to x
   """
   #np.expand_dims(correct_class_scores, axis = 1)
   #probs = np.exp(x - np.max(x, axis=1, keepdims=True))
@@ -313,12 +312,8 @@ def softmax_loss(x, y):
 
   #Somehow Buggy. Max doesn't work.
   probs = np.exp(x - np.expand_dims(np.max(x, axis=1), axis = 1))
-  probs /= np.expand_dims(np.sum(probs, axis=1), axis = 1)
+  probs = probs / np.expand_dims(np.sum(probs, axis=1), axis = 1)
   N = x.shape[0]
   loss = -np.sum(np.log(probs[np.arange(N), y])) / N
 
-  dx = probs.copy()
-  dx[np.arange(N), y] -= 1
-  dx /= N
-
-  return loss, dx
+  return loss
