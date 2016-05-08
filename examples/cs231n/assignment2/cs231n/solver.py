@@ -260,7 +260,9 @@ class Solver(object):
           self.best_val_acc = val_acc
           self.best_params = {}
           for k, v in self.model.params.iteritems():
-            self.best_params[k] = v.copy()
+            #TODO: Missing Copy Method
+            #self.best_params[k] = v.copy()
+            self.best_params[k] = v
 
 
     # At the end of training swap the best params into the model
