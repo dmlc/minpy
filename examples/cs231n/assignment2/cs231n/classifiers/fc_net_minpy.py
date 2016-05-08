@@ -152,9 +152,6 @@ class FullyConnectedNet(ModelBase):
     - reg: Scalar giving L2 regularization strength.
     - weight_scale: Scalar giving the standard deviation for random
       initialization of the weights.
-    - dtype: A numpy datatype object; all computations will be performed using
-      this datatype. float32 is faster but less accurate, so you should use
-      float64 for numeric gradient checking.
     - seed: If not None, then pass this random seed to the dropout layers. This
       will make the dropout layers deteriminstic so we can gradient check the
       model.
@@ -163,21 +160,9 @@ class FullyConnectedNet(ModelBase):
     self.use_dropout = dropout > 0
     self.reg = reg
     self.num_layers = 1 + len(hidden_dims)
-    #self.dtype = dtype
     self.params = {}
+    self.WeightAndBiasArray = []
 
-    ############################################################################
-    # TODO: Initialize the parameters of the network, storing all values in    #
-    # the self.params dictionary. Store weights and biases for the first layer #
-    # in W1 and b1; for the second layer use W2 and b2, etc. Weights should be #
-    # initialized from a normal distribution with standard deviation equal to  #
-    # weight_scale and biases should be initialized to zero.                   #
-    #                                                                          #
-    # When using batch normalization, store scale and shift parameters for the #
-    # first layer in gamma1 and beta1; for the second layer use gamma2 and     #
-    # beta2, etc. Scale parameters should be initialized to one and shift      #
-    # parameters should be initialized to zero.                                #
-    ############################################################################
     for l in xrange(self.num_layers):
       if l == 0:
         input_d = input_dim
@@ -191,9 +176,12 @@ class FullyConnectedNet(ModelBase):
 
       self.params[self.GetWeightName(l)] = random.randn(input_d, out_d) * weight_scale
       self.params[self.GetBiasName(l)] = np.zeros((out_d))
-    ############################################################################
-    #                             END OF YOUR CODE                             #
-    ############################################################################
+
+    for l in xrange(self.num_layers):
+      self.WeightAndBiasArray.append(self.params[self.GetWeightName(l)])
+
+    for l in xrange(self.num_layers):
+      self.WeightAndBiasArray.append(self.params[self.GetBiasName(l)])
 
     # When using dropout we need to pass a dropout_param dictionary to each
     # dropout layer so that the layer knows the dropout probability and the mode
@@ -237,32 +225,30 @@ class FullyConnectedNet(ModelBase):
     assert not (self.use_batchnorm or self.use_dropout)
 
     # args is [X, Y, W[0], ..., W[n-1], b[0], ..., b[n-1]]
-    # type of (args) is list.
     def train_loss(*args):
       last_layer_output = args[0]
 
       for l in xrange(self.num_layers):
         if l < (self.num_layers - 1):
-          # TODO: last_layer_output is mutated in this code
-          # TODO: rewrite last_layer_output 
-          last_layer_output, _ = affine_relu_forward(last_layer_output, 
+          last_layer_output = affine_relu_forward(last_layer_output, \
             args[2 + l], args[2 + self.num_layers + l]) 
         else:
-          last_layer_output, _ = affine_forward(last_layer_output, 
+          last_layer_output = affine_forward(last_layer_output, \
             args[2 + l], args[2 + self.num_layers + l]) 
+
 
       scores = last_layer_output 
 
       if mode == 'test':
         return scores
 
-      loss, _ = softmax_loss(scores, y)
+      #loss, _ = softmax_loss(scores, y)
+      loss = svm_loss(scores, y)
       return loss
 
     grad_function = grad_and_loss(train_loss, range(2, 2+2*self.num_layers))
 
-    #TODO: define self.WeightAndBiasArray
-    loss, grads_array = grad_function(X, y, *self.WeightAndBiasArray)
+    grads_array, loss = grad_function(X, y, *self.WeightAndBiasArray)
     grads = {}
 
     for l in xrange(self.num_layers - 1, -1, -1):
