@@ -45,8 +45,12 @@ class Registry(object):
     def get(self, name, t):
         return self._reg[name][t]
 
-    def iter_available_types(self, name):
+    def iter_available_types(self, name, args_len, kwargs_keys):
         if name not in self._reg:
             return iter([])
         else:
-            return self._reg[name].keys()
+            ret = []
+            for i, j in self._reg[name].items():
+                if j.gradable(args_len, kwargs_keys):
+                    ret.append(i)
+            return ret
