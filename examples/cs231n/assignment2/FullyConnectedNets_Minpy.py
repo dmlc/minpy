@@ -20,23 +20,9 @@ def RunTwoLayerNet():
   solver.train()
 
 def RunFullyConnectedNet():
-  N, D, H1, H2, C = 2, 15, 20, 30, 10
-  X = np.random.randn(N, D)
-  y = np.random.randint(C, size=(N,))
-  
-  for reg in [0, 3.14]:
-    print 'Running check with reg = ', reg
-    model = FullyConnectedNet([H1, H2], input_dim=D, num_classes=C,
-                                      reg=reg, weight_scale=5e-2)
-  
-    loss, grads = model.loss_and_derivative(X, y)
-    print 'Initial loss: ', loss
-    ''' 
-    for name in sorted(grads):
-      f = lambda _: model.loss_and_derivative(X, y)[0]
-      grad_num = eval_numerical_gradient(f, model.params[name], verbose=False, h=1e-5)
-      print '%s relative error: %.2e' % (name, rel_error(grad_num, grads[name]))
-    ''' 
+  model = FullyConnectedNet([100, 50], dropout=0.5)
+  solver = Solver(model, data, optim_config={'learning_rate': 1e-3,}, lr_decay=0.95, print_every = 100)
+  solver.train()
 
 #RunTwoLayerNet()
 RunFullyConnectedNet()

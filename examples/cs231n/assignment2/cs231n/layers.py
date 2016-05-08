@@ -4,8 +4,9 @@ import minpy.core
 import minpy.array
 from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
+import minpy.numpy.random as random
 
-#np.set_policy(policy.OnlyNumpyPolicy())
+np.set_policy(policy.OnlyNumpyPolicy())
 #np.set_policy(policy.PreferMXNetPolicy())
 
 def affine_forward(x, w, b):
@@ -152,21 +153,19 @@ def dropout_forward(x, dropout_param):
   """
   p, mode = dropout_param['p'], dropout_param['mode']
   if 'seed' in dropout_param:
-    np.random.seed(dropout_param['seed'])
+    random.seed(dropout_param['seed'])
 
   mask = None
   out = None
 
   if mode == 'train':
-    #TODO: Add grad of comparison
+    #TODO: check implementation of compare operator in mxnet? 
     mask = random.rand(*x.shape) > p
     out = x * mask #drop!
-  elif mode == 'test':
+  else:
     out = x
-  cache = (dropout_param, mask)
-  out = out.astype(x.dtype, copy=False)
 
-  return out, cache
+  return out
 
 def conv_forward_naive(x, w, b, conv_param):
   """

@@ -4,11 +4,10 @@ This file implements fullyconnected network in minpy.
 All the array created in this file belongs to minpy.array Type.
 Types of input values to loss() function, i.e. training/testing data & targets, should also be minpy.array.
 """
-
 import numpy as py_np
 
 from model import ModelBase
-from cs231n.layers import affine_forward, svm_loss
+from cs231n.layers import affine_forward, svm_loss, dropout_forward
 from cs231n.layer_utils import affine_relu_forward
 
 import minpy
@@ -139,6 +138,7 @@ class FullyConnectedNet(ModelBase):
   def __init__(self, hidden_dims, input_dim=3*32*32, num_classes=10,
                dropout=0, use_batchnorm=False, reg=0.0,
                weight_scale=1e-2, seed=None):
+
     """
     Initialize a new FullyConnectedNet.
     
@@ -161,9 +161,8 @@ class FullyConnectedNet(ModelBase):
     self.reg = reg
     self.num_layers = 1 + len(hidden_dims)
     self.params = {}
-    self.WeightAndBiasArray = []
 
-    for l in xrange(self.num_layers):
+    for l in range(self.num_layers):
       if l == 0:
         input_d = input_dim
       else:
@@ -176,12 +175,6 @@ class FullyConnectedNet(ModelBase):
 
       self.params[self.GetWeightName(l)] = random.randn(input_d, out_d) * weight_scale
       self.params[self.GetBiasName(l)] = np.zeros((out_d))
-
-    for l in xrange(self.num_layers):
-      self.WeightAndBiasArray.append(self.params[self.GetWeightName(l)])
-
-    for l in xrange(self.num_layers):
-      self.WeightAndBiasArray.append(self.params[self.GetBiasName(l)])
 
     # When using dropout we need to pass a dropout_param dictionary to each
     # dropout layer so that the layer knows the dropout probability and the mode
@@ -212,6 +205,8 @@ class FullyConnectedNet(ModelBase):
 
     Input / output: Same as TwoLayerNet above.
     """
+
+    X_plain = np.reshape(X, (X.shape[0], -1))
     mode = 'test' if y is None else 'train'
 
     if self.dropout_param is not None:
@@ -221,23 +216,28 @@ class FullyConnectedNet(ModelBase):
       for bn_param in self.bn_params:
         bn_param[mode] = mode
 
-    # TODO: add bn_options and dropout option
-    assert not (self.use_batchnorm or self.use_dropout)
+    self.params_array = []
+    for l in range(self.num_layers):
+      self.params_array.append(self.params[self.GetWeightName(l)])
+
+    for l in range(self.num_layers):
+      self.params_array.append(self.params[self.GetBiasName(l)])
 
     # args is [X, Y, W[0], ..., W[n-1], b[0], ..., b[n-1]]
     def train_loss(*args):
-      last_layer_output = args[0]
+      X = args[0]
+      y = args[1]
 
+      last_output = X
       for l in xrange(self.num_layers):
         if l < (self.num_layers - 1):
-          last_layer_output = affine_relu_forward(last_layer_output, \
-            args[2 + l], args[2 + self.num_layers + l]) 
+          last_output = affine_relu_forward(last_output, args[2 + l], args[2 + self.num_layers + l]) 
+          if self.use_dropout:
+            last_output = dropout_forward(last_output, self.dropout_param)
         else:
-          last_layer_output = affine_forward(last_layer_output, \
-            args[2 + l], args[2 + self.num_layers + l]) 
+          last_output = affine_forward(last_output, args[2 + l], args[2 + self.num_layers + l]) 
 
-
-      scores = last_layer_output 
+      scores = last_output
 
       if mode == 'test':
         return scores
@@ -246,12 +246,15 @@ class FullyConnectedNet(ModelBase):
       loss = svm_loss(scores, y)
       return loss
 
-    grad_function = grad_and_loss(train_loss, range(2, 2+2*self.num_layers))
+    if y is None:
+      return train_loss(X_plain, y, *self.params_array)
 
-    grads_array, loss = grad_function(X, y, *self.WeightAndBiasArray)
+    grad_function = grad_and_loss(train_loss, range(2, 2+2*self.num_layers))
+    grads_array, loss = grad_function(X_plain, y, *self.params_array)
+
     grads = {}
 
-    for l in xrange(self.num_layers - 1, -1, -1):
+    for l in xrange(self.num_layers):
       grads[self.GetWeightName(l)] = grads_array[l]
       grads[self.GetBiasName(l)] = grads_array[l + self.num_layers]
 

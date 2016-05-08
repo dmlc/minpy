@@ -189,11 +189,28 @@ def Test_Softmax():
   print 'loss: ', loss
   #print 'dx error: ', rel_error(dx_num, dx)
 
+def Test_Dropout():
+  x = np.random.randn(10, 10) + 10
+  mp_x = NumpyVarToMinpy(x)
+
+  dout = np.random.randn(*x.shape)
+  p = 0.5
+  
+  dropout_param = {'mode': 'train', 'p': p, 'seed': 123}
+
+  mp_out = dropout_forward(mp_x, dropout_param)
+  out = MinpyVarToNumpy(mp_out)
+
+  print ('Probability:', p)
+  print ('Filterd ratio:', (out==0).sum()/100.0)
+  
+  
 #Test_Affine_Forward()
 #Test_Affine_Backward()
 #Relu_Forward()
 #Relu_Backward()
-Test_SVM()
+#Test_SVM()
 #Test_SVM_CPU_GPU()
 #Test_Softmax()
 #Test_Test_Forward()
+Test_Dropout()

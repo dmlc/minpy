@@ -4,6 +4,7 @@ import minpy.core
 import minpy.array
 from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
+import minpy.numpy.random as random
 
 #np.set_policy(policy.OnlyNumpyPolicy())
 #np.set_policy(policy.PreferMXNetPolicy())
@@ -314,34 +315,19 @@ def dropout_forward(x, dropout_param):
   """
   p, mode = dropout_param['p'], dropout_param['mode']
   if 'seed' in dropout_param:
-    np.random.seed(dropout_param['seed'])
+    random.seed(dropout_param['seed'])
 
   mask = None
   out = None
 
   if mode == 'train':
-    ###########################################################################
-    # TODO: Implement the training phase forward pass for inverted dropout.   #
-    # Store the dropout mask in the mask variable.                            #
-    ###########################################################################
+
     mask = np.random.rand(*x.shape) > p #drop mask!
     out = x * mask #drop!
-    ###########################################################################
-    #                            END OF YOUR CODE                             #
-    ###########################################################################
   elif mode == 'test':
-    ###########################################################################
-    # TODO: Implement the test phase forward pass for inverted dropout.       #
-    ###########################################################################
     out = x
-    ###########################################################################
-    #                            END OF YOUR CODE                             #
-    ###########################################################################
 
-  cache = (dropout_param, mask)
-  out = out.astype(x.dtype, copy=False)
-
-  return out, cache
+  return out
 
 
 def dropout_backward(dout, cache):
