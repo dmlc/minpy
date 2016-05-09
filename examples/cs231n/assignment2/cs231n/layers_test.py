@@ -6,7 +6,7 @@ from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
 import minpy.numpy.random as random
 
-#np.set_policy(policy.OnlyNumpyPolicy())
+np.set_policy(policy.OnlyNumpyPolicy())
 #np.set_policy(policy.PreferMXNetPolicy())
 
 def affine_forward(x, w, b):
@@ -175,64 +175,36 @@ def batchnorm_forward(x, gamma, beta, bn_param):
   momentum = bn_param.get('momentum', 0.9)
 
   N, D = x.shape
-  running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
-  running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
+  running_mean = bn_param.get('running_mean', np.zeros(D))
+  running_var = bn_param.get('running_var', np.zeros(D))
 
-  out, cache = None, None
+  out = None
   if mode == 'train':
-    #############################################################################
-    # TODO: Implement the training-time forward pass for batch normalization.   #
-    # Use minibatch statistics to compute the mean and variance, use these      #
-    # statistics to normalize the incoming data, and scale and shift the        #
-    # normalized data using gamma and beta.                                     #
-    #                                                                           #
-    # You should store the output in the variable out. Any intermediates that   #
-    # you need for the backward pass should be stored in the cache variable.    #
-    #                                                                           #
-    # You should also use your computed sample mean and variance together with  #
-    # the momentum variable to update the running mean and running variance,    #
-    # storing your result in the running_mean and running_var variables.        #
-    #############################################################################
-    mean = np.sum(x,axis=0)/float(N)
+    mean = np.sum(x, axis = 0)/float(N)
     x_mean = (x - mean)
 
-    sqr_x_mean = x_mean**2
-    var = np.sum(sqr_x_mean,axis=0)/float(N)
-    sqrt_var = np.sqrt(var+eps)
+    sqr_x_mean = x_mean ** 2
+    var = np.sum(sqr_x_mean, axis = 0)/float(N)
+    sqrt_var = np.sqrt(var + eps)
 
     inv_sqrt_var = 1.0/sqrt_var
 
-    x_hat = x_mean*inv_sqrt_var
+    x_hat = x_mean * inv_sqrt_var
     out = gamma * x_hat + beta
 
-    cache = (x_hat,gamma,sqr_x_mean,mean,var,sqrt_var,x_mean,inv_sqrt_var)
-
-    running_mean = momentum*running_mean + (1.0-momentum)*mean
-    running_var = momentum*running_var + (1.0-momentum)*var
-    #############################################################################
-    #                             END OF YOUR CODE                              #
-    #############################################################################
+    running_mean = momentum*running_mean + (1.0 - momentum) * mean
+    running_var = momentum*running_var + (1.0 - momentum) * var
   elif mode == 'test':
-    #############################################################################
-    # TODO: Implement the test-time forward pass for batch normalization. Use   #
-    # the running mean and variance to normalize the incoming data, then scale  #
-    # and shift the normalized data using gamma and beta. Store the result in   #
-    # the out variable.                                                         #
-    #############################################################################
-    x_hat = (x - running_mean)/np.sqrt(running_var+eps)
+    x_hat = (x - running_mean)/np.sqrt(running_var + eps)
     out = gamma * x_hat + beta
-    #############################################################################
-    #                             END OF YOUR CODE                              #
-    #############################################################################
   else:
     raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
   # Store the updated running means back into bn_param
   bn_param['running_mean'] = running_mean
   bn_param['running_var'] = running_var
-
-  return out, cache
-
+ 
+  return out
 
 def batchnorm_backward(dout, cache):
   """

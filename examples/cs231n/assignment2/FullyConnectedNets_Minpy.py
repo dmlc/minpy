@@ -20,7 +20,7 @@ def RunTwoLayerNet():
   solver.train()
 
 def RunFullyConnectedNet():
-  model = FullyConnectedNet([100, 50], dropout=0.5)
+  model = FullyConnectedNet([100, 50], dropout = 0.5, use_batchnorm = True)
   solver = Solver(model, data, optim_config={'learning_rate': 1e-3,}, lr_decay=0.95, print_every = 100)
   solver.train()
 

@@ -97,29 +97,27 @@ def batchnorm_forward(x, gamma, beta, bn_param):
   momentum = bn_param.get('momentum', 0.9)
 
   N, D = x.shape
-  running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
-  running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
+  running_mean = bn_param.get('running_mean', np.zeros(D))
+  running_var = bn_param.get('running_var', np.zeros(D))
 
-  out, cache = None, None
+  out = None
   if mode == 'train':
-    mean = np.sum(x,axis=0)/float(N)
+    mean = np.sum(x, axis = 0)/float(N)
     x_mean = (x - mean)
 
-    sqr_x_mean = x_mean**2
-    var = np.sum(sqr_x_mean,axis=0)/float(N)
-    sqrt_var = np.sqrt(var+eps)
+    sqr_x_mean = x_mean ** 2
+    var = np.sum(sqr_x_mean, axis = 0)/float(N)
+    sqrt_var = np.sqrt(var + eps)
 
     inv_sqrt_var = 1.0/sqrt_var
 
-    x_hat = x_mean*inv_sqrt_var
+    x_hat = x_mean * inv_sqrt_var
     out = gamma * x_hat + beta
 
-    cache = (x_hat,gamma,sqr_x_mean,mean,var,sqrt_var,x_mean,inv_sqrt_var)
-
-    running_mean = momentum*running_mean + (1.0-momentum)*mean
-    running_var = momentum*running_var + (1.0-momentum)*var
+    running_mean = momentum*running_mean + (1.0 - momentum) * mean
+    running_var = momentum*running_var + (1.0 - momentum) * var
   elif mode == 'test':
-    x_hat = (x - running_mean)/np.sqrt(running_var+eps)
+    x_hat = (x - running_mean)/np.sqrt(running_var + eps)
     out = gamma * x_hat + beta
   else:
     raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
@@ -128,9 +126,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
   bn_param['running_mean'] = running_mean
   bn_param['running_var'] = running_var
 
-  return out, cache
-
-
+  return out
 
 def dropout_forward(x, dropout_param):
   """

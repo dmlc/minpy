@@ -204,6 +204,37 @@ def Test_Dropout():
   print ('Probability:', p)
   print ('Filterd ratio:', (out==0).sum()/100.0)
   
+def Test_BatchNorm():
+  # Check the training-time forward pass by checking means and variances
+  # of features both before and after batch normalization
+  
+  # Simulate the forward pass for a two-layer network|
+  N, D1, D2, D3 = 200, 50, 60, 3
+  X = np.random.randn(N, D1)
+  W1 = np.random.randn(D1, D2)
+  W2 = np.random.randn(D2, D3)
+  a = np.maximum(0, X.dot(W1)).dot(W2)
+  
+  print 'Before batch normalization:'
+  print '  means: ', a.mean(axis=0)
+  print '  stds: ', a.std(axis=0)
+  
+  # Means should be close to zero and stds close to one
+  print 'After batch normalization (gamma=1, beta=0)'
+  mp_a = NumpyVarToMinpy(a)
+  mp_a_norm = batchnorm_forward(mp_a, np.ones(D3), np.zeros(D3), {'mode': 'train'})
+  a_norm = MinpyVarToNumpy(mp_a_norm)
+  print '  mean: ', a_norm.mean(axis=0)
+  print '  std: ', a_norm.std(axis=0)
+  
+  # Now means should be close to beta and stds close to gamma
+  gamma = np.asarray([1.0, 2.0, 3.0])
+  beta = np.asarray([11.0, 12.0, 13.0])
+  mp_a_norm = batchnorm_forward(mp_a, gamma, beta, {'mode': 'train'})
+  a_norm = MinpyVarToNumpy(mp_a_norm)
+  print 'After batch normalization (nontrivial gamma, beta)'
+  print '  means: ', a_norm.mean(axis=0)
+  print '  stds: ', a_norm.std(axis=0)
   
 #Test_Affine_Forward()
 #Test_Affine_Backward()
@@ -213,4 +244,5 @@ def Test_Dropout():
 #Test_SVM_CPU_GPU()
 #Test_Softmax()
 #Test_Test_Forward()
-Test_Dropout()
+#Test_Dropout()
+Test_BatchNorm()
