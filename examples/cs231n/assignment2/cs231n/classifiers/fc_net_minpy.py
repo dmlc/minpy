@@ -5,6 +5,7 @@ All the array created in this file belongs to minpy.array Type.
 Types of input values to loss() function, i.e. training/testing data & targets, should also be minpy.array.
 """
 import numpy as py_np
+import functools
 
 from model import ModelBase
 from cs231n.layers import affine_forward, relu_forward, svm_loss, dropout_forward, batchnorm_forward
@@ -129,18 +130,6 @@ class FullyConnectedNet(ModelBase):
   self.params dictionary and will be learned using the Solver class.
   """
 
-  def GetWeightName(self, kth):
-    return 'W' + str(kth)
-
-  def GetBiasName(self, kth):
-    return 'b' + str(kth)
-
-  def GetBnGammaName(self, kth):
-    return 'bn_ga' + str(kth)
-
-  def GetBnBetaName(self, kth):
-    return 'bn_be' + str(kth)
-
   def __init__(self, hidden_dims, input_dim=3*32*32, num_classes=10,
                dropout=0, use_batchnorm=False, reg=0.0,
                weight_scale=1e-2, seed=None):
@@ -167,6 +156,12 @@ class FullyConnectedNet(ModelBase):
     self.reg = reg
     self.num_layers = 1 + len(hidden_dims)
     self.params = {}
+    self.data_target_cnt = 2
+
+    self.w_name = lambda l: 'W' + str(l)
+    self.b_name = lambda l: 'b' + str(l)
+    self.bn_ga_name = lambda l: 'bn_ga' + str(l)
+    self.bn_bt_name = lambda l: 'bn_bt' + str(l)
 
     for l in range(self.num_layers):
       if l == 0:
@@ -179,11 +174,13 @@ class FullyConnectedNet(ModelBase):
       else:
         out_d = num_classes
 
-      self.params[self.GetWeightName(l)] = random.randn(input_d, out_d) * weight_scale
-      self.params[self.GetBiasName(l)] = np.zeros((out_d))
+      self.params[self.w_name(l)] = random.randn(input_d, out_d) * weight_scale
+      self.params[self.b_name(l)] = np.zeros((out_d))
       if l < self.num_layers and self.use_batchnorm:
-        self.params[self.GetBnBetaName(l)] = np.zeros((out_d))
-        self.params[self.GetBnGammaName(l)] = np.ones((out_d))
+        self.params[self.bn_ga_name(l)] = np.ones((out_d))
+        self.params[self.bn_bt_name(l)] = np.zeros((out_d))
+
+    self.param_keys = self.params.keys()
 
     # When using dropout we need to pass a dropout_param dictionary to each
     # dropout layer so that the layer knows the dropout probability and the mode
@@ -196,16 +193,33 @@ class FullyConnectedNet(ModelBase):
     
     # With batch normalization we need to keep track of running means and
     # variances, so we need to pass a special bn_param object to each batch
-    # normalization layer. You should pass self.bn_params[0] to the forward pass
-    # of the first batch normalization layer, self.bn_params[1] to the forward
-    # pass of the second batch normalization layer, etc.
+    # normalization layer.
     self.bn_params = []
     if self.use_batchnorm:
       self.bn_params = [{'mode': 'train'} for i in xrange(self.num_layers - 1)]
     
-    # Cast all parameters to the correct datatype
-    #for k, v in self.params.iteritems():
-      #self.params[k] = v.astype(dtype)
+    # Build key's index in loss func's arglist
+    self.key_args_index = {}
+    for i, key in enumerate(self.param_keys):
+      # data, targets would be the first two elments in arglist
+      self.key_args_index[key] = self.data_target_cnt + i
+
+    self.w_idx = self.wrap_param_idx(self.w_name)
+    self.b_idx = self.wrap_param_idx(self.b_name)
+    self.bn_ga_idx = self.wrap_param_idx(self.bn_ga_name)
+    self.bn_bt_idx = self.wrap_param_idx(self.bn_bt_name)
+
+  def wrap_param_idx(self, f):
+    @functools.wraps(f)
+    def find_idx(key):
+      return self.key_args_index[f(key)]
+    return find_idx
+
+  def pack_params(self):
+    params_collect = []
+    for key in self.param_keys:
+      params_collect.append(self.params[key])
+    return params_collect
 
   @converter
   def loss_and_derivative(self, X, y=None):
@@ -225,40 +239,26 @@ class FullyConnectedNet(ModelBase):
       for bn_param in self.bn_params:
         bn_param['mode'] = mode
 
-    self.params_array = []
-    #TODO: Refine those four for statements; more fancy style
-    for l in range(self.num_layers):
-      self.params_array.append(self.params[self.GetWeightName(l)])
+    params_array = self.pack_params()
 
-    for l in range(self.num_layers):
-      self.params_array.append(self.params[self.GetBiasName(l)])
-
-    for l in range(self.num_layers):
-      if l < self.num_layers and self.use_batchnorm:
-        self.params_array.append(self.params[self.GetBnGammaName(l)])
-
-    for l in range(self.num_layers):
-      if l < self.num_layers and self.use_batchnorm:
-        self.params_array.append(self.params[self.GetBnBetaName(l)])
-
-    # args is [X, Y, W[:], W[:], Gamma[:], Beta[:]]
     def train_loss(*args):
       X = args[0]
       y = args[1]
 
-      v = X
+      res = X
       for l in xrange(self.num_layers):
-        if l < (self.num_layers - 1):
-          v = affine_forward(v, args[2 + l], args[2 + self.num_layers + l]) 
-          if self.use_batchnorm:
-            v = batchnorm_forward(v, args[2 + 2* self.num_layers + l], args[2 + 3* self.num_layers + l], self.bn_params[l])
-          v = relu_forward(v)
-          if self.use_dropout:
-            v = dropout_forward(v, self.dropout_param)
-        else:
-          v = affine_forward(v, args[2 + l], args[2 + self.num_layers + l]) 
+        prev_res = res
+        res = affine_forward(prev_res, args[self.w_idx(l)], args[self.b_idx(l)])
 
-      scores = v
+        if l < (self.num_layers - 1):
+          if self.use_batchnorm:
+            res = batchnorm_forward(res, args[self.bn_ga_idx(l)],
+                                    args[self.bn_bt_idx(l)], self.bn_params[l])
+          res = relu_forward(res)
+          if self.use_dropout:
+            res = dropout_forward(res, self.dropout_param)
+
+      scores = res
 
       if mode == 'test':
         return scores
@@ -268,17 +268,13 @@ class FullyConnectedNet(ModelBase):
       return loss
 
     if y is None:
-      return train_loss(X_plain, y, *self.params_array)
+      return train_loss(X_plain, y, *params_array)
 
-    grad_function = grad_and_loss(train_loss, range(2, 2 + 4 * self.num_layers))
-    grads_array, loss = grad_function(X_plain, y, *self.params_array)
+    grad_function = grad_and_loss(train_loss, range(self.data_target_cnt, self.data_target_cnt + len(params_array)))
+    grads_array, loss = grad_function(X_plain, y, *params_array)
 
     grads = {}
 
-    for l in xrange(self.num_layers):
-      grads[self.GetWeightName(l)] = grads_array[l]
-      grads[self.GetBiasName(l)] = grads_array[l + self.num_layers]
-      grads[self.GetBnGammaName(l)] = grads_array[l + 2*self.num_layers]
-      grads[self.GetBnBetaName(l)] = grads_array[l + 3*self.num_layers]
-
+    for i, grad in enumerate(grads_array):
+      grads[self.param_keys[i]] = grad
     return loss, grads
