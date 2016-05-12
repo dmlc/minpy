@@ -112,3 +112,4 @@ def def_grads(reg, prims):
     prims('maximum').def_grad(lambda ans, x, y: unbroadcast(ans, x, lambda g: g * (x == ans)))
     prims('maximum').def_grad(lambda ans, x, y: unbroadcast(ans, y, lambda g: g * (y == ans)), argnum=1)
     prims('_minpy_indexing_delegate').def_grad(lambda ans, x, index: lambda g: _minpy_indexing_delegate_grad(x, index, g))
+    prims('reshape').def_grad(lambda _0, x, _1: lambda g: np.reshape(g, x.shape))
