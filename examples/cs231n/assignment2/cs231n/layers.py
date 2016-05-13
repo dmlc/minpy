@@ -102,11 +102,10 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
   out = None
   if mode == 'train':
-    mean = np.sum(x, axis = 0)/float(N)
+    mean = np.sum(x, axis = 0)/N
     x_mean = (x - mean)
-
     sqr_x_mean = x_mean ** 2
-    var = np.sum(sqr_x_mean, axis = 0)/float(N)
+    var = np.sum(sqr_x_mean, axis = 0)/N
     sqrt_var = np.sqrt(var + eps)
 
     inv_sqrt_var = 1.0/sqrt_var
@@ -281,7 +280,9 @@ def svm_loss(x, y):
   correct_class_scores = x[np.arange(N), y]
   
   #TODO: Support broadcast case: (X,) (X, Y)
-  #margins = np.maximum(0, x - correct_class_scores[:, np.newaxis] + 1.0)
+  #shape(x) is (d0, d1)
+  #shape(correct_class_scores) is (d0,)
+  #margins = np.maximum(0, x - correct_class_scores + 1.0)
   margins = np.transpose(np.maximum(0, np.transpose(x) - np.transpose(correct_class_scores) + 1.0))
 
   loss = (np.sum(margins) - np.sum(margins[np.arange(N), y])) / N

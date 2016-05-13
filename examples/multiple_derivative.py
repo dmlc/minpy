@@ -38,16 +38,22 @@ weights = random.rand(*wshape) - 0.5
 
 #training_gradient_fun_0 = grad(training_loss, 0)
 training_gradient_fun_0 = grad_and_loss(training_loss, 0)
+print 'loss is'
+print training_gradient_fun_0(weights, inputs)[1]
 print 'derivative of 1st argument by calling single arg-grad func'
 print training_gradient_fun_0(weights, inputs)[0]
 
 training_gradient_fun_1 = grad_and_loss(training_loss, 1)
+print 'loss is'
+print training_gradient_fun_1(weights, inputs)[1]
 print 'derivative of 2nd argument by calling single arg-grad func'
 print training_gradient_fun_1(weights, inputs)[0]
 
 
 training_gradient_fun_both = grad_and_loss(training_loss, [0, 1])
 v = training_gradient_fun_both(weights, inputs)
+print 'loss is'
+print v[1]
 print 'derivative of 1st argument by calling multiple arg-grad func'
 print v[0][0]
 print 'derivative of 2nd argument by calling multiple arg-grad func'
