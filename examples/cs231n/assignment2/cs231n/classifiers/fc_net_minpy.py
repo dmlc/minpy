@@ -14,7 +14,7 @@ from cs231n.layer_utils import affine_relu_forward
 import minpy
 import minpy.numpy as np
 import minpy.numpy.random as random
-from minpy.core import grad_and_loss, converter
+from minpy.core import grad_and_loss
 
 #import minpy.dispatch.policy as policy
 
@@ -35,7 +35,7 @@ class TwoLayerNet(ModelBase):
   """
   
   def __init__(self, input_dim=3*32*32, hidden_dim=100, num_classes=10,
-               weight_scale=1e-3, reg=0.0):
+               weight_scale=1e-3, reg=0.0, conv_mode='lazy'):
     """
     Initialize a new network.
 
@@ -48,6 +48,7 @@ class TwoLayerNet(ModelBase):
       initialization of the weights.
     - reg: Scalar giving L2 regularization strength.
     """
+    super().__init__(conv_mode)
     self.params = {}
     self.reg = reg
 
@@ -56,7 +57,6 @@ class TwoLayerNet(ModelBase):
     self.params['W2'] = random.randn(hidden_dim, num_classes) * weight_scale 
     self.params['b2'] = np.zeros((num_classes))
 
-  @converter
   def loss_and_derivative(self, X, y=None):
     """
     Compute loss and gradient for a minibatch of data.
@@ -77,8 +77,6 @@ class TwoLayerNet(ModelBase):
       names to gradients of the loss with respect to those parameters.
     """  
     # Note: types of X, y are mxnet.ndarray
-
-
     def train_loss(X, y, W1, W2, b1, b2):
       l1 = affine_relu_forward(X, W1, b1)
       l2 = affine_forward(l1, W2, b2)
@@ -132,7 +130,7 @@ class FullyConnectedNet(ModelBase):
 
   def __init__(self, hidden_dims, input_dim=3*32*32, num_classes=10,
                dropout=0, use_batchnorm=False, reg=0.0,
-               weight_scale=1e-2, seed=None):
+               weight_scale=1e-2, seed=None, conv_mode='lazy'):
 
     """
     Initialize a new FullyConnectedNet.
@@ -151,6 +149,7 @@ class FullyConnectedNet(ModelBase):
       will make the dropout layers deteriminstic so we can gradient check the
       model.
     """
+    super(FullyConnectedNet, self).__init__(conv_mode)
     self.use_batchnorm = use_batchnorm
     self.use_dropout = dropout > 0
     self.reg = reg
@@ -223,7 +222,6 @@ class FullyConnectedNet(ModelBase):
       params_collect.append(self.params[key])
     return params_collect
 
-  @converter
   def loss_and_derivative(self, X, y=None):
     """
     Compute loss and gradient for the fully-connected net.
