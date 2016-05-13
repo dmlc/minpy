@@ -158,6 +158,7 @@ class FullyConnectedNet(ModelBase):
     self.params = {}
     self.data_target_cnt = 2
 
+    #Define parameter name given # layer
     self.w_name = lambda l: 'W' + str(l)
     self.b_name = lambda l: 'b' + str(l)
     self.bn_ga_name = lambda l: 'bn_ga' + str(l)
@@ -204,6 +205,7 @@ class FullyConnectedNet(ModelBase):
       # data, targets would be the first two elments in arglist
       self.key_args_index[key] = self.data_target_cnt + i
 
+    # Init Key to index in loss_function args
     self.w_idx = self.wrap_param_idx(self.w_name)
     self.b_idx = self.wrap_param_idx(self.b_name)
     self.bn_ga_idx = self.wrap_param_idx(self.bn_ga_name)
