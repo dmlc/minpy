@@ -48,7 +48,7 @@ class TwoLayerNet(ModelBase):
       initialization of the weights.
     - reg: Scalar giving L2 regularization strength.
     """
-    super().__init__(conv_mode)
+    super(TwoLayerNet, self).__init__(conv_mode)
     self.params = {}
     self.reg = reg
 
