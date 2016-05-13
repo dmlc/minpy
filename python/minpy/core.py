@@ -8,6 +8,8 @@ from .utils import log
 from . import array
 
 from .array_variants import ArrayType
+from .array_variants import array_types
+from .array_variants import number_types
 
 _logger = log.get_logger(__name__)
 
@@ -116,38 +118,43 @@ def function(symbol, input_shapes):
         prim.def_grad_kw(def_grad_kw(name), name)
     return prim
 
+class ConvertErrorUnexpectedType(ValueError):
+    pass
+
 def NumpyVarToMinpy(var):
   return array.Value.wrap(var)
 
 def MinpyVarToNumpy(var):
   return array.Value.wrap(var).get_data(ArrayType.NUMPY)
 
+def ConvFunc(var, conv, basic_types):
+  v_t = type(var)
+  if v_t is tuple:
+    np_var = tuple(conv(v)  for v in var)
+  elif v_t is list:
+    np_var = list(conv(v)  for v in var)
+  elif v_t is dict:
+    np_var = {k:conv(v)  for k, v in var.iteritems()}
+  elif  type(t) in basic_types:
+    np_var = conv(var)
+  else:
+    raise ConvertErrorUnexpectedType('Unexpected %s type found in core.ConvToNumpy' % v_t)
+  return np_var
+
 def converter(cmd):
   def wrapper(func):
     @functools.wraps(func)
     def real_wrapper(*args, **kwargs):
-      mpy_args = [NumpyVarToMinpy(v) for v in args]
-      mpy_kwargs = {}
-      for key, value in mpy_kwargs.iteritems():
-        mpy_kwargs[key] = NumpyVarToMinpy(value)
+      basic_types = array_types.values() + number_types.values()
+      mpy_args = ConvFunc(args, NumpyVarToMinpy, basic_types)
+      mpy_kwargs = ConvFunc(kwargs, NumpyVarToMinpy, basic_types)
 
       mpy_res = func(*mpy_args, **mpy_kwargs)
       if cmd == 'lazy':
+        # lazy mode returns funciton result without converting
         return mpy_res
-
-      if type(mpy_res) is not tuple:
-        loss_mpy = mpy_res
       else:
-        loss_mpy = mpy_res[0]
-      loss_npy = MinpyVarToNumpy(loss_mpy)
+        return ConvFunc(mpy_res, MinpyVarToNumpy, basic_types)
 
-      if type(mpy_res) is not tuple:
-        return loss_npy
-      else:
-        grad_dict_mpy = mpy_res[1]
-        grad_dict_npy = {}
-        for key, value in grad_dict_mpy.iteritems():
-          grad_dict_npy[key] = MinpyVarToNumpy(value)
-        return loss_npy, grad_dict_npy
     return real_wrapper
   return wrapper
