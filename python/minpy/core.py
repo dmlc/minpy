@@ -128,14 +128,13 @@ def MinpyVarToNumpy(var):
   return array.Value.wrap(var).get_data(ArrayType.NUMPY)
 
 def ConvFunc(var, conv, basic_types):
-  v_t = type(var)
-  if v_t is tuple:
+  if isinstance(var, tuple):
     np_var = tuple(conv(v)  for v in var)
-  elif v_t is list:
+  elif isinstance(var, list):
     np_var = list(conv(v)  for v in var)
-  elif v_t is dict:
+  elif isinstance(var, dict):
     np_var = {k:conv(v)  for k, v in var.iteritems()}
-  elif  type(t) in basic_types:
+  elif type(var) in basic_types:
     np_var = conv(var)
   else:
     raise ConvertErrorUnexpectedType('Unexpected %s type found in core.ConvToNumpy' % v_t)
