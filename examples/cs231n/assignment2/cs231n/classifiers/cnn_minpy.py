@@ -1,11 +1,15 @@
-import minpy as np
+import minpy 
+import minpy.numpy as np
 import mxnet as mx
+import minpy.numpy.random as random
 from model import ModelBase
+import minpy.core as core
 
 class ModelInputDimInconsistencyError(ValueError):
-    pass
+  pass
 
-class ThreeLayerConvNet(ModelBase): """
+class ThreeLayerConvNet(ModelBase): 
+  """
   A three-layer convolutional network with the following architecture:
 
   conv - relu - 2x2 max pool - affine - relu - affine - softmax
@@ -45,30 +49,27 @@ class ThreeLayerConvNet(ModelBase): """
 
     self.set_param()
 
-    # we could add another base mxnet model
-    self.set_mxnet_symbol()
-
-  def set_param(self)
+  def set_param(self):
     self.params = {}
 
     c_cnt, height, width = self.input_dim
     f_cnt = self.num_filters
-    f_h, f_d = self.filter_size, self.filter_size
+    f_h, f_w = self.filter_size, self.filter_size
 
-    self.params['conv_weight'] = random.randn(f_cnt, c_cnt, f_h, f_w) * weights
+    self.params['conv_weight'] = random.randn(f_cnt, c_cnt, f_h, f_w) * self.weight_scale
     self.params['conv_bias'] = np.zeros(f_cnt)
 
     conv_stride = 1
     conv_pad = (f_h-1) / 2
 
-    Hc, Wc = 1 + ( H + 2*conv_pad - f_h) / conv_stride , 1 + ( W + 2*conv_pad - f_d) / conv_stride
+    Hc, Wc = 1 + ( height + 2*conv_pad - f_h) / conv_stride , 1 + ( width + 2*conv_pad - f_w) / conv_stride
 
     pool_height, pool_width = 2, 2
     pool_stride = 2
 
     Hp, Wp = (Hc - pool_height)/pool_stride+1, (Wc - pool_width)/pool_stride+1
 
-    self.params['fc1_weight'] = random.randn(Hp*Wp*F, self.hidden_dim) * self.weight_scale
+    self.params['fc1_weight'] = random.randn(Hp*Wp*f_cnt, self.hidden_dim) * self.weight_scale
     self.params['fc1_bias'] = np.zeros(self.hidden_dim)
 
     self.params['fc2_weight'] = random.randn(self.hidden_dim, self.num_classes) * self.weight_scale
@@ -90,10 +91,10 @@ class ThreeLayerConvNet(ModelBase): """
     pool1 = mx.symbol.Pooling(data=tanh1, pool_type="max", kernel=(2,2), stride=(2,2))
     
     flatten = mx.symbol.Flatten(data=pool1)
-    fc1 = mx.sym.FullyConnected(name='fc1', data=flatten, num_hidden=hidden_dim)
+    fc1 = mx.sym.FullyConnected(name='fc1', data=flatten, num_hidden=self.hidden_dim)
     act1 = mx.sym.Activation(data=fc1, act_type='sigmoid')
 
-    fc2 = mx.sym.FullyConnected(name='fc2', data=fc1, num_hidden=hidden_dim)
+    fc2 = mx.sym.FullyConnected(name='fc2', data=fc1, num_hidden=self.hidden_dim)
     act2 = mx.sym.Activation(data=fc2, act_type='sigmoid')
 
     batch_num, x_c, x_h, x_w = X.shape
@@ -117,9 +118,10 @@ class ThreeLayerConvNet(ModelBase): """
     assert len(args) == len(self.param_keys)
     for i, key in enumerate(self.param_keys):
       wDict[key] = args[i]
+    wDict['x'] = args[0]
     return wDict
 
-  def loss(self, X, y=None):
+  def loss_and_derivative(self, X, y=None):
     """
     Evaluate loss and gradient for the three-layer convolutional network.
 
@@ -130,10 +132,10 @@ class ThreeLayerConvNet(ModelBase): """
 
     params_array = self.pack_params()
 
-    def train_loss(*args)
+    def train_loss(*args):
       inputs = args[0]
       targets = args[1]
-      probs = f('x' = inputs, self.make_mxnet_weight_dict(args[self.data_target_cnt:len(args)]))
+      probs = self.symbol_func(**self.make_mxnet_weight_dict(args[self.data_target_cnt:len(args)]))
 
       if targets is None:
         return probs 
@@ -148,7 +150,7 @@ class ThreeLayerConvNet(ModelBase): """
     if y is None:
       return train_loss(X, y, *params_array)
 
-    grad_function = grad_and_loss(train_loss, range(self.data_target_cnt, self.data_target_cnt + len(params_array)))
+    grad_function = core.grad_and_loss(train_loss, range(self.data_target_cnt, self.data_target_cnt + len(params_array)))
     grads_array, loss = grad_function(X, y, *params_array)
 
     grads = {}
