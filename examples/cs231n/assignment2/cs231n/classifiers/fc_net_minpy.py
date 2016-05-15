@@ -155,7 +155,6 @@ class FullyConnectedNet(ModelBase):
     self.reg = reg
     self.num_layers = 1 + len(hidden_dims)
     self.params = {}
-    self.data_target_cnt = 2
 
     #Define parameter name given # layer
     self.w_name = lambda l: 'W' + str(l)

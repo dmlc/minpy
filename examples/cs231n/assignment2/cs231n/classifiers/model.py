@@ -10,6 +10,7 @@ class ModelBase(object):
 
   def __init__(self, conv_mode = 'lazy'):
     self.convert_mode = conv_mode
+    self.data_target_cnt = 2
 
   def loss(self, X, y = None):
     res = converter(self.convert_mode)(self.loss_and_derivative)(X, y)
