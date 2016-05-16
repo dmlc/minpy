@@ -16,11 +16,10 @@ class Policy(object):
     def decide(self, candidates, *args, **kwargs):
         raise AmbiguousPolicyError('Unimplemented')
 
-
 class PreferMXNetPolicy(Policy):
     """Perfer using MXNet functions."""
     def decide(self, candidates, *args, **kwargs):
-        if ArrayType.MXNET in candidates:
+        if ArrayType.MXNET in map(lambda x: x.type, candidates):
             return ArrayType.MXNET
         else:
             return ArrayType.NUMPY
@@ -28,10 +27,10 @@ class PreferMXNetPolicy(Policy):
 class OnlyNumpyPolicy(Policy):
     """Perfer using MXNet functions."""
     def decide(self, candidates, *args, **kwargs):
-        if ArrayType.NUMPY in candidates:
+        if ArrayType.NUMPY in map(lambda x: x.type, candidates):
             return ArrayType.NUMPY
         else:
-            raise ValueError("Cannot find proper functions among: {}".format(candidates))
+            raise ValueError("Cannot find proper functions among: {}.".format(candidates))
 
 def resolve_name(name, reg, plc, *args, **kwargs):
     """Resolve a function name.

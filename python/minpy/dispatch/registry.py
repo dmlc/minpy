@@ -50,7 +50,7 @@ class Registry(object):
             return iter([])
         else:
             ret = []
-            for i, j in self._reg[name].items():
-                if j.gradable(args_len, kwargs_keys):
+            for i in self._reg[name].values():
+                if i.gradable(args_len, kwargs_keys):
                     ret.append(i)
             return ret
