@@ -38,7 +38,8 @@ class ThreeLayerConvNet(ModelBase):
     - reg: Scalar giving L2 regularization strength
     """
     super(ThreeLayerConvNet, self).__init__(conv_mode)
-    # this should be moved in super() init
+    #TODO(haoran): Add another parent class
+    #This should be moved into super() __init__
     self.symbol_func = None
 
     self.input_dim = input_dim
@@ -61,6 +62,8 @@ class ThreeLayerConvNet(ModelBase):
     self.params['conv1_weight'] = random.randn(f_cnt, c_cnt, f_h, f_w) * self.weight_scale
     self.params['conv1_bias'] = np.zeros(f_cnt)
 
+    #TODO(Haoran): whole stuff about all dimension calculations
+    #should be substituted by quering symbol.arg_list
     conv_stride = 1
     conv_pad = (f_h-1) / 2
 
@@ -79,6 +82,8 @@ class ThreeLayerConvNet(ModelBase):
     self.params['fc2_weight'] = np.transpose(random.randn(self.hidden_dim, self.num_classes) * self.weight_scale)
     self.params['fc2_bias'] = np.zeros((self.num_classes))
 
+
+    #TODO(Haoran): move following into parent structured model class
     self.param_keys = self.params.keys()
 
     # Build key's index in loss func's arglist
@@ -112,15 +117,18 @@ class ThreeLayerConvNet(ModelBase):
 
     self.symbol_func = core.function(scores, [('x', X.shape), ('softmax_label', label_shape)])
 
+  #TODO(Haoran): move this into parent structured model class
   def pack_params(self):
     params_collect = []
     for key in self.param_keys:
       params_collect.append(self.params[key])
     return params_collect
 
+  #TODO(Haoran): move this into parent structured model class
   def get_index_reg_weight(self):
     return [self.key_args_index[key] for key in ['conv1_weight', 'fc1_weight', 'fc2_weight']]
 
+  #TODO(Haoran): move this into parent mxnet model class
   def make_mxnet_weight_dict(self, inputs, targets, args):
     wDict = {}
     assert len(args) == len(self.param_keys)
@@ -137,6 +145,8 @@ class ThreeLayerConvNet(ModelBase):
 
     params_array = self.pack_params()
 
+    #TODO(Haoran): isolate this part out for user
+    #if so, loss_and_derivative function should be inherited from super mxnet model class
     def train_loss(*args):
       inputs = args[0]
       softmax_label = args[1]
