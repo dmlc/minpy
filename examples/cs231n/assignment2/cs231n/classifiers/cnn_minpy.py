@@ -1,9 +1,12 @@
 import minpy 
+import numpy as py_np
 import minpy.numpy as np
 import mxnet as mx
 import minpy.numpy.random as random
 from model import ModelBase
 import minpy.core as core
+
+from cs231n.layers import affine_forward, relu_forward, svm_loss, dropout_forward, batchnorm_forward
 
 class ModelInputDimInconsistencyError(ValueError):
   pass
@@ -56,8 +59,13 @@ class ThreeLayerConvNet(ModelBase):
     f_cnt = self.num_filters
     f_h, f_w = self.filter_size, self.filter_size
 
-    self.params['conv_weight'] = random.randn(f_cnt, c_cnt, f_h, f_w) * self.weight_scale
+    self.params['conv1_weight'] = random.randn(f_cnt, c_cnt, f_h, f_w) * self.weight_scale
+    self.params['conv1_bias'] = np.zeros(f_cnt)
+
+    """
+    self.params['conv_weight'] = random.randn(f_cnt/2, c_cnt, f_h, f_w) * self.weight_scale
     self.params['conv_bias'] = np.zeros(f_cnt)
+    """
 
     conv_stride = 1
     conv_pad = (f_h-1) / 2
@@ -69,11 +77,13 @@ class ThreeLayerConvNet(ModelBase):
 
     Hp, Wp = (Hc - pool_height)/pool_stride+1, (Wc - pool_width)/pool_stride+1
 
-    self.params['fc1_weight'] = random.randn(Hp*Wp*f_cnt, self.hidden_dim) * self.weight_scale
-    self.params['fc1_bias'] = np.zeros(self.hidden_dim)
+    # weight has to be tranposed to fit mxnet's symbol
+    self.params['fc1_weight'] = np.transpose(random.randn(5408, self.hidden_dim) * self.weight_scale)
+    self.params['fc1_bias'] = np.zeros((self.hidden_dim))
 
-    self.params['fc2_weight'] = random.randn(self.hidden_dim, self.num_classes) * self.weight_scale
-    self.params['fc2_bias'] = np.zeros(self.num_classes)
+    # weight has to be tranposed to fit mxnet's symbol
+    self.params['fc2_weight'] = np.transpose(random.randn(self.hidden_dim, self.num_classes) * self.weight_scale)
+    self.params['fc2_bias'] = np.zeros((self.num_classes))
 
     self.param_keys = self.params.keys()
 
@@ -86,22 +96,28 @@ class ThreeLayerConvNet(ModelBase):
   def set_mxnet_symbol(self, X):
 
     data = mx.sym.Variable(name='x')
-    conv1 = mx.symbol.Convolution(name='conv', data=data, kernel=(5,5), num_filter=5)
-    tanh1 = mx.symbol.Activation(data=conv1, act_type="tanh")
+    conv1 = mx.symbol.Convolution(name='conv1', data=data, kernel=(self.filter_size, self.filter_size), num_filter=self.num_filters)
+    tanh1 = mx.symbol.Activation(data=conv1, act_type="relu")
     pool1 = mx.symbol.Pooling(data=tanh1, pool_type="max", kernel=(2,2), stride=(2,2))
-    
+
     flatten = mx.symbol.Flatten(data=pool1)
     fc1 = mx.sym.FullyConnected(name='fc1', data=flatten, num_hidden=self.hidden_dim)
-    act1 = mx.sym.Activation(data=fc1, act_type='sigmoid')
 
-    fc2 = mx.sym.FullyConnected(name='fc2', data=fc1, num_hidden=self.hidden_dim)
-    act2 = mx.sym.Activation(data=fc2, act_type='sigmoid')
+    fc1 = mx.sym.FullyConnected(name='fc1', data=pool1, num_hidden=self.hidden_dim)
+    act1 = mx.sym.Activation(data=fc1, act_type='relu')
+
+    fc2 = mx.sym.FullyConnected(name='fc2', data=fc1, num_hidden=self.num_classes)
 
     batch_num, x_c, x_h, x_w = X.shape
     c, h, w = self.input_dim
     if not ( c == x_c and h == x_h and x_w ):
       raise ModelInputDimInconsistencyError('Expected Dim: {}, Input Dim: {}'.format(self.input_dim, X.shape))
-    self.symbol_func = core.function(act2, [('x', X.shape)])
+
+    #scores = mx.sym.SoftmaxOutput(data=act2, name='softmax', grad_scale=1.0)
+    label_shape = (batch_num, )
+
+    #self.symbol_func = core.function(scores, [('x', X.shape), ('softmax_label', label_shape)])
+    self.symbol_func = core.function(fc2, [('x', X.shape)])
 
 
   def pack_params(self):
@@ -113,12 +129,14 @@ class ThreeLayerConvNet(ModelBase):
   def get_index_reg_weight(self):
     return [self.key_args_index[key] for key in ['conv_weight', 'fc1_weight', 'fc2_weight']]
 
-  def make_mxnet_weight_dict(self, args):
+  def make_mxnet_weight_dict(self, inputs, targets, args):
     wDict = {}
     assert len(args) == len(self.param_keys)
     for i, key in enumerate(self.param_keys):
       wDict[key] = args[i]
-    wDict['x'] = args[0]
+    wDict['x'] = inputs 
+    #if targets is not None:
+    #  wDict['softmax_label'] = targets
     return wDict
 
   def loss_and_derivative(self, X, y=None):
@@ -127,24 +145,31 @@ class ThreeLayerConvNet(ModelBase):
 
     Input / output: Same API as TwoLayerNet in fc_net.py.
     """
+
     if self.symbol_func == None:
       self.set_mxnet_symbol(X)
 
     params_array = self.pack_params()
 
+    if y is not None:
+      samples_num = X.shape[0]
+      one_to_many_y = py_np.zeros((samples_num, self.num_classes))
+      real_y = core.MinpyVarToNumpy(y)
+      one_to_many_y[py_np.arange(samples_num), real_y] = 1
+
     def train_loss(*args):
       inputs = args[0]
       targets = args[1]
-      probs = self.symbol_func(**self.make_mxnet_weight_dict(args[self.data_target_cnt:len(args)]))
-
+      probs = self.symbol_func(**self.make_mxnet_weight_dict(inputs, targets, args[self.data_target_cnt:len(args)]))
       if targets is None:
         return probs 
 
-      N = inputs.shape[0]
-      loss = -np.sum(np.log(probs[np.arange(N), targets])) / N
+      #loss = -np.sum(np.log(probs[np.arange(samples_num), targets])) / samples_num
+      #loss = -np.sum(one_to_many_y * np.log(probs)) / samples_num 
+      #loss = probs**2
 
-      for reg_index in self.get_index_reg_weight():
-        loss += 0.5*self.reg*np.sum(args[reg_index]**2)
+      loss = svm_loss(probs, targets) 
+
       return loss
 
     if y is None:
@@ -154,7 +179,6 @@ class ThreeLayerConvNet(ModelBase):
     grads_array, loss = grad_function(X, y, *params_array)
 
     grads = {}
-
     for i, grad in enumerate(grads_array):
       grads[self.param_keys[i]] = grad
 
