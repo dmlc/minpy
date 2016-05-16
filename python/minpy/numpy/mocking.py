@@ -44,7 +44,7 @@ class Module(object):
         self._logger.info('Import {} primitives'.format(len(self._registry._reg)))
 
     def set_policy(self, plc):
-        assert(isinstance(plc, policy.Policy), 'Need an instance of `minpy.dispatch.Policy`.')
+        assert isinstance(plc, policy.Policy), 'Need an instance of `minpy.dispatch.Policy`.'
         self._policy = plc
 
     def __getattr__(self, name):
