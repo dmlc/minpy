@@ -66,10 +66,10 @@ class Node(object):
                 res = functools.reduce(
                         operator.add,
                         map(call, self._partial_derivatives),
-                        0.0)
+                        Value.warp(0.0))
 
                 # in case _partial_derivatives is empty
-                if (type(res) == float) and (type(self._value) != Number):
+                if (isinstance(res, float) or isinstance(res, Number)) and (not isinstance(self._value, Number)):
                   res = numpy.zeros(self._value.shape)
 
                 self._partial_derivative_cache[target] = Value.wrap(res)
