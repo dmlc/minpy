@@ -11,7 +11,6 @@ class _Formatter(logging.Formatter):
 
     def __init__(self):
         datefmt = '%m%d %H:%M:%S'
-        #super().__init__(datefmt=datefmt, style='{')
         super(_Formatter, self).__init__(datefmt=datefmt)
 
     def _get_color(self, level):
