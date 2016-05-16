@@ -66,7 +66,7 @@ class Node(object):
                 res = functools.reduce(
                         operator.add,
                         map(call, self._partial_derivatives),
-                        Value.warp(0.0))
+                        Value.wrap(0.0))
 
                 # in case _partial_derivatives is empty
                 if (isinstance(res, float) or isinstance(res, Number)) and (not isinstance(self._value, Number)):
