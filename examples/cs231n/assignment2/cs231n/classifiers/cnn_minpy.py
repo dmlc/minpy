@@ -1,5 +1,4 @@
 import minpy 
-import numpy as py_np
 import minpy.numpy as np
 import mxnet as mx
 import minpy.numpy.random as random
@@ -62,11 +61,6 @@ class ThreeLayerConvNet(ModelBase):
     self.params['conv1_weight'] = random.randn(f_cnt, c_cnt, f_h, f_w) * self.weight_scale
     self.params['conv1_bias'] = np.zeros(f_cnt)
 
-    """
-    self.params['conv_weight'] = random.randn(f_cnt/2, c_cnt, f_h, f_w) * self.weight_scale
-    self.params['conv_bias'] = np.zeros(f_cnt)
-    """
-
     conv_stride = 1
     conv_pad = (f_h-1) / 2
 
@@ -113,12 +107,10 @@ class ThreeLayerConvNet(ModelBase):
     if not ( c == x_c and h == x_h and x_w ):
       raise ModelInputDimInconsistencyError('Expected Dim: {}, Input Dim: {}'.format(self.input_dim, X.shape))
 
-    #scores = mx.sym.SoftmaxOutput(data=act2, name='softmax', grad_scale=1.0)
+    scores = mx.sym.SoftmaxOutput(data = fc2, name='softmax')
     label_shape = (batch_num, )
 
-    #self.symbol_func = core.function(scores, [('x', X.shape), ('softmax_label', label_shape)])
-    self.symbol_func = core.function(fc2, [('x', X.shape)])
-
+    self.symbol_func = core.function(scores, [('x', X.shape), ('softmax_label', label_shape)])
 
   def pack_params(self):
     params_collect = []
@@ -135,40 +127,27 @@ class ThreeLayerConvNet(ModelBase):
     for i, key in enumerate(self.param_keys):
       wDict[key] = args[i]
     wDict['x'] = inputs 
-    #if targets is not None:
-    #  wDict['softmax_label'] = targets
+    if targets is not None:
+      wDict['softmax_label'] = targets
     return wDict
 
   def loss_and_derivative(self, X, y=None):
-    """
-    Evaluate loss and gradient for the three-layer convolutional network.
-
-    Input / output: Same API as TwoLayerNet in fc_net.py.
-    """
-
     if self.symbol_func == None:
       self.set_mxnet_symbol(X)
 
     params_array = self.pack_params()
 
-    if y is not None:
-      samples_num = X.shape[0]
-      one_to_many_y = py_np.zeros((samples_num, self.num_classes))
-      real_y = core.MinpyVarToNumpy(y)
-      one_to_many_y[py_np.arange(samples_num), real_y] = 1
-
     def train_loss(*args):
       inputs = args[0]
-      targets = args[1]
-      probs = self.symbol_func(**self.make_mxnet_weight_dict(inputs, targets, args[self.data_target_cnt:len(args)]))
-      if targets is None:
+      softmax_label = args[1]
+      probs = self.symbol_func(**self.make_mxnet_weight_dict(inputs, softmax_label, args[self.data_target_cnt:len(args)]))
+      if softmax_label is None:
         return probs 
 
-      #loss = -np.sum(np.log(probs[np.arange(samples_num), targets])) / samples_num
-      #loss = -np.sum(one_to_many_y * np.log(probs)) / samples_num 
-      #loss = probs**2
-
-      loss = svm_loss(probs, targets) 
+      samples_num = X.shape[0]
+      targets = np.zeros((samples_num, self.num_classes))
+      targets[np.arange(samples_num), softmax_label] = 1
+      loss = -np.sum(targets * np.log(probs)) / samples_num
 
       return loss
 

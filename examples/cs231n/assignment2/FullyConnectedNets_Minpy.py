@@ -11,10 +11,6 @@ from cs231n.data_utils import get_CIFAR10_data
 from cs231n.gradient_check import eval_numerical_gradient, eval_numerical_gradient_array
 from cs231n.solver import Solver
 
-data = get_CIFAR10_data()
-for k, v in data.iteritems():
-  print '%s: ' % k, v.shape
-
 def RunTwoLayerNet():
   model = TwoLayerNet()
   solver = Solver(model, data, optim_config={'learning_rate': 1e-3,}, lr_decay=0.95, print_every = 100)
@@ -27,8 +23,13 @@ def RunFullyConnectedNet():
 
 def RunCnnNet():
   model = ThreeLayerConvNet()
-  solver = Solver(model, data, optim_config={'learning_rate': 1e-3,}, lr_decay=0.95, print_every = 100)
+  solver = Solver(model, data, optim_config={'learning_rate': 1e-5,}, lr_decay=0.95, print_every = 100)
   solver.train()
+
+
+data = get_CIFAR10_data()
+for k, v in data.iteritems():
+  print '%s: ' % k, v.shape
 
 #RunTwoLayerNet()
 #RunFullyConnectedNet()
