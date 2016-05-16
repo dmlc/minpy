@@ -22,7 +22,7 @@ def RunFullyConnectedNet():
   solver.train()
 
 def RunCnnNet():
-  model = ThreeLayerConvNet()
+  model = ThreeLayerConvNet(reg = 1e-2)
   solver = Solver(model, data, optim_config={'learning_rate': 1e-5,}, lr_decay=0.95, print_every = 100)
   solver.train()
 

@@ -119,7 +119,7 @@ class ThreeLayerConvNet(ModelBase):
     return params_collect
 
   def get_index_reg_weight(self):
-    return [self.key_args_index[key] for key in ['conv_weight', 'fc1_weight', 'fc2_weight']]
+    return [self.key_args_index[key] for key in ['conv1_weight', 'fc1_weight', 'fc2_weight']]
 
   def make_mxnet_weight_dict(self, inputs, targets, args):
     wDict = {}
@@ -148,6 +148,8 @@ class ThreeLayerConvNet(ModelBase):
       targets = np.zeros((samples_num, self.num_classes))
       targets[np.arange(samples_num), softmax_label] = 1
       loss = -np.sum(targets * np.log(probs)) / samples_num
+      for i in self.get_index_reg_weight():
+        loss = loss + np.sum(0.5*args[i]**2*self.reg)
 
       return loss
 
