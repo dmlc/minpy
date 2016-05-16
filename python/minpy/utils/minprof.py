@@ -22,10 +22,10 @@ import optparse
 import time
 import os
 import sys
-
 import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+from . import log
+logger = log.get_logger(__name__, logging.INFO)
 
 from inspect import getframeinfo, stack, getsource, getfile
 
