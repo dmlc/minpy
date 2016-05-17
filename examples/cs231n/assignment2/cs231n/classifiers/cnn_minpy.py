@@ -1,11 +1,14 @@
 import minpy 
 import minpy.numpy as np
-import mxnet as mx
 import minpy.numpy.random as random
-from model import ModelBase
 import minpy.core as core
 
+import mxnet as mx
+
+from model import ModelBase
 from cs231n.layers import affine_forward, relu_forward, svm_loss, dropout_forward, batchnorm_forward
+
+#TODO(Haoran): write examples in python notebook
 
 class ModelInputDimInconsistencyError(ValueError):
   pass
@@ -109,7 +112,7 @@ class ThreeLayerConvNet(ModelBase):
 
     batch_num, x_c, x_h, x_w = X.shape
     c, h, w = self.input_dim
-    if not ( c == x_c and h == x_h and x_w == w):
+    if not ( c == x_c and h == x_h and w == x_w):
       raise ModelInputDimInconsistencyError('Expected Dim: {}, Input Dim: {}'.format(self.input_dim, X.shape))
 
     scores = mx.sym.SoftmaxOutput(data = fc2, name='softmax')
@@ -140,6 +143,7 @@ class ThreeLayerConvNet(ModelBase):
     return wDict
 
   def loss_and_derivative(self, X, y=None):
+    # symbol's init func takes input size.
     if self.symbol_func == None:
       self.set_mxnet_symbol(X)
 
