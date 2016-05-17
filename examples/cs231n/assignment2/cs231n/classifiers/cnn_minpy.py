@@ -109,7 +109,7 @@ class ThreeLayerConvNet(ModelBase):
 
     batch_num, x_c, x_h, x_w = X.shape
     c, h, w = self.input_dim
-    if not ( c == x_c and h == x_h and x_w ):
+    if not ( c == x_c and h == x_h and x_w == w):
       raise ModelInputDimInconsistencyError('Expected Dim: {}, Input Dim: {}'.format(self.input_dim, X.shape))
 
     scores = mx.sym.SoftmaxOutput(data = fc2, name='softmax')
