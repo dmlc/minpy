@@ -27,7 +27,7 @@ class ThreeLayerConvNet(ModelBase):
 
   def __init__(self, input_dim=(3, 32, 32), num_filters=32, filter_size=7,
                hidden_dim=100, num_classes=10, weight_scale=1e-3, reg=0.0,
-               dype=py_np.float64, conv_mode='lazy'):
+               dtype=py_np.float64, conv_mode='lazy'):
     """
     Initialize a new network.
 
