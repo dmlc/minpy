@@ -302,7 +302,7 @@ def softmax_loss(x, y):
   Returns a tuple of:
   - loss: Scalar giving the loss
   """
-  #Missing Max Operator 
+  #TODO: Missing Max Operator 
   probs = np.exp(x - np.expand_dims(np.max(x, axis=1), axis = 1))
   probs = probs / np.expand_dims(np.sum(probs, axis=1), axis = 1)
   N = x.shape[0]
