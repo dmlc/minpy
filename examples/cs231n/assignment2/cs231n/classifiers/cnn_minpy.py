@@ -4,6 +4,7 @@ import minpy.numpy.random as random
 import minpy.core as core
 
 import mxnet as mx
+import numpy as py_np
 
 from model import ModelBase
 from cs231n.layers import affine_forward, relu_forward, svm_loss, dropout_forward, batchnorm_forward
@@ -26,7 +27,7 @@ class ThreeLayerConvNet(ModelBase):
 
   def __init__(self, input_dim=(3, 32, 32), num_filters=32, filter_size=7,
                hidden_dim=100, num_classes=10, weight_scale=1e-3, reg=0.0,
-               conv_mode='lazy'):
+               dype=py_np.float64, conv_mode='lazy'):
     """
     Initialize a new network.
 

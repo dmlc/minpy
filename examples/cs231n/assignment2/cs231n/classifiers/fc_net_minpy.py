@@ -35,7 +35,7 @@ class TwoLayerNet(ModelBase):
   """
   
   def __init__(self, input_dim=3*32*32, hidden_dim=100, num_classes=10,
-               weight_scale=1e-3, reg=0.0, conv_mode='lazy'):
+               weight_scale=1e-3, reg=0.0, conv_mode='lazy', dype=''):
     """
     Initialize a new network.
 
@@ -130,7 +130,7 @@ class FullyConnectedNet(ModelBase):
 
   def __init__(self, hidden_dims, input_dim=3*32*32, num_classes=10,
                dropout=0, use_batchnorm=False, reg=0.0,
-               weight_scale=1e-2, seed=None, conv_mode='lazy'):
+               weight_scale=1e-2, seed=None, dype=py_np.float64, conv_mode='lazy'):
 
     """
     Initialize a new FullyConnectedNet.
