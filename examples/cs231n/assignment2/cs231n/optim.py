@@ -1,4 +1,5 @@
-import numpy as np
+import minpy
+import minpy.numpy as np
 
 """
 This file implements various first-order update rules that are commonly used for
