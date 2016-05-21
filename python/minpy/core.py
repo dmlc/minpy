@@ -133,7 +133,6 @@ def ConvFunc(var, conv, basic_types):
     return None
 
   if type(var) in basic_types:
-    print 'in conv', type(var)
     conv_var = conv(var)
   elif isinstance(var, tuple):
     conv_var = tuple(ConvFunc(v, conv, basic_types)  for v in var)
@@ -146,7 +145,7 @@ def ConvFunc(var, conv, basic_types):
 
   return conv_var
 
-def DataConvWrap(cmd):
+def DataConvWrap(cmd='lazy'):
   def wrapper(func):
     @functools.wraps(func)
     def real_wrapper(*args, **kwargs):
@@ -154,7 +153,6 @@ def DataConvWrap(cmd):
       for num_type_lists in number_types.values():
         basic_types += num_type_lists
       basic_types += [array.Number, array.Array, array.Value]
-      print basic_types
       mpy_args = ConvFunc(args, NumpyVarToMinpy, basic_types)
       mpy_kwargs = ConvFunc(kwargs, NumpyVarToMinpy, basic_types)
 
