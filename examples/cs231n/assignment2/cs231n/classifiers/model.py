@@ -2,7 +2,7 @@ import abc
 import functools 
 import minpy 
 from minpy.array_variants import ArrayType
-from minpy.core import converter, MinpyVarToNumpy
+from minpy.core import DataConvWrap, MinpyVarToNumpy
 
 
 class ModelBase(object):
@@ -13,7 +13,7 @@ class ModelBase(object):
     self.data_target_cnt = 2
 
   def loss(self, X, y = None):
-    res = converter(self.convert_mode)(self.loss_and_derivative)(X, y)
+    res = DataConvWrap(self.convert_mode)(self.loss_and_derivative)(X, y)
 
     # make loss or score, i.e. res[0], return as numpy.float
     # while grads, i.e. res[1], could be minpy's array

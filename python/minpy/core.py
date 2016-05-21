@@ -3,13 +3,13 @@
 """Core gradient calculation."""
 import mxnet as mx
 import functools
+import itertools
+
 import operator
 from .utils import log
 from . import array
 
-from .array_variants import ArrayType
-from .array_variants import array_types
-from .array_variants import number_types
+from .array_variants import ArrayType, array_types, number_types
 
 _logger = log.get_logger(__name__)
 
@@ -128,23 +128,29 @@ def MinpyVarToNumpy(var):
   return array.Value.wrap(var).get_data(ArrayType.NUMPY)
 
 def ConvFunc(var, conv, basic_types):
-  if isinstance(var, tuple):
-    np_var = tuple(conv(v)  for v in var)
-  elif isinstance(var, list):
-    np_var = list(conv(v)  for v in var)
-  elif isinstance(var, dict):
-    np_var = {k:conv(v)  for k, v in var.iteritems()}
-  elif type(var) in basic_types:
-    np_var = conv(var)
-  else:
-    raise ConvertErrorUnexpectedType('Unexpected %s type found in core.ConvToNumpy' % v_t)
-  return np_var
+  if var is None:
+    return None
 
-def converter(cmd):
+  if type(var) in basic_types:
+    conv_var = conv(var)
+  elif isinstance(var, tuple):
+    conv_var = tuple(ConvFunc(v, conv, basic_types)  for v in var)
+  elif isinstance(var, list):
+    conv_var = list(ConvFunc(v, conv, basic_types)  for v in var)
+  elif isinstance(var, dict):
+    conv_var = {k:ConvFunc(v, conv, basic_types)  for k, v in var.iteritems()}
+  else:
+    raise ConvertErrorUnexpectedType('Unexpected %s type found in core.ConvToNumpy' % type(var))
+
+  return conv_var
+
+def DataConvWrap(cmd):
   def wrapper(func):
     @functools.wraps(func)
     def real_wrapper(*args, **kwargs):
-      basic_types = array_types.values() + number_types.values()
+      basic_types = array_types.values()
+      for num_type_lists in number_types.values():
+        basic_types += num_type_lists
       mpy_args = ConvFunc(args, NumpyVarToMinpy, basic_types)
       mpy_kwargs = ConvFunc(kwargs, NumpyVarToMinpy, basic_types)
 
