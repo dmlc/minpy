@@ -10,6 +10,7 @@ from .utils import log
 from . import array
 
 from .array_variants import ArrayType, array_types, number_types
+import array
 
 _logger = log.get_logger(__name__)
 
@@ -132,6 +133,7 @@ def ConvFunc(var, conv, basic_types):
     return None
 
   if type(var) in basic_types:
+    print 'in conv', type(var)
     conv_var = conv(var)
   elif isinstance(var, tuple):
     conv_var = tuple(ConvFunc(v, conv, basic_types)  for v in var)
@@ -151,6 +153,8 @@ def DataConvWrap(cmd):
       basic_types = array_types.values()
       for num_type_lists in number_types.values():
         basic_types += num_type_lists
+      basic_types += [array.Number, array.Array, array.Value]
+      print basic_types
       mpy_args = ConvFunc(args, NumpyVarToMinpy, basic_types)
       mpy_kwargs = ConvFunc(kwargs, NumpyVarToMinpy, basic_types)
 
