@@ -6,7 +6,7 @@ from __future__ import print_function
 from ..utils import log
 from . import policy
 
-_logger = log.get_logger(__name__, log.DEBUG)
+_logger = log.get_logger(__name__)
 
 
 class PrimitiveSelector(object):
