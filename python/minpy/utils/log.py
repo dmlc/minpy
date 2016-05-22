@@ -4,7 +4,15 @@
 import logging
 import sys
 
+CRITICAL = logging.CRITICAL
+ERROR = logging.ERROR
+WARNING = logging.WARNING
+INFO = logging.INFO
+DEBUG = logging.DEBUG
+NOTSET = logging.NOTSET
+
 PY3 = sys.version_info[0] == 3
+
 
 class _Formatter(logging.Formatter):
     """Customized log formatter."""
@@ -38,17 +46,21 @@ class _Formatter(logging.Formatter):
     def format(self, record):
         fmt = self._get_color(record.levelno)
         fmt += self._get_label(record.levelno)
-        fmt += '[%(asctime)s %(process)d %(filename)s:%(lineno)d:%(funcName)s]\x1b[0m'
+        fmt += '%(asctime)s %(process)d %(name)s:%(funcName)s:%(lineno)d'
+        fmt += ']\x1b[0m'
         fmt += ' %(message)s'
-        self._fmt = fmt
         if PY3:
             self._style._fmt = fmt
+        else:
+            self._fmt = fmt
         return super(_Formatter, self).format(record)
+
 
 _handler = logging.StreamHandler()
 _handler.setFormatter(_Formatter())
 
-def get_logger(name=None, level=logging.INFO):
+
+def get_logger(name=None, level=INFO):
     """Get customized logger.
 
     Args:

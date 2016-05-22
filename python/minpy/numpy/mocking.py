@@ -9,6 +9,7 @@ import logging
 from ..utils import log
 from ..dispatch import registry
 from ..dispatch import policy
+from ..dispatch import primitive_selector
 from ..array_variants import * # import all array_variants names
 from .. import array
 
@@ -48,16 +49,13 @@ class Module(object):
         self._policy = plc
 
     def __getattr__(self, name):
-        self._logger.debug('Look up name {}'.format(name))
         # Special members for internal use.
         if name == '__registry__':
             return self._registry
         elif self._registry.has_name(name):
-            prim = policy.resolve_name(name, self._registry, self._policy)
-            self._logger.debug('Found primitive with name "{}" with type {}'.format(name, prim.typestr))
-            return prim
+            return primitive_selector.PrimitiveSelector(name, self._registry, self._policy)
         elif name in self._old:
-            self._logger.info('No entry found for {} in registry, fallback'.format(name))
+            self._logger.info('No entry found for "{}" in registry, fallback.'.format(name))
             return self._old[name]
         else:
-            raise DynamicLookupError('Cannot found name "{}"'.format(name))
+            raise DynamicLookupError('Cannot find name "{}".'.format(name))
