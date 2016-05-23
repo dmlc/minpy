@@ -11,11 +11,12 @@ This repository aims at prototyping a pure `numpy` interface above [mxnet](https
 
 How to get started?
 -------------------
-The project is still a work-in-progress. You could look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents and installation instructions are coming soon!
+The project is still a work-in-progress. You could look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents are coming soon!
 
-# Installation for development
+# Installation guide for development
 
-Change directory into `python` and run `pip install -e .`.
+Currently MinPy is going through rapid development (but we do our best to keep the API unchanged). So it is adviced to do an editable installation.
+Change directory into where the Python package lies and run `pip install -e .` if you are in a virtual environment, or `pip install --user -e .` if you are using your system Python packages. This will ensure a symbolic link to the project, so you do not have to install a second time when you update this repository.
 
 What we really want?
 -------------------
