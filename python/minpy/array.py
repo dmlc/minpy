@@ -69,7 +69,10 @@ class Node(object):
             res = rec[0](grad_value)
             return res
         assert(isinstance(target, Node))
-        assert(len(self._partial_derivatives) != 0)
+        # Note: Haoran comments the assert instruction below for two cases.
+        # when 1. self is target or 2. some vars won't contribute to final loss,
+        # _partial_derivatives could be zero-length
+        # assert(len(self._partial_derivatives) != 0)
         if not target in self._partial_derivative_cache:
             if self is target:  # Partial derivative of self is one.
                 res = 1.0 if isinstance(self._value, Number) else numpy.ones(self._value.shape)
