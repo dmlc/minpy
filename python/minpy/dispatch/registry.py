@@ -2,55 +2,72 @@
 # -*- coding: utf-8 -*-
 """Registry for functions under the same symbol."""
 from ..utils import log
-from ..utils import common
-import types
-import logging
 
+#pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
+#pylint: enable= invalid-name
 
-class DuplicateRegistryError(ValueError):
+class PrimitiveRegistryError(ValueError):
+    """ Error during registering primitives """
     pass
 
 class Registry(object):
-    """Registry for primitives under the same symbol."""
-
+    """ Registry for primitives. Primitives with the same name but with different implementation
+    type will be registered in the same entry.
+    """
     def __init__(self):
         self._reg = {}
 
     def register(self, name, prim):
         """Register primitive.
-
-        :param str name: Name of the primitive
-        :param Primitive prim: Primitive
-
-        :raises DuplicateRegistryError: Type already registered under the same
-                                        name.
+        Args:
+            name:
+                Name of the primitive
+            prim:
+                Primitive
+        Throw:
+            PrimitiveRegistryError: Type already registered under the same name.
         """
         if name not in self._reg:
             self._reg[name] = {}
         if prim.type in self._reg[name]:
-            raise DuplicateRegistryError(
+            raise PrimitiveRegistryError(
                 'Type "{}" for name "{}" has already existed'.format(prim.typestr, name))
         else:
-            _logger.debug('Function "{}" registered with type {}'
-                         .format(name, prim.typestr))
+            _logger.debug('Function "{}" registered with type {}'.format(name, prim.typestr))
             self._reg[name][prim.type] = prim
 
     def has_name(self, name):
+        """ Return whether the given name has been registered """
         return name in self._reg
 
-    def exists(self, name, t):
-        return name in self._reg and t in self._reg[name]
+    def exists(self, name, ptype):
+        """ Return whether primitive exists under the given name and the given implementation type.
+        """
+        return name in self._reg and ptype in self._reg[name]
 
-    def get(self, name, t):
-        return self._reg[name][t]
+    def get(self, name, ptype):
+        """ Get the primitive registered under the given name and the given implementation type.
+        """
+        return self._reg[name][ptype]
 
     def iter_available_types(self, name, args_len, kwargs_keys):
+        """ Find primitives of the given name that have gradients defined for the arguments
+        Args:
+            name:
+                Primitive name
+            args_len:
+                Number of arguments that are passed to the primitive
+            kwargs_keys:
+                Keyword arguments that are passed to the primitive
+        Return:
+            Primitives that satisfy above requirementes
+        """
         if name not in self._reg:
             return iter([])
         else:
             ret = []
-            for i in self._reg[name].values():
-                if i.gradable(args_len, kwargs_keys):
-                    ret.append(i)
+            for prim in self._reg[name].values():
+                if prim.gradable(args_len, kwargs_keys):
+                    ret.append(prim)
             return ret

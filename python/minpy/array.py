@@ -421,7 +421,7 @@ class Array(Value):
             np_index = tuple(to_np(i) for i in index)
         else:
             np_index = to_np(index)
-        return Value._ns._minpy_indexing_delegate(self, np_index)
+        return Value._ns._minpy_getitem(self, np_index)
 
     def __setitem__(self, index, val):
         """NumPy indexing operations.
@@ -602,7 +602,15 @@ class Primitive(object):
         return self
 
     def gradable(self, args_len, kwargs_keys):
-        """Return whether the primitive has gradient function defined"""
+        """Return whether the primitive has gradient function defined
+        Args:
+            args_len:
+                Number of arguments that are passed to the primitive
+            kwargs_keys:
+                Keyword arguments that are passed to the primitive
+        Return:
+            Whether all the arguments have gradient defined
+        """
         ret = args_len <= len(self._grad_func)
         for i in kwargs_keys:
             ret = ret and (i in self._grad_func_kw)
