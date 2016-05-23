@@ -1,30 +1,39 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# pylint: disable= unused-argument, protected-access, logging-format-interpolation
 """Base type for arrays."""
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys
-import enum
 import functools
 import itertools
 import operator
 import logging
 
 from .utils import log
-from .utils import common
-from .utils.minprof import minprof
-#import typing
+#from .utils.minprof import minprof
 from .array_variants import ArrayType
 from .array_variants import array_types
 from .array_variants import number_types
 
-
- #FIXME: should not import these; use array_invariants instead
 import mxnet
 import numpy
 
+#pylint: disable= invalid-name
 _logger = log.get_logger(__name__, logging.WARN)
+#pylint: enable= invalid-name
+
+class UnknownArrayTypeError(TypeError):
+    """ Unsupported underlying array type (now only support: numpy.ndarray and mxnet.ndarray)"""
+    pass
+
+class NoImplementationError(ValueError):
+    """ Throw if not implemented currently """
+    pass
+
+class AutogradError(ValueError):
+    """ Error during auto differentiation """
+    pass
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -51,63 +60,56 @@ class Node(object):
 
         :param Node target: target variable to compute partial derivative
         """
+        def _call_pd(rec):
+            """ helper function for calling gradient function """
+            # if you want to do profiling, try to use "with minprof(<some info>): ... "
+            grad = rec[1].partial_derivative(target)
+            grad_value = grad.get_data(rec[2]._type)
+            _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
+            res = rec[0](grad_value)
+            return res
         assert(isinstance(target, Node))
+        assert(len(self._partial_derivatives) != 0)
         if not target in self._partial_derivative_cache:
             if self is target:  # Partial derivative of self is one.
-                self._partial_derivative_cache[target] = Value.wrap(1.0 if isinstance(self._value, Number) else numpy.ones(self._value.shape))
+                res = 1.0 if isinstance(self._value, Number) else numpy.ones(self._value.shape)
             else:
-                def call(rec):
-                    # if you want to do profiling, try to use "with minprof(<some info>): ... "
-                    grad = rec[1].partial_derivative(target)
-                    grad_value = grad.get_data(rec[2]._type)
-                    _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
-                    res = rec[0](grad_value)
-                    return res
                 res = functools.reduce(
-                        operator.add,
-                        map(call, self._partial_derivatives),
-                        Value.wrap(0.0))
-
-                # in case _partial_derivatives is empty
-                if (isinstance(res, float) or isinstance(res, Number)) and (not isinstance(self._value, Number)):
-                  res = numpy.zeros(self._value.shape)
-
-                self._partial_derivative_cache[target] = Value.wrap(res)
+                    operator.add,
+                    [_call_pd(pd) for pd in self._partial_derivatives],
+                    Value.wrap(0.0))
+            self._partial_derivative_cache[target] = Value.wrap(res)
         return self._partial_derivative_cache[target]
 
-class ArrayTypeMissingError(ValueError):
-    pass
-
-class UnknownArrayTypeError(ValueError):
-    pass
-
-class NoImplementationError(ValueError):
-    pass
-
 class Value(object):
+    # pylint: disable= no-self-use
+    """ Class for all possible values in minpy. It contains the real underlying value and the
+    gradient information for auto differentiation. It also defines common operators and redirects
+    the call to the namespace dispatcher.
+    """
     _ns = None
 
     @staticmethod
-    def wrap(d, *args, **kwargs):
-        if d is None:
+    def wrap(data, *args, **kwargs):
+        """ Wrap given data into its corresponding wrapper class. For example, `numpy.ndarray`
+        will be converted to `minpy.Array` while float number will become `minpy.Number`. The
+        allowed array types are defined in `minpy.array_variants.array_types`; the allowed number
+        types are defined in `minpy.array_variants.number_types`.
+        """
+        if data is None:
             return None
-        t = type(d)
-        if isinstance(d, Value):
-            return d
-        elif t in array_types.values():
-            return Array(d, *args, **kwargs)
-        elif t in itertools.chain(*number_types.values()):
-            return Number(d, *args, **kwargs)
+        dtype = type(data)
+        if isinstance(data, Value):
+            return data
+        elif dtype in array_types.values():
+            return Array(data, *args, **kwargs)
+        elif dtype in itertools.chain(*number_types.values()):
+            return Number(data, *args, **kwargs)
         else:
-            raise UnknownArrayTypeError('cannot wrap type: {}'.format(t))
-
-    def get_data(self, t):
-        assert(False)
-        pass
+            raise UnknownArrayTypeError('cannot wrap type: {}'.format(dtype))
 
     def __cmp__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __eq__(self, other):
         return Value._ns.equal(self, other)
@@ -129,34 +131,27 @@ class Value(object):
 
     def __pos__(self):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __neg__(self):
         return Value._ns.negative(self)
 
     def __abs__(self):
         raise NoImplementationError('Not implemented')
-        #return Value._ns.abs(self)
 
     def __invert__(self):
         raise NoImplementationError('Not implemented')
-        pass
 
-    def __round__(self, n):
+    def __round__(self, nbits):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __floor__(self):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __ceil__(self):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __trunc__(self):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __add__(self, other):
         return Value._ns.add(self, other)
@@ -169,7 +164,6 @@ class Value(object):
 
     def __floordiv__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __div__(self, other):
         return Value._ns.divide(self, other)
@@ -182,30 +176,24 @@ class Value(object):
 
     def __divmod__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __pow__(self, other):
         return Value._ns.power(self, other)
 
     def __lshift__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __rshift__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __and__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __or__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __xor__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __radd__(self, other):
         return Value._ns.add(other, self)
@@ -218,7 +206,6 @@ class Value(object):
 
     def __rfloordiv__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __rdiv__(self, other):
         return Value._ns.divide(other, self)
@@ -237,26 +224,21 @@ class Value(object):
 
     def __rlshift__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __rrshift__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __rand__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __ror__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __rxor__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __iadd__(self, other):
-        return Value._ns.add(self, add)
+        return Value._ns.add(self, other)
 
     def __isub__(self, other):
         return Value._ns.subtract(self, other)
@@ -266,7 +248,6 @@ class Value(object):
 
     def __ifloordiv__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __idiv__(self, other):
         return Value._ns.divide(self, other)
@@ -282,23 +263,19 @@ class Value(object):
 
     def __ilshift__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __irshift__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __iand__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __ior__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
 
     def __ixor__(self, other):
         raise NoImplementationError('Not implemented')
-        pass
+    # pylint: enable= no-self-use
 
 class Number(Value):
     """Class for numbers with derivative information"""
@@ -311,12 +288,13 @@ class Number(Value):
     def __str__(self):
         return str(self._val)
 
-    def get_data(self, t):
-        """Get array data of given type."""
+    def get_data(self, dtype):
+        """Get data of given type. Directly return the underlying value here."""
         return self._val
 
     @property
     def val(self):
+        """ return the underlying value """
         return self._val
 
     @property
@@ -326,6 +304,7 @@ class Number(Value):
 
     @property
     def marked_for_bp(self):
+        """ Return whether the current Value will be used for autograd """
         return self._marked_for_bp
 
 class Array(Value):
@@ -343,27 +322,29 @@ class Array(Value):
     def __init__(self, data, marked=False):
         self._data = {}
         self._node = Node(self)
-        t = Array.to_array_type(data)
-        self._data[t] = data
-        self._latest_version = t
+        atype = Array.to_array_type(data)
+        self._data[atype] = data
+        self._latest_version = atype
         self._marked_for_bp = marked
 
     @staticmethod
     def to_array_type(arr):
-        t = type(arr)
-        if t == array_types['numpy']:
+        """ Return the type enum of the given array """
+        atype = type(arr)
+        if atype == array_types['numpy']:
             return ArrayType.NUMPY
-        elif t == array_types['mxnet']:
+        elif atype == array_types['mxnet']:
             return ArrayType.MXNET
         else:
             raise UnknownArrayTypeError(
-                'Array data of type {} unknown.'.format(t))
+                'Array data of type {} unknown.'.format(atype))
 
     def __str__(self):
         return str(self.get_data(ArrayType.NUMPY))
 
     @property
     def marked_for_bp(self):
+        """ Return whether the current Value will be used for autograd """
         return self._marked_for_bp
 
     @property
@@ -371,15 +352,17 @@ class Array(Value):
         """ get node which contains derivative information from this array """
         return self._node
 
-    def has_type(self, t):
+    def has_type(self, atype):
         """Return whether array data of given type exists in the underlying storage.
         """
-        return t in self._data.keys()
+        return atype in self._data.keys()
 
     def reshape(self, new_shape):
+        """ Function for reshape this array """
         return Value._ns.reshape(self, new_shape)
 
     def _synchronize_data(self):
+        """ Synchronize the data of different array types. """
         if self._latest_version == ArrayType.MXNET:
             _logger.info('Copy from mxnet array to numpy array Node#{}'.format(id(self)))
             mxarray = self._data[ArrayType.MXNET]
@@ -387,19 +370,22 @@ class Array(Value):
         elif self._latest_version == ArrayType.NUMPY:
             _logger.info('Copy from numpy array to mxnet array Node#{}'.format(id(self)))
             nparray = self._data[ArrayType.NUMPY]
-            self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0)) # TODO on which device ?
+            # pylint: disable= fixme
+            # TODO currently, we only use one gpu
+            # pylint: enable= fixme
+            self._data[ArrayType.MXNET] = mxnet.ndarray.array(nparray, ctx=mxnet.gpu(0))
         self._latest_version = None
 
-    def enforce_data(self, t):
+    def enforce_data(self, dtype):
         """Enforce array data of given type."""
-        if self._latest_version is not None and self._latest_version != t:
+        if self._latest_version is not None and self._latest_version != dtype:
             self._synchronize_data()
             self._latest_version = None
 
-    def get_data(self, t):
+    def get_data(self, dtype):
         """Get array data of given type."""
-        self.enforce_data(t)
-        return self._data[t]
+        self.enforce_data(dtype)
+        return self._data[dtype]
 
     def asnumpy(self):
         """Get raw NumPy array.
@@ -408,15 +394,16 @@ class Array(Value):
         """
         return numpy.array(self.get_data(ArrayType.NUMPY))
 
-    def get_data_mutable(self, t):
+    def get_data_mutable(self, dtype):
         """Get exclusive access to array data of given type."""
-        if self._latest_version is not None and self._latest_version != t:
+        if self._latest_version is not None and self._latest_version != dtype:
             self._synchronize_data()
-        self._latest_version = t
-        return self._data[t]
+        self._latest_version = dtype
+        return self._data[dtype]
 
     @property
     def shape(self):
+        """ Get the shape of array """
         if ArrayType.NUMPY in self._data:
             return self._data[ArrayType.NUMPY].shape
         else:
@@ -425,45 +412,53 @@ class Array(Value):
     def __getitem__(self, index):
         """NumPy indexing operations.
 
-        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit conversion to NumPy array.
+        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit
+        conversion to NumPy array.
         """
         np_index = None
+        to_np = lambda x: x if isinstance(x, slice) else Value.wrap(x).get_data(ArrayType.NUMPY)
         if isinstance(index, tuple):
-            np_index = tuple(x if type(x) is slice else Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
+            np_index = tuple(to_np(i) for i in index)
         else:
-            np_index = index if type(index) is slice else Value.wrap(index).get_data(ArrayType.NUMPY)
+            np_index = to_np(index)
         return Value._ns._minpy_indexing_delegate(self, np_index)
 
     def __setitem__(self, index, val):
         """NumPy indexing operations.
 
-        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit conversion to NumPy array.
-        Also note that this operation breaks gradient chain.
+        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit
+        conversion to NumPy array. Also note that this operation breaks gradient chain.
         """
         np_index = None
+        np_val = Value.wrap(val).get_data(ArrayType.NUMPY)
+        to_np = lambda x: x if isinstance(x, slice) else Value.wrap(x).get_data(ArrayType.NUMPY)
         if isinstance(index, tuple):
-            np_index = tuple(x if type(x) is slice else Value.wrap(x).get_data(ArrayType.NUMPY) for x in index)
+            np_index = tuple(to_np(i) for i in index)
         else:
-            np_index = index if type(index) is slice else Value.wrap(index).get_data(ArrayType.NUMPY)
-        self.get_data_mutable(ArrayType.NUMPY).__setitem__(np_index, Value.wrap(val).get_data(ArrayType.NUMPY))
+            np_index = to_np(index)
+        np_array = self.get_data_mutable(ArrayType.NUMPY)
+        np_array.__setitem__(np_index, np_val)
 
     def __delitem__(self, index):
         """NumPy indexing operations.
 
-        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit conversion to NumPy array.
-        Also note that this operation breaks gradient chain.
+        Currently `mxnet.ndarray` does not support full indexing, so there is an implicit
+        conversion to NumPy array.  Also note that this operation breaks gradient chain.
         """
         self.get_data_mutable(ArrayType.NUMPY).__delitem(index)
 
+    # pylint: disable= invalid-name
     @property
     def T(self):
+        """ Get transposed array """
         return Value._ns.transpose(self)
+    # pylint: enable= invalid-name
 
 class Primitive(object):
-    """Primitive computation."""
+    """ Class for primitives. It includes both forward function and gradient definition """
     __slots__ = ['_func', '_grad_func', '_grad_func_kw', '_type', '_mutate_args', '_mutate_kw']
 
-    def __init__(self, func, ty, mutate_args=[], mutate_kw=[]):
+    def __init__(self, func, ty, mutate_args=None, mutate_kw=None):
         """Initialize.
         Args:
             func: A function that performs the action.
@@ -472,15 +467,17 @@ class Primitive(object):
         self._grad_func = {}
         self._grad_func_kw = {}
         self._type = ty
-        self._mutate_args = mutate_args
-        self._mutate_kw = mutate_kw
+        self._mutate_args = [] if mutate_args is None else mutate_args
+        self._mutate_kw = [] if mutate_kw is None else mutate_kw
 
     @property
     def type(self):
+        """ Return the type of the primitive (ArrayType.NUMPY or ArrayType.MXNET) """
         return self._type
 
     @property
     def typestr(self):
+        """ Return the string representation of primitive type """
         if self._type == ArrayType.NUMPY:
             return "numpy"
         elif self._type == ArrayType.MXNET:
@@ -508,6 +505,7 @@ class Primitive(object):
             KeyError:
                 No corresponding gradient function.
         """
+        # pylint: disable= missing-docstring, invalid-name
         _logger.debug('Calling {} type {}'.format(self._func, self.typestr))
 
         def get_val(x, mutate):
@@ -536,9 +534,7 @@ class Primitive(object):
                 return accum
         # Check whether the result value is on the path of bp phase
         # If all the input arguments are not on the bp path, the result value is not as well.
-        need_bp = functools.reduce(scan,
-                         itertools.chain(args, kwargs.values()),
-                         False)
+        need_bp = functools.reduce(scan, itertools.chain(args, kwargs.values()), False)
         # Wrap the result raw value with wrapper and node.
         result = Value.wrap(result_value, marked=need_bp)
         if need_bp:
@@ -547,36 +543,27 @@ class Primitive(object):
             for i, arg in enumerate(args):
                 if isinstance(arg, Value) and arg.marked_for_bp:
                     if i >= len(self._grad_func):
-                      _logger.info('Warning: partial derivative of func {0} on #{1} arg is not defined'.format( self._func.__name__, i))
-                      continue
-                    _logger.debug('Adding partial derivative to func {} on #{} arg'
-                            .format(self._func, i))
+                        _logger.info('Warning: partial derivative of func {0} on #{1} \
+                            arg is not defined'.format(self._func.__name__, i))
+                        continue
+                    _logger.debug('Adding partial derivative to func {} on #{} arg'\
+                        .format(self._func, i))
                     arg.node.add_partial_derivative(
-                            self._grad_func[i](result_value, *arg_values, **kwargs_values),
-                            result.node, self)
+                        self._grad_func[i](result_value, *arg_values, **kwargs_values),
+                        result.node, self)
             for k, arg in kwargs.items():
                 if isinstance(arg, Value) and arg.marked_for_bp:
                     if k not in self._grad_func_kw:
-                      _logger.info('Warning: partial derivative of func {0} on kwarg "{1}" is not defined'.format(self._func.__name__, k))
-                      continue
-                    _logger.debug('Adding partial derivative to func {} on kwarg "{}"'
-                            .format(self._func, k))
+                        _logger.info('Warning: partial derivative of func {0} on kwarg "{1}"\
+                            is not defined'.format(self._func.__name__, k))
+                        continue
+                    _logger.debug('Adding partial derivative to func {} on kwarg "{}"'\
+                        .format(self._func, k))
                     arg.node.add_partial_derivative(
-                            self._grad_func_kw[k](result_value, *arg_values, **kwargs_values),
-                            result.node, self)
+                        self._grad_func_kw[k](result_value, *arg_values, **kwargs_values),
+                        result.node, self)
         return result
-
-    def _enforce_input_type(self, f):
-        def enforce(x):
-            if self._type == ArrayType.NUMPY:
-                x.enforce_data(ArrayType.NUMPY)
-            elif self._type == ArrayType.MXNET:
-                x.enforce_data(ArrayType.MXNET)
-
-        @functools.wraps(f)
-        def wrapper(*args, **kwargs):
-            return f(*tuple(map(enforce, args)), **{x: enforce(kwargs[x]) for x in kwargs})
-        return wrapper
+        # pylint: enable= missing-docstring, invalid-name
 
     def def_grad(self, func, argnum=0):
         """Define gradient function.
@@ -589,8 +576,6 @@ class Primitive(object):
         Return:
             self instance for multiple def_grad in one statement
         """
-        # XXX(minjie): why comment enforce_input_type?
-        #self._grad_func[argnum] = self._enforce_input_type(func)
         self._grad_func[argnum] = func
         return self
 
@@ -602,14 +587,22 @@ class Primitive(object):
             key:
                 Key name of the argument.
         """
-        #self._grad_func[key] = self._enforce_input_type(func)
         self._grad_func_kw[key] = func
         return self
 
     def def_grad_zero(self, argnum=0):
+        """Define zero gradient
+        Args:
+            argnum:
+                Index of the argument
+        Return:
+            self instance for multiple def_grad_zero in one statement
+        """
         self._grad_func[argnum] = lambda *args, **kwargs: lambda g: 0.0
+        return self
 
     def gradable(self, args_len, kwargs_keys):
+        """Return whether the primitive has gradient function defined"""
         ret = args_len <= len(self._grad_func)
         for i in kwargs_keys:
             ret = ret and (i in self._grad_func_kw)
