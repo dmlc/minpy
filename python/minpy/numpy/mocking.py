@@ -2,18 +2,19 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import sys
 import importlib
-import logging
 
 from ..utils import log
 from ..dispatch import registry
 from ..dispatch import policy
-from ..array_variants import * # import all array_variants names
+from ..dispatch import primitive_selector
+from ..array_variants import *  # import all array_variants names
 from .. import array
+
 
 class DynamicLookupError(KeyError):
     pass
+
 
 class Module(object):
     """Module level dynamic lookup."""
@@ -22,42 +23,46 @@ class Module(object):
         self._registry = registry.Registry()
         self._policy = policy.PreferMXNetPolicy()
         self._logger = log.get_logger(old['__name__'])
-        self._logger.info('Initialize module: {}'.format(old['__name__']))
+        self._logger.info('Initialize module: {}.'.format(old['__name__']))
         self._old = old
         for vname in variants:
-            if name == None:
+            if name is None:
                 modname = 'minpy.array_variants.{}'.format(vname)
             else:
                 modname = 'minpy.array_variants.{}.{}'.format(vname, name)
             mod = importlib.import_module(modname)
-            self._logger.info('Importing from {}'.format(modname))
-            #TODO better wrapper?
-            primitive_wrapper = lambda func, *args, **kwargs:\
-                array.Primitive(func, variants[vname], *args, **kwargs)
+            self._logger.info('Importing from {}.'.format(modname))
+
+            def primitive_wrapper(func, *args, **kwargs):
+                return array.Primitive(func, variants[vname], *args, **kwargs)
             # register all primitives of the module
             before = len(self._registry._reg)
             mod.register_primitives(self._registry, primitive_wrapper)
-            self._logger.info('Got {} primitives from {}'.format(len(self._registry._reg) - before, modname))
-            primitive_getter = lambda name : self._registry.get(name, variants[vname])
+            self._logger.info('Got {} primitives from {}'.format(
+                len(self._registry._reg) - before, modname))
+
+            def primitive_getter(name):
+                return self._registry.get(name, variants[vname])
             # define gradients of primitives
             mod.def_grads(self._registry, primitive_getter)
-        self._logger.info('Import {} primitives'.format(len(self._registry._reg)))
+        self._logger.info('Import {} primitives'.format(len(
+            self._registry._reg)))
 
     def set_policy(self, plc):
-        assert isinstance(plc, policy.Policy), 'Need an instance of `minpy.dispatch.Policy`.'
+        assert isinstance(
+            plc, policy.Policy), 'Need an instance of `minpy.dispatch.Policy`.'
         self._policy = plc
 
     def __getattr__(self, name):
-        self._logger.debug('Look up name {}'.format(name))
         # Special members for internal use.
         if name == '__registry__':
             return self._registry
         elif self._registry.has_name(name):
-            prim = policy.resolve_name(name, self._registry, self._policy)
-            self._logger.debug('Found primitive with name "{}" with type {}'.format(name, prim.typestr))
-            return prim
+            return primitive_selector.PrimitiveSelector(name, self._registry,
+                                                        self._policy)
         elif name in self._old:
-            self._logger.info('No entry found for {} in registry, fallback'.format(name))
+            self._logger.info(
+                'No entry found for "{}" in registry, fallback.'.format(name))
             return self._old[name]
         else:
-            raise DynamicLookupError('Cannot found name "{}"'.format(name))
+            raise DynamicLookupError('Cannot find name "{}".'.format(name))

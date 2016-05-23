@@ -35,11 +35,13 @@ def grad_and_loss(func, argnum=0):
         _logger.debug('---Forward pass finished. Start backward pass')
         grad_vals = []
         for i in argnums:
-            grad_vals.append(arrays[i].node.partial_derivative(result_array.node))
+            grad_vals.append(arrays[i].node.partial_derivative(
+                result_array.node))
             arrays[i]._marked_for_bp = False
         if len(grad_vals) == 1:
             grad_vals = grad_vals[0]
         return grad_vals, result_array
+
     return wrapped
     #pylint: enable= missing-docstring
 

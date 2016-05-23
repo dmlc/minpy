@@ -13,6 +13,10 @@ How to get started?
 -------------------
 The project is still a work-in-progress. You could look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents and installation instructions are coming soon!
 
+# Installation for development
+
+Change directory into `python` and run `pip install -e .`.
+
 What we really want?
 -------------------
 In one word, if you have a `numpy` code, you could replace the `import` by:
