@@ -162,7 +162,7 @@ def convert(val, converter, basic_types):
     elif isinstance(val, dict):
         ret = {k: convert(v, converter, basic_types) for k, v in val.iteritems()}
     else:
-        raise MinpyWrapperError('Unexpected %s type found in core.ConvToNumpy' % type(val))
+        raise MinpyWrapperError('Unexpected %s type found in core.convert' % type(val))
     return ret
 
 def wraps(mode='lazy'):
