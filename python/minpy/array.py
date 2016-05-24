@@ -82,7 +82,7 @@ class Node(object):
                     [_call_pd(pd) for pd in self._partial_derivatives],
                     Value.wrap(0.0))
                 # in case _partial_derivatives is empty
-                if len(self._partial_derivatives) == 0:
+                if (len(self._partial_derivatives) == 0) and (not isinstance(self._value, Number)):
                     res = numpy.zeros(self._value.shape)
             self._partial_derivative_cache[target] = Value.wrap(res)
         return self._partial_derivative_cache[target]
