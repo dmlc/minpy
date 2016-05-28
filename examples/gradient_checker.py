@@ -49,11 +49,3 @@ def Check_All_Func():
     for each_type in reg[each_key]:
       if (reg[each_key][each_type].grad_defined()):
         print each_type, reg[each_key][each_type]
-      
-
-
-
-
-
-
-
