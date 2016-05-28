@@ -2,6 +2,7 @@ import minpy
 import minpy.numpy as np
 import minpy.core
 import minpy.array
+from minpy.core import wraps
 from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
 import minpy.numpy.random as random
@@ -9,6 +10,7 @@ import minpy.numpy.random as random
 np.set_policy(policy.OnlyNumpyPolicy())
 #np.set_policy(policy.PreferMXNetPolicy())
 
+@wraps('lazy')
 def affine_forward(x, w, b):
   """
   Computes the forward pass for an affine (fully-connected) layer.
@@ -32,14 +34,7 @@ def affine_forward(x, w, b):
 
   return out
 
-"""
-def NumpyVarToMinpy(var):
-  return minpy.array.Value.wrap(var)
-
-def MinpyVarToNumpy(var):
-  return minpy.array.Value.wrap(var).get_data(ArrayType.NUMPY)
-"""
-
+@wraps('lazy')
 def relu_forward(x):
   """
   Computes the forward pass for a layer of rectified linear units (ReLUs).
@@ -54,6 +49,7 @@ def relu_forward(x):
   out = np.maximum(0, x)
   return out
 
+@wraps('lazy')
 def batchnorm_forward(x, gamma, beta, bn_param):
   """
   Forward pass for batch normalization.
@@ -127,6 +123,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
   return out
 
+@wraps('lazy')
 def dropout_forward(x, dropout_param):
   """
   Performs the forward pass for (inverted) dropout.
@@ -261,6 +258,7 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
 
   return out, cache
 
+@wraps('lazy')
 def svm_loss(x, y):
   """
   Computes the loss and gradient using for multiclass SVM classification.
@@ -289,6 +287,7 @@ def svm_loss(x, y):
 
   return loss
 
+@wraps('lazy')
 def softmax_loss(x, y):
   """
   Computes the loss and gradient for softmax classification.

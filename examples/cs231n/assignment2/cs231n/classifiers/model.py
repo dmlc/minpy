@@ -4,6 +4,14 @@ import minpy
 from minpy.array_variants import ArrayType
 from minpy.core import wraps, minpy_to_numpy
 
+class ParamsNameNotFoundError(ValueError):
+    """ Error of not existed name during accessing model params """
+    pass
+
+class UnknownAccessModeError(ValueError):
+    """ Error of unexpected mode during accessing model params """
+    pass
+
 
 class ModelBase(object):
   __metaclass__ = abc.ABCMeta
@@ -11,6 +19,7 @@ class ModelBase(object):
   def __init__(self, conv_mode = 'lazy'):
     self.convert_mode = conv_mode
     self.data_target_cnt = 2
+    self.params = {}
 
   def loss(self, X, y = None):
     res = wraps(self.convert_mode)(self.loss_and_derivative)(X, y)
