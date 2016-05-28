@@ -21,18 +21,6 @@ class ModelBase(object):
     self.data_target_cnt = 2
     self.params = {}
 
-  def get_param(self, name, mode = 'numpy'):
-    if name in self.params:
-      if mode == 'numpy':
-        return minpy_to_numpy(self.params[name])
-      elif mode == 'minpy':
-        return self.params[name]
-      else:
-        raise UnknownAccessModeError('unexpected mode {} in accessing model\'s params', mode)
-    else:
-      raise ParamsNameNotFoundError('not found param {} in model'.format(name))
-      
-
   def loss(self, X, y = None):
     res = wraps(self.convert_mode)(self.loss_and_derivative)(X, y)
 
