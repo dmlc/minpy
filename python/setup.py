@@ -3,8 +3,9 @@
 import setuptools
 
 setuptools.setup(
-    name='MinPy',
+    name='minpy',
+    install_requires=['numpy'],
     version='0.0.1',
-    packages=['minpy']
+    packages=['minpy'],
+    url='https://github.com/dmlc/minpy'
 )
-
