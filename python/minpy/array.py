@@ -607,17 +607,17 @@ class Primitive(object):
         self._grad_func[argnum] = lambda *args, **kwargs: lambda g: 0.0
         return self
 
-    def gradable(self, args_len, kwargs_keys):
-        """Return whether the primitive has gradient function defined
-        Args:
-            args_len:
-                Number of arguments that are passed to the primitive
-            kwargs_keys:
-                Keyword arguments that are passed to the primitive
-        Return:
-            Whether all the arguments have gradient defined
+    def gradable(self, bp_args, bp_kwargs):
+        """Return whether the primitive has gradient function defined.
+
+        :param tuple bp_args: Positional arguments that need back propagation.
+        :param tuple bp_kwargs: Keyword arguments that need back propagation.
+        :return: Whether all the arguments have gradients defined.
         """
-        ret = args_len <= len(self._grad_func)
-        for i in kwargs_keys:
-            ret = ret and (i in self._grad_func_kw)
-        return ret
+        for i in bp_args:
+            if i not in self._grad_func:
+                return False
+        for i in bp_kwargs:
+            if i not in self._grad_func_kw:
+                return False
+        return True
