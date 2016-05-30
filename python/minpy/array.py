@@ -105,6 +105,14 @@ class Value(object):
     """
     _ns = None
 
+    def __init__(self, marked):
+        self._marked_for_bp = marked
+
+    @property
+    def marked_for_bp(self):
+        """Return whether the current Value will be used for autograd."""
+        return self._marked_for_bp
+
     @staticmethod
     def wrap(data, *args, **kwargs):
         """ Wrap given data into its corresponding wrapper class. For example, `numpy.ndarray`
@@ -299,9 +307,9 @@ class Number(Value):
     __slots__ = ['_node', '_val', '_marked_for_bp']
 
     def __init__(self, val, marked=False):
+        super(Number, self).__init__(marked)
         self._node = Node(self)
         self._val = val
-        self._marked_for_bp = marked
 
     def __str__(self):
         return str(self._val)
@@ -320,11 +328,6 @@ class Number(Value):
         """ get node which contains derivative information from this array """
         return self._node
 
-    @property
-    def marked_for_bp(self):
-        """ Return whether the current Value will be used for autograd """
-        return self._marked_for_bp
-
 
 class Array(Value):
     """Base array type.
@@ -339,12 +342,12 @@ class Array(Value):
     __array_priority__ = 100.0  # highest priority when compute with numpy.ndarray
 
     def __init__(self, data, marked=False):
+        super(Array, self).__init__(marked)
         self._data = {}
         self._node = Node(self)
         atype = Array.to_array_type(data)
         self._data[atype] = data
         self._latest_version = atype
-        self._marked_for_bp = marked
 
     @staticmethod
     def to_array_type(arr):
@@ -360,11 +363,6 @@ class Array(Value):
 
     def __str__(self):
         return str(self.get_data(ArrayType.NUMPY))
-
-    @property
-    def marked_for_bp(self):
-        """ Return whether the current Value will be used for autograd """
-        return self._marked_for_bp
 
     @property
     def node(self):
