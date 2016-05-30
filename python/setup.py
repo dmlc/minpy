@@ -3,8 +3,8 @@
 import setuptools
 
 setuptools.setup(
-    name='MinPy',
+    name='minpy',
     version='0.0.1',
-    packages=['minpy']
+    packages=setuptools.find_packages()
 )
 
