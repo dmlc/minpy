@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 import setuptools
 
-setuptools.setup(
-    name='minpy',
-    version='0.0.1',
-    packages=setuptools.find_packages()
-)
-
+setuptools.setup(name='minpy',
+                 version='0.0.1',
+                 packages=setuptools.find_packages(),
+                 install_requires=[
+                     'enum',
+                     'numpy',
+                     'mxnet',
+                 ])
