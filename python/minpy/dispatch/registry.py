@@ -3,18 +3,21 @@
 """Registry for functions under the same symbol."""
 from ..utils import log
 
-#pylint: disable= invalid-name
+# pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
-#pylint: enable= invalid-name
+# pylint: enable= invalid-name
+
 
 class PrimitiveRegistryError(ValueError):
     """ Error during registering primitives """
     pass
 
+
 class Registry(object):
     """ Registry for primitives. Primitives with the same name but with different implementation
     type will be registered in the same entry.
     """
+
     def __init__(self):
         self._reg = {}
 
@@ -32,9 +35,12 @@ class Registry(object):
             self._reg[name] = {}
         if prim.type in self._reg[name]:
             raise PrimitiveRegistryError(
-                'Type "{}" for name "{}" has already existed'.format(prim.typestr, name))
+                'Type "{}" for name "{}" has already existed'.format(
+                    prim.typestr, name))
         else:
-            _logger.debug('Function "{}" registered with type {}'.format(name, prim.typestr))
+            _logger.debug(
+                'Function "{}" registered with type {}'.format(
+                    name, prim.typestr))
             self._reg[name][prim.type] = prim
 
     def has_name(self, name):
@@ -51,23 +57,19 @@ class Registry(object):
         """
         return self._reg[name][ptype]
 
-    def iter_available_types(self, name, args_len, kwargs_keys):
-        """ Find primitives of the given name that have gradients defined for the arguments
-        Args:
-            name:
-                Primitive name
-            args_len:
-                Number of arguments that are passed to the primitive
-            kwargs_keys:
-                Keyword arguments that are passed to the primitive
-        Return:
-            Primitives that satisfy above requirementes
+    def iter_available_types(self, name, bp_args, bp_kwargs):
+        """Find primitives of the given name that have gradients defined for the arguments.
+
+        :param str name: Primitive name.
+        :param tuple bp_args: Positional arguments that need back propagation.
+        :param tuple bp_kwargs: Keyword arguments that need back propagation.
+        :return: Primitives that satisfy above requirements.
         """
         if name not in self._reg:
             return iter([])
         else:
             ret = []
             for prim in self._reg[name].values():
-                if prim.gradable(args_len, kwargs_keys):
+                if prim.gradable(bp_args, bp_kwargs):
                     ret.append(prim)
             return ret

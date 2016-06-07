@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#pylint: disable= protected-access, invalid-name
+# pylint: disable= protected-access, invalid-name
 """Core gradient calculation."""
 from __future__ import absolute_import
 from __future__ import print_function
@@ -14,6 +14,7 @@ from .array_variants import ArrayType, array_types, number_types
 
 _logger = log.get_logger(__name__)
 
+
 def grad_and_loss(func, argnum=0):
     """ Return function that computes both gradient and loss value
     Args:
@@ -24,7 +25,7 @@ def grad_and_loss(func, argnum=0):
     Return:
         A function that would compute both the gradient of the specified argument and loss value
     """
-    #pylint: disable= missing-docstring
+    # pylint: disable= missing-docstring
     @functools.wraps(func)
     def wrapped(*args):
         arrays = tuple(array.Value.wrap(a) for a in args)
@@ -43,7 +44,8 @@ def grad_and_loss(func, argnum=0):
         return grad_vals, result_array
 
     return wrapped
-    #pylint: enable= missing-docstring
+    # pylint: enable= missing-docstring
+
 
 def grad(func, argnum=0):
     """ Return function that contains gradient calculation
@@ -56,16 +58,19 @@ def grad(func, argnum=0):
         A function that would compute the gradient of the specified argument
     """
     grad_with_loss_func = grad_and_loss(func, argnum)
-    #pylint: disable= missing-docstring
+    # pylint: disable= missing-docstring
+
     @functools.wraps(grad_with_loss_func)
     def wrapped(*args):
         return grad_with_loss_func(*args)[0]
     return wrapped
-    #pylint: enable= missing-docstring
+    # pylint: enable= missing-docstring
+
 
 class MXNetSymbolError(ValueError):
     """ Error class for creating mxnet symbols """
     pass
+
 
 def function(symbol, input_shapes, sym_name='mxnet_symbol'):
     """ Construct a differentiable function from mxnet symbol
@@ -94,7 +99,7 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
     param_names = [arg_names[i] for i in param_idx]
     ```
     """
-    #pylint: disable= missing-docstring
+    # pylint: disable= missing-docstring
     param_names = arg_names
 
     def func(*args, **kwargs):
@@ -105,13 +110,16 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
             if name in executor.arg_dict:
                 value.copyto(executor.arg_dict[name])
             else:
-                raise MXNetSymbolError('find arg name: %s not in executors arg_list' % name)
+                raise MXNetSymbolError(
+                    'find arg name: %s not in executors arg_list' %
+                    name)
         # forward
         # TODO: is_train flag
         executor.forward(is_train=True)
         # TODO: Handle with multiple outputs, including the order of outputs
         return executor.outputs[0]
     func.__name__ = sym_name
+
     def def_grad_kw(keyname):
         def grad_wrapper(ans, *arg_values, **kwargs_values):
             def grad_func(g):
@@ -124,19 +132,23 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
     for name in param_names:
         prim.def_grad_kw(def_grad_kw(name), name)
     return prim
-    #pylint: enable= missing-docstring
+    # pylint: enable= missing-docstring
+
 
 class MinpyWrapperError(TypeError):
     """ Error when wrapping function return values """
     pass
 
+
 def numpy_to_minpy(var):
     """ Convert a numpy array to minpy array """
     return array.Value.wrap(var)
 
+
 def minpy_to_numpy(var):
     """ Convert a minpy array to numpy array """
     return array.Value.wrap(var).get_data(ArrayType.NUMPY)
+
 
 def convert(val, converter, basic_types):
     """ Apply converter to the value according to their types
@@ -160,23 +172,38 @@ def convert(val, converter, basic_types):
     elif isinstance(val, list):
         ret = list(convert(v, converter, basic_types) for v in val)
     elif isinstance(val, dict):
-        ret = {k: convert(v, converter, basic_types) for k, v in val.iteritems()}
+        ret = {k: convert(v, converter, basic_types)
+               for k, v in val.iteritems()}
     else:
-        raise MinpyWrapperError('Unexpected %s type found in core.convert' % type(val))
+        raise MinpyWrapperError(
+            'Unexpected %s type found in core.convert' %
+            type(val))
     return ret
 
+
 def wraps(mode='lazy'):
-    """ Wrapping minpy functions to return values in different array types based on the mode """
+    """
+    Convenient wrapper function separate minpy and numpy data structure. The wrapper will convert
+    all array types in the input arguments as minpy arrays. The return type will be converted
+    according to the mode that is given.
+      - In 'lazy' mode: no conversion will be performed for the return values. So users need to 
+        handle the return value type themselves.
+      - In 'numpy' mode: all minpy arrays will be converted to numpy arrays.
+    """
     #pylint: disable= missing-docstring
     def wrapper(func):
         @functools.wraps(func)
         def real_wrapper(*args, **kwargs):
-            # no need to convert argument types caz mxnet support numpy arguments
-            mpy_res = func(*args, **kwargs)
             basic_types = array_types.values()
             for num_type_lists in number_types.values():
                 basic_types += num_type_lists
             basic_types += [array.Number, array.Array, array.Value]
+            # convert input arguments into minpy structure
+            mpy_args = convert(args, numpy_to_minpy, basic_types)
+            mpy_kwargs = convert(kwargs, numpy_to_minpy, basic_types)
+            # call func
+            mpy_res = func(*mpy_args, **mpy_kwargs)
+            # convert return value
             if mode == 'lazy':
                 # lazy mode returns funciton result without converting
                 return mpy_res
@@ -186,5 +213,5 @@ def wraps(mode='lazy'):
             else:
                 raise MinpyWrapperError('Unknown wrapper mode: %s' % mode)
         return real_wrapper
-    #pylint: enable= missing-docstring
+    # pylint: enable= missing-docstring
     return wrapper

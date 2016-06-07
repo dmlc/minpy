@@ -38,7 +38,6 @@ def register_primitives(reg, prim_wrapper):
     """ Register primitives in mxnet package """
     mxnet_wrapper.wrap_namespace(mxnet.ndarray.__dict__, reg, prim_wrapper)
     # Additional primitives due to naming issues in MXNet.
-    reg.register('power', prim_wrapper(NDArray._power))
     reg.register('maximum', prim_wrapper(NDArray._maximum))
     reg.register('reshape', prim_wrapper(NDArray.reshape))
 
@@ -114,7 +113,7 @@ def def_grads(reg, prims):
     prims('sin').def_grad(lambda ans, x: lambda g: g * mxnet.nd.cos(x))
     prims('cos').def_grad(lambda ans, x: lambda g: -g * mxnet.nd.sin(x))
     prims('power').def_grad(
-        lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y * mxnet.nd.NDArray._power(x, y - 1)))
+        lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y * mxnet.nd.power(x, y - 1)))
     prims('power').def_grad(
         lambda ans, x, y: unbroadcast(ans, y, lambda g: g * mxnet.nd.log(x) * ans),
         argnum=1)
