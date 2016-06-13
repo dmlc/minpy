@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/dmlc/minpy.svg?branch=master)](https://travis-ci.org/dmlc/minpy)
 
+[![PyPI version](https://badge.fury.io/py/minpy.svg)](https://badge.fury.io/py/minpy)
+
 This repository aims at prototyping a pure `numpy` interface above [mxnet](https://github.com/dmlc/mxnet) backend. The key features include:
 
 * [Autograd](https://github.com/HIPS/autograd) support.
@@ -13,10 +15,11 @@ How to get started?
 -------------------
 The project is still a work-in-progress. You could look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents are coming soon!
 
-# Installation guide for development
+# Easy installation
 
-Currently MinPy is going through rapid development (but we do our best to keep the API unchanged). So it is adviced to do an editable installation.
-Change directory into where the Python package lies and run `pip install -e .` if you are in a virtual environment, or `pip install --user -e .` if you are using your system Python packages. This will ensure a symbolic link to the project, so you do not have to install a second time when you update this repository.
+```
+pip install minpy
+```
 
 What we really want?
 -------------------
