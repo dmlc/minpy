@@ -38,7 +38,6 @@ def register_primitives(reg, prim_wrapper):
     """ Register primitives in mxnet package """
     mxnet_wrapper.wrap_namespace(mxnet.ndarray.__dict__, reg, prim_wrapper)
     # Additional primitives due to naming issues in MXNet.
-    reg.register('maximum', prim_wrapper(NDArray._maximum))
     reg.register('reshape', prim_wrapper(NDArray.reshape))
 
 

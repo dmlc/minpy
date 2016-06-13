@@ -173,7 +173,7 @@ def convert(val, converter, basic_types):
         ret = list(convert(v, converter, basic_types) for v in val)
     elif isinstance(val, dict):
         ret = {k: convert(v, converter, basic_types)
-               for k, v in val.iteritems()}
+               for k, v in val.items()}
     else:
         raise MinpyWrapperError(
             'Unexpected %s type found in core.convert' %
@@ -194,7 +194,7 @@ def wraps(mode='lazy'):
     def wrapper(func):
         @functools.wraps(func)
         def real_wrapper(*args, **kwargs):
-            basic_types = array_types.values()
+            basic_types = list(array_types.values())
             for num_type_lists in number_types.values():
                 basic_types += num_type_lists
             basic_types += [array.Number, array.Array, array.Value]

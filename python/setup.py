@@ -6,7 +6,6 @@ setuptools.setup(name='minpy',
                  version='0.0.1',
                  packages=setuptools.find_packages(),
                  install_requires=[
-                     'enum',
                      'numpy',
                      'mxnet',
                  ],

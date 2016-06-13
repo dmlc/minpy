@@ -41,8 +41,7 @@ def quick_grad_check(fun,
     numeric_grad = (unary_fun(eps / 2) - unary_fun(-eps / 2)) / eps
     analytic_grad = np.sum(grad_fun(arg).asnumpy() * random_dir)
 
-    passed = abs(analytic_grad - numeric_grad) < atol\
-        and abs(analytic_grad - numeric_grad) < abs(analytic_grad * rtol)
+    passed = np.allclose(numeric_grad, analytic_grad, rtol=rtol, atol=atol)
 
     if verbose:
         if passed:

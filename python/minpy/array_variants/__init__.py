@@ -3,13 +3,12 @@
 #pylint: disable= invalid-name
 """ Package for different implementations of array computations """
 from __future__ import absolute_import
-import enum
 
 from ..utils import common
 from . import numpy
 from . import mxnet
 
-class ArrayType(enum.Enum):
+class ArrayType:
     """Enumeration of types of arrays."""
     NUMPY = 0
     MXNET = 1

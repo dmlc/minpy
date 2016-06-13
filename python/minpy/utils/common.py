@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Common utility functions."""
-import enum
 import functools
-
 
 def enforce_type(T, method=False):
     """Enforce argument types.
@@ -38,4 +36,3 @@ def enforce_type(T, method=False):
             return func(*args_wrapped, **kwargs_wrapped)
         return wrapped
     return decorator
-
