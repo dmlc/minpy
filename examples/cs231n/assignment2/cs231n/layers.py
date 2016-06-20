@@ -1,4 +1,4 @@
-import minpy 
+import minpy
 import minpy.numpy as np
 import minpy.core
 import minpy.array
@@ -10,9 +10,10 @@ import minpy.numpy.random as random
 np.set_policy(policy.OnlyNumpyPolicy())
 #np.set_policy(policy.PreferMXNetPolicy())
 
+
 @wraps('lazy')
 def affine_forward(x, w, b):
-  """
+    """
   Computes the forward pass for an affine (fully-connected) layer.
 
   The input x has shape (N, d_1, ..., d_k) and contains a minibatch of N
@@ -30,13 +31,14 @@ def affine_forward(x, w, b):
   - cache: (x, w, b)
   """
 
-  out = np.dot(x, w) + b
+    out = np.dot(x, w) + b
 
-  return out
+    return out
+
 
 @wraps('lazy')
 def relu_forward(x):
-  """
+    """
   Computes the forward pass for a layer of rectified linear units (ReLUs).
 
   Input:
@@ -46,12 +48,13 @@ def relu_forward(x):
   - out: Output, of the same shape as x
   - cache: x
   """
-  out = np.maximum(0, x)
-  return out
+    out = np.maximum(0, x)
+    return out
+
 
 @wraps('lazy')
 def batchnorm_forward(x, gamma, beta, bn_param):
-  """
+    """
   Forward pass for batch normalization.
   
   During training the sample mean and (uncorrected) sample variance are
@@ -88,44 +91,45 @@ def batchnorm_forward(x, gamma, beta, bn_param):
   - out: of shape (N, D)
   - cache: A tuple of values needed in the backward pass
   """
-  mode = bn_param['mode']
-  eps = bn_param.get('eps', 1e-5)
-  momentum = bn_param.get('momentum', 0.9)
+    mode = bn_param['mode']
+    eps = bn_param.get('eps', 1e-5)
+    momentum = bn_param.get('momentum', 0.9)
 
-  N, D = x.shape
-  running_mean = bn_param.get('running_mean', np.zeros(D))
-  running_var = bn_param.get('running_var', np.zeros(D))
+    N, D = x.shape
+    running_mean = bn_param.get('running_mean', np.zeros(D))
+    running_var = bn_param.get('running_var', np.zeros(D))
 
-  out = None
-  if mode == 'train':
-    mean = np.sum(x, axis = 0)/N
-    x_mean = (x - mean)
-    sqr_x_mean = x_mean ** 2
-    var = np.sum(sqr_x_mean, axis = 0)/N
-    sqrt_var = np.sqrt(var + eps)
+    out = None
+    if mode == 'train':
+        mean = np.sum(x, axis=0) / N
+        x_mean = (x - mean)
+        sqr_x_mean = x_mean**2
+        var = np.sum(sqr_x_mean, axis=0) / N
+        sqrt_var = np.sqrt(var + eps)
 
-    inv_sqrt_var = 1.0/sqrt_var
+        inv_sqrt_var = 1.0 / sqrt_var
 
-    x_hat = x_mean * inv_sqrt_var
-    out = gamma * x_hat + beta
+        x_hat = x_mean * inv_sqrt_var
+        out = gamma * x_hat + beta
 
-    running_mean = momentum*running_mean + (1.0 - momentum) * mean
-    running_var = momentum*running_var + (1.0 - momentum) * var
-  elif mode == 'test':
-    x_hat = (x - running_mean)/np.sqrt(running_var + eps)
-    out = gamma * x_hat + beta
-  else:
-    raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
+        running_mean = momentum * running_mean + (1.0 - momentum) * mean
+        running_var = momentum * running_var + (1.0 - momentum) * var
+    elif mode == 'test':
+        x_hat = (x - running_mean) / np.sqrt(running_var + eps)
+        out = gamma * x_hat + beta
+    else:
+        raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
-  # Store the updated running means back into bn_param
-  bn_param['running_mean'] = running_mean
-  bn_param['running_var'] = running_var
+    # Store the updated running means back into bn_param
+    bn_param['running_mean'] = running_mean
+    bn_param['running_var'] = running_var
 
-  return out
+    return out
+
 
 @wraps('lazy')
 def dropout_forward(x, dropout_param):
-  """
+    """
   Performs the forward pass for (inverted) dropout.
 
   Inputs:
@@ -143,24 +147,25 @@ def dropout_forward(x, dropout_param):
   - cache: A tuple (dropout_param, mask). In training mode, mask is the dropout
     mask that was used to multiply the input; in test mode, mask is None.
   """
-  p, mode = dropout_param['p'], dropout_param['mode']
-  if 'seed' in dropout_param:
-    random.seed(dropout_param['seed'])
+    p, mode = dropout_param['p'], dropout_param['mode']
+    if 'seed' in dropout_param:
+        random.seed(dropout_param['seed'])
 
-  mask = None
-  out = None
+    mask = None
+    out = None
 
-  if mode == 'train':
-    #TODO: check implementation of compare operator in mxnet? 
-    mask = random.rand(*x.shape) > p
-    out = x * mask #drop!
-  else:
-    out = x
+    if mode == 'train':
+        #TODO: check implementation of compare operator in mxnet?
+        mask = random.rand(*x.shape) > p
+        out = x * mask  #drop!
+    else:
+        out = x
 
-  return out
+    return out
+
 
 def conv_forward_naive(x, w, b, conv_param):
-  """
+    """
   A naive implementation of the forward pass for a convolutional layer.
 
   The input consists of N data points, each with C channels, height H and width
@@ -182,20 +187,21 @@ def conv_forward_naive(x, w, b, conv_param):
     W' = 1 + (W + 2 * pad - WW) / stride
   - cache: (x, w, b, conv_param)
   """
-  out = None
-  #############################################################################
-  # TODO: Implement the convolutional forward pass.                           #
-  # Hint: you can use the function np.pad for padding.                        #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
-  cache = (x, w, b, conv_param)
-  return out, cache
+    out = None
+    #############################################################################
+    # TODO: Implement the convolutional forward pass.                           #
+    # Hint: you can use the function np.pad for padding.                        #
+    #############################################################################
+    pass
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+    cache = (x, w, b, conv_param)
+    return out, cache
+
 
 def max_pool_forward_naive(x, pool_param):
-  """
+    """
   A naive implementation of the forward pass for a max pooling layer.
 
   Inputs:
@@ -209,19 +215,20 @@ def max_pool_forward_naive(x, pool_param):
   - out: Output data
   - cache: (x, pool_param)
   """
-  out = None
-  #############################################################################
-  # TODO: Implement the max pooling forward pass                              #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
-  cache = (x, pool_param)
-  return out, cache
+    out = None
+    #############################################################################
+    # TODO: Implement the max pooling forward pass                              #
+    #############################################################################
+    pass
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+    cache = (x, pool_param)
+    return out, cache
+
 
 def spatial_batchnorm_forward(x, gamma, beta, bn_param):
-  """
+    """
   Computes the forward pass for spatial batch normalization.
   
   Inputs:
@@ -242,25 +249,26 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
   - out: Output data, of shape (N, C, H, W)
   - cache: Values needed for the backward pass
   """
-  out, cache = None, None
+    out, cache = None, None
 
-  #############################################################################
-  # TODO: Implement the forward pass for spatial batch normalization.         #
-  #                                                                           #
-  # HINT: You can implement spatial batch normalization using the vanilla     #
-  # version of batch normalization defined above. Your implementation should  #
-  # be very short; ours is less than five lines.                              #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+    #############################################################################
+    # TODO: Implement the forward pass for spatial batch normalization.         #
+    #                                                                           #
+    # HINT: You can implement spatial batch normalization using the vanilla     #
+    # version of batch normalization defined above. Your implementation should  #
+    # be very short; ours is less than five lines.                              #
+    #############################################################################
+    pass
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
 
-  return out, cache
+    return out, cache
+
 
 @wraps('lazy')
 def svm_loss(x, y):
-  """
+    """
   Computes the loss and gradient using for multiclass SVM classification.
 
   Inputs:
@@ -274,22 +282,24 @@ def svm_loss(x, y):
   - dx: Gradient of the loss with respect to x
   """
 
-  N = x.shape[0]
-  correct_class_scores = x[np.arange(N), y]
-  
-  #TODO: Support broadcast case: (X,) (X, Y)
-  #shape(x) is (d0, d1)
-  #shape(correct_class_scores) is (d0,)
-  #margins = np.maximum(0, x - correct_class_scores + 1.0)
-  margins = np.transpose(np.maximum(0, np.transpose(x) - np.transpose(correct_class_scores) + 1.0))
+    N = x.shape[0]
+    correct_class_scores = x[np.arange(N), y]
 
-  loss = (np.sum(margins) - np.sum(margins[np.arange(N), y])) / N
+    #TODO: Support broadcast case: (X,) (X, Y)
+    #shape(x) is (d0, d1)
+    #shape(correct_class_scores) is (d0,)
+    #margins = np.maximum(0, x - correct_class_scores + 1.0)
+    margins = np.transpose(np.maximum(0, np.transpose(x) - np.transpose(
+        correct_class_scores) + 1.0))
 
-  return loss
+    loss = (np.sum(margins) - np.sum(margins[np.arange(N), y])) / N
+
+    return loss
+
 
 @wraps('lazy')
 def softmax_loss(x, y):
-  """
+    """
   Computes the loss and gradient for softmax classification.
 
   Inputs:
@@ -301,10 +311,10 @@ def softmax_loss(x, y):
   Returns a tuple of:
   - loss: Scalar giving the loss
   """
-  #TODO: Missing Max Operator 
-  probs = np.exp(x - np.expand_dims(np.max(x, axis=1), axis = 1))
-  probs = probs / np.expand_dims(np.sum(probs, axis=1), axis = 1)
-  N = x.shape[0]
-  loss = -np.sum(np.log(probs[np.arange(N), y])) / N
+    #TODO: Missing Max Operator
+    probs = np.exp(x - np.expand_dims(np.max(x, axis=1), axis=1))
+    probs = probs / np.expand_dims(np.sum(probs, axis=1), axis=1)
+    N = x.shape[0]
+    loss = -np.sum(np.log(probs[np.arange(N), y])) / N
 
-  return loss
+    return loss
