@@ -144,6 +144,11 @@ def def_grads(reg, prims):
     prims('maximum').def_grad(
         lambda ans, x, y: unbroadcast(ans, y, lambda g: g * (y == ans)),
         argnum=1)
+    prims('minimum').def_grad(
+        lambda ans, x, y: unbroadcast(ans, x, lambda g: g * (x == ans)))
+    prims('minimum').def_grad(
+        lambda ans, x, y: unbroadcast(ans, y, lambda g: g * (y == ans)),
+        argnum=1)
     prims('_minpy_getitem').def_grad(
         lambda ans, x, index: lambda g: _minpy_getitem_grad(x, index, g))
     prims('reshape').def_grad(
