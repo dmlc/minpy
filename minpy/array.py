@@ -296,12 +296,13 @@ class Value(object):
     # pylint: enable= no-self-use
 
 
-class Number(Value):
+class Number(Value, float):
     """Class for numbers with derivative information"""
     __slots__ = ['_node', '_val', '_marked_for_bp']
 
     def __init__(self, val, marked=False):
         super(Number, self).__init__(marked)
+        super(Number, self).__init__(val)
         self._node = Node(self)
         self._val = val
 
