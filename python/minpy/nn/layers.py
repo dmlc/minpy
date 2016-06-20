@@ -175,16 +175,25 @@ def softmax_loss(x, y):
     Inputs:
     - x: Input data, of shape (N, C) where x[i, j] is the score for the jth class
       for the ith input.
-    - y: Vector of labels, of shape (N,) where y[i] is the label for x[i] and
-      0 <= y[i] < C
+    - y: Either of the followings:
+      - One hot encoding of labels, of shape (N, C)
+      - Label index of shape (N, ), each y[i] is the label of i^th example
+        (0 <= y[i] < C)
 
     Returns a tuple of:
     - loss: Scalar giving the loss
     """
-    probs = np.exp(x - np.expand_dims(np.max(x, axis=1), axis=1))
-    probs = probs / np.expand_dims(np.sum(probs, axis=1), axis=1)
     N = x.shape[0]
-    loss = -np.sum(np.log(probs[np.arange(N), y])) / N
+    C = x.shape[1]
+    if len(y.shape) == 1:
+        #convert it to one hot encoding
+        onehot_y = np.zeros([N, C])
+        np.onehot_encode(y, onehot_y)
+    else:
+        onehot_y = y
+    probs = np.exp(x - np.max(x, axis=1, keepdims=True))
+    probs = probs / np.sum(probs, axis=1, keepdims=True)
+    loss = -np.sum(np.log(probs) * onehot_y) / N
     return loss
 
 @wraps('lazy')

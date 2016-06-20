@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import itertools as it
 import numpy as np
 from minpy.core import grad
+from minpy.array import Value
 
 def quick_grad_check(fun,
                      arg,
@@ -32,6 +33,9 @@ def quick_grad_check(fun,
     """
     if rs is None:
         rs = np.random.RandomState()
+
+    if isinstance(arg, Value): # convert it to numpy value
+        arg = arg.asnumpy()
 
     random_dir = rs.standard_normal(np.shape(arg))
     random_dir = random_dir / np.sqrt(np.sum(random_dir * random_dir))

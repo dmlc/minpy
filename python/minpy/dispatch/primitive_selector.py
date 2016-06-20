@@ -4,8 +4,9 @@
 """Lazy evaluation of primitive selection."""
 from __future__ import absolute_import
 from __future__ import print_function
-from ..utils import log
-from . import policy
+
+from minpy.utils import log
+from minpy.dispatch import policy
 
 _logger = log.get_logger(__name__)
 

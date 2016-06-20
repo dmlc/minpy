@@ -75,23 +75,17 @@ class Node(object):
             res = rec[0](grad_value)
             return res
         assert(isinstance(target, Node))
-        # Note: Haoran comments the assert instruction below for two cases.
-        # when 1. self is target or 2. some vars won't contribute to final loss,
-        # _partial_derivatives could be zero-length
-        # assert(len(self._partial_derivatives) != 0)
         if target not in self._partial_derivative_cache:
             if self is target:  # Partial derivative of self is one.
                 res = 1.0 if isinstance(
                     self._value, Number) else numpy.ones(
                     self._value.shape)
             else:
-                res = functools.reduce(
-                    operator.add,
-                    [_call_pd(pd) for pd in self._partial_derivatives],
-                    Value.wrap(0.0))
+                res = functools.reduce(operator.add,
+                                       [_call_pd(pd) for pd in self._partial_derivatives],
+                                       Value.wrap(0.0))
                 # in case _partial_derivatives is empty
-                if (len(self._partial_derivatives) == 0) and (
-                        not isinstance(self._value, Number)):
+                if len(self._partial_derivatives) == 0 and not isinstance(self._value, Number):
                     res = numpy.zeros(self._value.shape)
             self._partial_derivative_cache[target] = Value.wrap(res)
         return self._partial_derivative_cache[target]
@@ -567,7 +561,12 @@ class Primitive(object):
                 kwargs[k],
                 k in self._mutate_kw) for k in kwargs}
         # Call the real function with raw value.
-        result_value = self._func(*arg_values, **kwargs_values)
+        if self.type == ArrayType.MXNET:
+            # Currently all mxnet function call will be performed on GPU #0
+            with mxnet.gpu(0) as ctx:
+                result_value = self._func(*arg_values, **kwargs_values)
+        else:
+            result_value = self._func(*arg_values, **kwargs_values)
         # if you want to do profiling, try to use minprof(<func>):
         # result_value = minprof(self._func)(*arg_values, **kwargs_values)
 

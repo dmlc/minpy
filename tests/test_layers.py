@@ -1,5 +1,4 @@
 import numpy as np
-import minpy.numpy as mp
 import minpy.nn.layers as layers
 import minpy.utils.gradient_checker as gradient_checker
 import minpy.dispatch.policy as plc
@@ -27,29 +26,27 @@ def test_batchnorm():
     gamma = rng.randn(40)
     beta = rng.randn(40)
     fake_y = np.zeros([20, 40])
-    running_mean = rng.randn(40)
-    running_var = rng.randn(40)
-    def check_mean(mean):
-        y, _, _ = layers.batchnorm(x,
-                             gamma,
-                             beta,
-                             running_mean=mean,
-                             running_var=running_var)
+    def check_gamma(g):
+        y, _, _ = layers.batchnorm(x, g, beta)
         return layers.l2_loss(y, fake_y)
-    gradient_checker.quick_grad_check(check_mean, running_mean, rs=rng)
-    def check_var(var):
-        y, _, _ = layers.batchnorm(x,
-                             gamma,
-                             beta,
-                             running_mean=running_mean,
-                             running_var=var)
+    gradient_checker.quick_grad_check(check_gamma, gamma, rs=rng)
+    def check_beta(b):
+        y, _, _ = layers.batchnorm(x, gamma, b)
         return layers.l2_loss(y, fake_y)
-    gradient_checker.quick_grad_check(check_var, running_var, rs=rng)
+    gradient_checker.quick_grad_check(check_beta, beta, rs=rng)
+
+def test_softmax():
+    lbl = np.zeros([20])
+    def check_fn(x):
+        return layers.softmax_loss(x, lbl)
+    x = rng.randn(20, 10)
+    gradient_checker.quick_grad_check(check_fn, x, rs=rng)
 
 def main():
     test_affine()
     test_relu()
     test_batchnorm()
+    test_softmax()
 
 if __name__ == '__main__':
     main()
