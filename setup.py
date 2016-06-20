@@ -4,7 +4,7 @@ import setuptools
 
 setuptools.setup(
     name='minpy',
-    version='0.0.1',
+    version='0.0.2',
     description='Pure NumPy practice with third-party operator integration.',
     packages=setuptools.find_packages(),
     install_requires=[

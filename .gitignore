@@ -1,93 +1,89 @@
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
+# C extensions
 *.so
-*.dylib
-*.dll
 
-# Fortran module files
-*.mod
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
 
-# Executables
-*.exe
-*.out
-*.app
-*~
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# doc
-doc/html
-doc/latex
-doc/doc
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
 
-#dmlc
-config.mk
+# Translations
+*.mo
+*.pot
 
-*.pyc
-.Rhistory
-*log
-Debug
-*suo
-tracker
+# Django stuff:
+*.log
+local_settings.py
 
-# vim
-*.swp
-*.swo
-*.swn
-.vimrc
-.ycm_extra_conf.py
-.ycm_extra_conf.pyc
+# Flask stuff:
+instance/
+.webassets-cache
 
-# Emacs
-.#*
-.clang_complete
-.dir-locals.el
-__pycache__
-*.pkl
-*.params
-*.json
-*.d
-build
-data
-recommonmark
-bin
-deps
+# Scrapy stuff:
+.scrapy
 
-# R
-*.Rcheck
-*.rds
-*.Rproj
-.Rproj.user
-R-package/inst/*
-*.tar.gz
+# Sphinx documentation
+docs/_build/
 
-# data
-*.rec
-*.lst
-*.zip
-*ubyte
-*.bin
+# PyBuilder
+target/
 
-# ipython notebook
-example/notebooks/.ipynb_checkpoints/*
-*_pb2.py
+# IPython Notebook
+.ipynb_checkpoints
 
-# Jetbrain
-.idea
+# pyenv
+.python-version
 
-# ctags
-tags
+# celery beat schedule file
+celerybeat-schedule
 
+# dotenv
+.env
+
+# virtualenv
+venv/
+ENV/
+
+# Spyder project settings
+.spyderproject
+
+# Rope project settings
+.ropeproject

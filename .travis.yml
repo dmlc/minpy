@@ -1,16 +1,18 @@
 sudo: required
-
 dist: trusty
-
 before_install:
-  - "sudo apt-get update -qq"
-  - "sudo apt-get install --yes libblas-dev liblapack-dev gfortran"
-
+- sudo apt-get update -qq
+- sudo apt-get install --yes libblas-dev liblapack-dev gfortran
 language: python
-
 python:
-  - "3.5"
-
+- '3.5'
 script:
-  - "echo \"No tests yet\""
-
+- echo "No tests yet"
+deploy:
+  provider: pypi
+  user: hotpxl
+  password:
+    secure: s1GTS8RKlOy2LV++sHO2OgWvWv14nnsAVU+ngsrtK5KIbBg93krVksJ1qYm/mKoVdiez1nUi5yu6geqITBa/neC0VTRUgfeTub7tDZ+zDlMAq/ZVBZYFqL2V9LQAsUeZgFmf3dEAN73pc6Ml6PwsB1WgM5yE0836dNV1ebYYZ2Z/DfgLHeIIWUnQI1qYip6zYsQMIHlM53XCx2y6mI1kgyjL16s/D+kOl2l54ZsR5j5wSJpg+Nj3WU4zd9ttaRNZ21XDesVoYF/ngddpshpBYGXhd044/q1gOe9D9CfIPkaRk5GXUe5k3eYMKyzEs/UJrzL0xQ0qFWpKacVklN/0U9S+c2cYNXf8JtFrqqXD15PFHGRzgcGlYkFpW5tpHHAsNOUWW/aHsZRPSaOtqtD5IwTZTzsUWkGBbM6Na4fMGQ46l/XpTDyS3K0zZ1FzRJtjULYByDFjh63IPTjcCoHodOaOzc6Qs0r0xLrSI7gOHp923I6cYlcP4F7tTKpK7fE2hMMHQiMFGOHwXIYvlXqzYceKKy+T6oMAl99JDhKEy7Nq4m2ohukQgq9YeEtgQXruaErxIMXosAuEpg0FXytQ5/LzbXhaGEBlKgNHSh+ptH82tuzvVtheKBBREo353ZE2IfS4xjSl90hlljAbYwO3uhYpRSf5DhrHQv+FHFqZ3FA=
+  on:
+    tags: true
+  distributions: "sdist bdist_wheel"
