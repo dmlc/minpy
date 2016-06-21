@@ -26,7 +26,6 @@ def main():
             args.level))
     with open('VERSION', 'w') as f:
         f.write(str(v))
-    subprocess.check_call(['git', 'tag', 'v{}'.format(str(v))])
 
 
 if __name__ == '__main__':

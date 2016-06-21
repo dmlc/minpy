@@ -1,0 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+
+file_path="$(${readlink} -f "$(dirname "${BASH_SOURCE[0]}")")"
+pushd "${file_path}" > /dev/null
+git tag "v$(cat VERSION)"
+git push --tags
