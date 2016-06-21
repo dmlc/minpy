@@ -14,7 +14,6 @@ deploy:
   user: hotpxl
   on:
     tags: true
-    distributions: sdist bdist_wheel
-    repo: dmlc/minpy
+  distributions: sdist bdist_wheel
   password:
     secure: ZVPpLvHzH16dJfuWR3Iqtulv6gXilw1//SzLVYzg8LoqG108qxaE99GeC1rPcsCAJCAfsoqNbZtd/VvtnLoaTTJojbTocpmC1o7rHmsXkDWZ/vcruRZHSJCZIKbjkjr1PxNHD1y2LSJMib1tyrGGi+1wiljCKkb4OKjRgvIfYHjmsDatR7FfMSuw0SNhIPflonKeAKLcKhRdEYqNfyv9auOsd1Mhl+TxqLZqgFq6Zw1XyTcq/b2x8TX3K0U/M7v9UA224I78xqAFzRoqwtgG3sDxmeGCTENmeQ46+ty/FNH0X9IjkPMIT6vHhAzG14Hi4rhaDsLTU3ICWsGYA25+uKvVgxRXrKG2O+x7VQe3+D+u5+iu2E7UH57u+mX25opWl7fQ2begULUWtsqckxZcdPm5i4HV26xIf7yUFm9CvJYotLveirUdb1hP+dGkcZJZps1sDNOQvKRK+2TVLXcJQ6xOML5r+d82nIC6efVRFUKXYY7VZLutVrM7krJ69s+t5K/3NN8aMJ0ap9Rsau4jg3ws3Fuo5wDnqAfpl/wiJ4X4yK9H62dkiOXwnvxKnp4iRvU1Ks9P8ydYVLVOERaMqMEIeuFuP3tdH01anwrpvjQdQjak7K9dfFBWn++vS/w6UVTMT0N5l4UJuSBCiPLd4NLoHX/p50EOPFJQoe8LVRc=
