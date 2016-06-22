@@ -6,7 +6,8 @@ addons:
     - gfortran
 language: python
 python:
-- '3.5'
+- "3.5"
+- "2.7"
 script:
 - echo "No tests yet"
 deploy:
