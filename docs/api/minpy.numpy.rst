@@ -4,10 +4,10 @@ minpy.numpy package
 Submodules
 ----------
 
-minpy.numpy.delegate module
----------------------------
+minpy.numpy.mocking module
+--------------------------
 
-.. automodule:: minpy.numpy.delegate
+.. automodule:: minpy.numpy.mocking
     :members:
     :undoc-members:
     :show-inheritance:

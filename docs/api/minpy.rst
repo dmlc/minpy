@@ -8,7 +8,7 @@ Subpackages
 
     minpy.array_variants
     minpy.dispatch
-    minpy.graph
+    minpy.nn
     minpy.numpy
     minpy.utils
 
@@ -19,6 +19,14 @@ minpy.array module
 ------------------
 
 .. automodule:: minpy.array
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+minpy.core module
+-----------------
+
+.. automodule:: minpy.core
     :members:
     :undoc-members:
     :show-inheritance:

@@ -6,12 +6,16 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
 .. toctree::
     :maxdepth: 2
     :caption: User documentation
+    :glob:
 
-    install
+    get-started/*
 
 .. toctree::
     :maxdepth: 2
     :caption: Developer documentation
+    :glob:
+
+    api/modules.rst
 
 
 

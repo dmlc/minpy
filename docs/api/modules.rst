@@ -1,5 +1,5 @@
-python
-======
+minpy
+=====
 
 .. toctree::
    :maxdepth: 4

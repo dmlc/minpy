@@ -12,6 +12,14 @@ minpy.dispatch.policy module
     :undoc-members:
     :show-inheritance:
 
+minpy.dispatch.primitive_selector module
+----------------------------------------
+
+.. automodule:: minpy.dispatch.primitive_selector
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 minpy.dispatch.registry module
 ------------------------------
 
