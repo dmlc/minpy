@@ -20,7 +20,7 @@ def load_CIFAR10(ROOT):
     xs = []
     ys = []
     for b in range(1, 6):
-        f = os.path.join(ROOT, 'data_batch_%d' % (b,))
+        f = os.path.join(ROOT, 'data_batch_%d' % (b, ))
         X, Y = load_CIFAR_batch(f)
         xs.append(X)
         ys.append(Y)
@@ -75,26 +75,25 @@ def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000):
 
 
 def load_tiny_imagenet(path, dtype=np.float32):
+    """Load TinyImageNet. Each of TinyImageNet-100-A, TinyImageNet-100-B, and
+    TinyImageNet-200 have the same directory structure, so this can be used
+    to load any of them.
+
+    Inputs:
+        - path: String giving path to the directory to load.
+        - dtype: numpy datatype used to load the data.
+
+    Returns: A tuple of
+        - class_names: A list where class_names[i] is a list of strings giving the
+          WordNet names for class i in the loaded dataset.
+        - X_train: (N_tr, 3, 64, 64) array of training images
+        - y_train: (N_tr,) array of training labels
+        - X_val: (N_val, 3, 64, 64) array of validation images
+        - y_val: (N_val,) array of validation labels
+        - X_test: (N_test, 3, 64, 64) array of testing images.
+        - y_test: (N_test,) array of test labels; if test labels are not available
+          (such as in student code) then y_test will be None.
     """
-  Load TinyImageNet. Each of TinyImageNet-100-A, TinyImageNet-100-B, and
-  TinyImageNet-200 have the same directory structure, so this can be used
-  to load any of them.
-
-  Inputs:
-  - path: String giving path to the directory to load.
-  - dtype: numpy datatype used to load the data.
-
-  Returns: A tuple of
-  - class_names: A list where class_names[i] is a list of strings giving the
-    WordNet names for class i in the loaded dataset.
-  - X_train: (N_tr, 3, 64, 64) array of training images
-  - y_train: (N_tr,) array of training labels
-  - X_val: (N_val, 3, 64, 64) array of validation images
-  - y_val: (N_val,) array of validation labels
-  - X_test: (N_test, 3, 64, 64) array of testing images.
-  - y_test: (N_test,) array of test labels; if test labels are not available
-    (such as in student code) then y_test will be None.
-  """
     # First load wnids
     with open(os.path.join(path, 'wnids.txt'), 'r') as f:
         wnids = [x.strip() for x in f]
@@ -185,18 +184,17 @@ def load_tiny_imagenet(path, dtype=np.float32):
 
 
 def load_models(models_dir):
+    """Load saved models from disk. This will attempt to unpickle all files in a
+    directory; any files that give errors on unpickling (such as README.txt) will
+    be skipped.
+
+    Inputs:
+        - models_dir: String giving the path to a directory containing model files.
+          Each model file is a pickled dictionary with a 'model' field.
+
+    Returns:
+        A dictionary mapping model file names to models.
     """
-  Load saved models from disk. This will attempt to unpickle all files in a
-  directory; any files that give errors on unpickling (such as README.txt) will
-  be skipped.
-
-  Inputs:
-  - models_dir: String giving the path to a directory containing model files.
-    Each model file is a pickled dictionary with a 'model' field.
-
-  Returns:
-  A dictionary mapping model file names to models.
-  """
     models = {}
     for model_file in os.listdir(models_dir):
         with open(os.path.join(models_dir, model_file), 'rb') as f:

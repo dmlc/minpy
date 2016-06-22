@@ -9,7 +9,6 @@
 # TODO: nest, recursive, timeunit, sort
 # TODO: GPU
 
-
 MINPROF_FLAG = True
 
 try:
@@ -38,6 +37,7 @@ if PY3:
     exec_ = getattr(builtins, "exec")
     del builtins
 else:
+
     def exec_(_code_, _globs_=None, _locs_=None):
         """Execute code in a namespaces."""
         if _globs_ is None:
@@ -52,8 +52,6 @@ else:
 # =================================================
 
 
-
-
 def label(code):
     """ Return a (filename, first_lineno, func_name) tuple for a given code
     object.
@@ -65,19 +63,21 @@ def label(code):
     else:
         return (code.co_filename, code.co_firstlineno, code.co_name)
 
+
 class FuncCallStats(object):
     """ Object to encapsulate function-call profiling statistics.
 
-    Attributes
-    ----------
-    timings : dict
-        Mapping from (filename, first_lineno, function_name) of the profiled
-        function to a list of (nhits, total_time) tuples for all function call.
-        total_time is an integer in the native units of the timer.
+    Attributes:
+        timings : dict
+            Mapping from (filename, first_lineno, function_name) of the profiled
+            function to a list of (nhits, total_time) tuples for all function call.
+            total_time is an integer in the native units of the timer.
     """
+
     def __init__(self, timings):
         self.timings = timings
         # self.unit = unit
+
 
 def read_lines(filename, begin_lineno, end_lineno):
     # print('read_Lines: %s, %s, %s' % (filename, begin_lineno, end_lineno))
@@ -90,9 +90,7 @@ def read_lines(filename, begin_lineno, end_lineno):
     return lines
 
 
-
 class FuncCallProfiler():
-
     class Timer():
         def __init__(self, profiler, info=None):
             self.profiler = profiler
@@ -115,10 +113,12 @@ class FuncCallProfiler():
 
             x = getframeinfo(stack()[1][0])
             self.end_lineno = x.lineno
-            self.code_snippet = read_lines(self.filename, self.begin_lineno, self.end_lineno)
+            self.code_snippet = read_lines(self.filename, self.begin_lineno,
+                                           self.end_lineno)
 
             if self.info is None:
-                code = (self.filename, self.begin_lineno, self.code_snippet[0].strip()+'...')
+                code = (self.filename, self.begin_lineno,
+                        self.code_snippet[0].strip() + '...')
             else:
                 code = (self.filename, self.begin_lineno, self.info)
             #print(code)
@@ -126,7 +126,6 @@ class FuncCallProfiler():
                 self.profiler.code_map[code] = []
             timing = (1, self.begin_time, self.end_time)
             self.profiler.code_map[code].append(timing)
-
 
     def __init__(self, *funcs):
         # logger.info("prof init")
@@ -157,7 +156,6 @@ class FuncCallProfiler():
             code = (frameinfo.filename, frameinfo.lineno, func.__name__)
         return code
 
-
     def add_function(self, func):
         """ Record function-call profiling information for the
         given Python function.
@@ -170,6 +168,7 @@ class FuncCallProfiler():
     def wrap_function(self, func):
         """ Wrap a function to profile it.
         """
+
         #@functools.wraps(func)
         def wrapper(*args, **kwargs):
             #self.functions.append(func.__code__)
@@ -182,6 +181,7 @@ class FuncCallProfiler():
                 end_time = time.time()
             self.code_map[code].append((1, begin_time, end_time))
             return result
+
         if MINPROF_FLAG is True:
             return wrapper
         else:
@@ -207,7 +207,7 @@ class FuncCallProfiler():
         stats = {}
         for code in self.code_map:
             key = label(code)
-            stats[key] = self.code_map[code] # TODO
+            stats[key] = self.code_map[code]  # TODO
         return FuncCallStats(stats)
 
     def runctx(self, cmd, globals, locals):
@@ -215,6 +215,7 @@ class FuncCallProfiler():
         """
         # logger.info("prof runctx")
         exec_(cmd, globals, locals)
+
 
 def show_func(filename, first_lineno, func_name, timings, stream=None):
     """ Show results for a single function.
@@ -234,7 +235,8 @@ def show_func(filename, first_lineno, func_name, timings, stream=None):
     template = '%10s %10.4f %10.4f    %-s:%s(%s)'
     if len(filename) > 40:
         filename = '...' + filename[-40:]
-    text = template % (nhits, total_time * 1000, percall * 1000, filename, first_lineno, func_name)
+    text = template % (nhits, total_time * 1000, percall * 1000, filename,
+                       first_lineno, func_name)
     stream.write(text)
     stream.write("\n")
 
@@ -250,7 +252,8 @@ def show_text(stats, stream=None):
         stream.write('Timer unit: %g s\n\n' % 1e-03)
         template = '%10.8s %10.8s %10.8s    %-s:%s(%s)::%s'
         #template = '%10s %10s %10s    %-s:%s(%s)'
-        header = template % ('ncalls', 'tottime', 'percall', 'filename', 'lineno', 'function', 'info')
+        header = template % ('ncalls', 'tottime', 'percall', 'filename',
+                             'lineno', 'function', 'info')
         stream.write("\n")
         stream.write(header)
         stream.write("\n")
@@ -284,18 +287,26 @@ def find_script(script_name):
 
 minprof = FuncCallProfiler()
 
+
 def main(args=None):
     # print '%s' % globals()
     if args is None:
         args = sys.argv
     usage = "%prog scriptfile [arg] ..."
     parser = optparse.OptionParser(usage=usage, version="%prog 0.1")
-    parser.add_option('-f', '--function-call', action='store_true',
-            help="Use the function-call profiler")
-    parser.add_option('-o', '--outfile', default=None,
-            help="Save stats to <outfile>")
-    parser.add_option('-v', '--view', action='store_true',
-            help="View the results of the profile in addition to saving it.")
+    parser.add_option('-f',
+                      '--function-call',
+                      action='store_true',
+                      help="Use the function-call profiler")
+    parser.add_option('-o',
+                      '--outfile',
+                      default=None,
+                      help="Save stats to <outfile>")
+    parser.add_option(
+        '-v',
+        '--view',
+        action='store_true',
+        help="View the results of the profile in addition to saving it.")
 
     #if not args[1:]:
     #    parser.print_usage()
@@ -305,7 +316,8 @@ def main(args=None):
 
     if not options.outfile:
         extension = 'fprof'
-        options.outfile = '%s.%s' % (os.path.basename(option_args[0]), extension)
+        options.outfile = '%s.%s' % (os.path.basename(option_args[0]),
+                                     extension)
 
     # if options.function_call:
     #     prof = FuncCallProfiler()
@@ -319,7 +331,8 @@ def main(args=None):
     try:
         try:
             execfile_ = execfile
-            minprof.runctx('execfile_(%r, globals())' % (script_file, ), globals(), locals())
+            minprof.runctx('execfile_(%r, globals())' %
+                           (script_file, ), globals(), locals())
         except (KeyboardInterrupt, SystemExit):
             pass
     finally:
@@ -327,6 +340,7 @@ def main(args=None):
         print('Wrote profile results to %s' % options.outfile)
         if options.view:
             minprof.print_stats()
+
 
 if __name__ == '__main__':
     main(sys.argv)
