@@ -9,14 +9,14 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     :glob:
 
     get-started/*
+    tutorial/*
 
 .. toctree::
     :maxdepth: 2
     :caption: Developer documentation
     :glob:
 
-    api/modules.rst
-
+    how-to/*
 
 
 Indices and tables
