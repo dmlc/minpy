@@ -16,6 +16,6 @@ setuptools.setup(
     install_requires=[
         'numpy',
         'mxnet',
-        'semantic_version',
+        'semantic-version',
     ],
     url='https://github.com/dmlc/minpy')
