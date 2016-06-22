@@ -627,36 +627,29 @@ class Primitive(object):
 
     def def_grad(self, func, argnum=0):
         """Define gradient function.
-        Args:
-            func:
-                Gradient function.
-            argnum:
-                Index of the argument.
 
-        Return:
-            self instance for multiple def_grad in one statement
+        :param func: Gradient function.
+        :param argnum: Index of the argument.
+        :return: Self.
         """
         self._grad_func[argnum] = func
         return self
 
     def def_grad_kw(self, func, key):
         """Define gradient function.
-        Args:
-            func:
-                Gradient function.
-            key:
-                Key name of the argument.
+
+        :param func: Gradient function.
+        :param key: Key name of the argument.
+        :return: Self.
         """
         self._grad_func_kw[key] = func
         return self
 
     def def_grad_zero(self, argnum=0):
         """Define zero gradient
-        Args:
-            argnum:
-                Index of the argument
-        Return:
-            self instance for multiple def_grad_zero in one statement
+
+        :param argnum: Index of the argument.
+        :return: Self.
         """
         self._grad_func[argnum] = lambda *args, **kwargs: lambda g: 0.0
         return self

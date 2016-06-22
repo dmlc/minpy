@@ -23,13 +23,10 @@ class Registry(object):
 
     def register(self, name, prim):
         """Register primitive.
-        Args:
-            name:
-                Name of the primitive
-            prim:
-                Primitive
-        Throw:
-            PrimitiveRegistryError: Type already registered under the same name.
+
+        :param name: Name of the primitive.
+        :param prim: Primitive.
+        :raises PrimitiveRegistryError: Type already registered under the same name.
         """
         if name not in self._reg:
             self._reg[name] = {}

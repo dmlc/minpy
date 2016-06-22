@@ -16,14 +16,11 @@ _logger = log.get_logger(__name__)
 
 
 def grad_and_loss(func, argnum=0):
-    """ Return function that computes both gradient and loss value
-    Args:
-        func:
-            the forward (loss) function
-        argnum:
-            the index of argument to calculate gradient for
-    Return:
-        A function that would compute both the gradient of the specified argument and loss value
+    """Return function that computes both gradient and loss value.
+
+    :param func: The forward (loss) function.
+    :param argnum: The index of argument to calculate gradient for.
+    :return: A function that would compute both the gradient of the specified argument and loss value.
     """
     # pylint: disable= missing-docstring
     @functools.wraps(func)
@@ -47,14 +44,11 @@ def grad_and_loss(func, argnum=0):
 
 
 def grad(func, argnum=0):
-    """ Return function that contains gradient calculation
-    Args:
-        func:
-            the forward (loss) function
-        argnum:
-            the index of argument to calculate gradient for
-    Return:
-        A function that would compute the gradient of the specified argument
+    """Return function that contains gradient calculation.
+
+    :param func: The forward (loss) function.
+    :param argnum: The index of argument to calculate gradient for.
+    :return: A function that would compute the gradient of the specified argument.
     """
     grad_with_loss_func = grad_and_loss(func, argnum)
     # pylint: disable= missing-docstring
@@ -72,14 +66,11 @@ class MXNetSymbolError(ValueError):
 
 
 def function(symbol, input_shapes, sym_name='mxnet_symbol'):
-    """ Construct a differentiable function from mxnet symbol
-    Args:
-        symbol:
-            target symbol as function output
-        input_shapes:
-            a dictionary of input names to input shapes, used for shape inference
-    Return:
-        A function that could be called (and differentiated) as normal primitive
+    """Construct a differentiable function from MXNet symbol.
+
+    :param symbol: Target symbol as function output.
+    :param input_shapes: A dictionary of input names to input shapes, used for shape inference.
+    :return: A function that could be called (and differentiated) as normal primitive.
     """
     # TODO: Policy Control
     policy_cpu = False
@@ -150,16 +141,12 @@ def minpy_to_numpy(var):
 
 
 def convert(val, converter, basic_types):
-    """ Apply converter to the value according to their types
-    Args:
-        val:
-            Value that could be either array types or container types
-        converter:
-            A function to convert values
-        basic_types:
-            Allowed types for conversion
-    Return:
-        Converted value remained in its original contrainer structure
+    """Apply converter to the value according to their types.
+
+    :param val: Value that could be either array types or container types.
+    :param converter: A function to convert values.
+    :param basic_types: Allowed types for conversion.
+    :return: Converted value remained in its original contrainer structure.
     """
     if val is None:
         return None
@@ -181,13 +168,14 @@ def convert(val, converter, basic_types):
 
 
 def wraps(mode='lazy'):
-    """
-    Convenient wrapper function separate minpy and numpy data structure. The wrapper will convert
-    all array types in the input arguments as minpy arrays. The return type will be converted
-    according to the mode that is given.
-      - In 'lazy' mode: no conversion will be performed for the return values. So users need to 
-        handle the return value type themselves.
-      - In 'numpy' mode: all minpy arrays will be converted to numpy arrays.
+    """Convenient wrapper function separate MinPy and NumPy data structure.
+    
+    The wrapper will convert all array types in the input arguments as MinPy arrays.
+    The return type will be converted according to the mode that is given.
+
+    * In ``lazy`` mode, no conversion will be performed for the return values. So users need to 
+      handle the return value type themselves.
+    * In ``numpy`` mode, all MinPy arrays will be converted to NumPy arrays.
     """
     #pylint: disable= missing-docstring
     def wrapper(func):

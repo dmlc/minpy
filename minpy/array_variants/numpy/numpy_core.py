@@ -29,15 +29,11 @@ def register_primitives(reg, prim_wrapper):
 
 def unbroadcast(ans, x, gradfun):
     """Unbroadcast to original shape.
-    Args:
-        ans:
-            Output of forward function (broadcasted shape)
-        x:
-            Input of forward function (pre-broadcasted shape)
-        gradfun:
-            Gradient function
-    Return:
-        New gradient function with proper unbroadcast on the result
+
+    :param ans: Output of forward function (broadcasted shape).
+    :param x: Input of forward function (pre-broadcasted shape).
+    :param gradfun: Gradient function.
+    :return: New gradient function with proper unbroadcast on the result.
     """
     #pylint: disable= missing-docstring
     if isinstance(x, np.ndarray):
