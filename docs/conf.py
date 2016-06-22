@@ -25,6 +25,10 @@ import sys
 import os.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from unittest import mock
+for i in ['numpy', 'numpy.random', 'mxnet', 'mxnet.ndarray', 'mxnet.random', 'scipy', 'scipy.misc']:
+    sys.modules[i] = mock.MagicMock()
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.

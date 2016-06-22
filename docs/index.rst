@@ -17,6 +17,7 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     :glob:
 
     how-to/*
+    api/modules.rst
 
 
 Indices and tables

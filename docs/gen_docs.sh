@@ -1,5 +1,4 @@
 #!/bin/bash
 set -euo pipefail
-sphinx-apidoc -f -o api ../minpy
-pushd docs > /dev/null
+sphinx-apidoc -f -M -H MinPy -A DMLC -o api ../minpy
 make html
