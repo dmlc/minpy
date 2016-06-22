@@ -61,6 +61,8 @@ class Module(object):
         # Special members for internal use.
         if name == '__registry__':
             return self._registry
+        elif name == '__all__':
+            return self._old.__all__
         elif self._registry.has_name(name):
             return primitive_selector.PrimitiveSelector(name, self._registry, self._policy)
         elif name in self._old:
