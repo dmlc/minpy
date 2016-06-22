@@ -10,6 +10,8 @@ setuptools.setup(
     name='minpy',
     version=version,
     description='Pure NumPy practice with third-party operator integration.',
+    maintainer='DMLC',
+    maintainer_email='minerva-support@googlegroups.com',
     packages=setuptools.find_packages(),
     install_requires=[
         'numpy',
