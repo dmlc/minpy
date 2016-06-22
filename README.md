@@ -1,8 +1,8 @@
 # MinPy
 
 [![Build Status](https://travis-ci.org/dmlc/minpy.svg?branch=master)](https://travis-ci.org/dmlc/minpy)
-
 [![PyPI version](https://badge.fury.io/py/minpy.svg)](https://badge.fury.io/py/minpy)
+[![Docs](https://readthedocs.org/projects/minpy/badge/?version=latest)](https://minpy.readthedocs.io/en/latest/)
 
 This repository aims at prototyping a pure `numpy` interface above [mxnet](https://github.com/dmlc/mxnet) backend. The key features include:
 
