@@ -45,7 +45,12 @@ def gen_sum_grad(ans, x, axis, keepdims):
     """ Generate gradient function of sum """
     xshape = list(x.shape)
     if axis is None:
-        return lambda g: ndarray.full(x.shape, g, x.context)
+        def grad(g):
+            if isinstance(g, float) or isinstance(g, int):
+                return ndarray.full(x.shape, g, x.context)
+            else:
+                return ndarray.full(x.shape, g.asscalar(), x.context)
+        return grad
     if isinstance(axis, int):
         axis = [axis]
     elif isinstance(axis, tuple):
