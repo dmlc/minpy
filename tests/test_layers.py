@@ -23,8 +23,8 @@ def test_relu():
 
 def test_batchnorm():
     x = rng.randn(20, 40)
-    gamma = rng.randn(40)
-    beta = rng.randn(40)
+    gamma = rng.randn(1, 40)
+    beta = rng.randn(1, 40)
     fake_y = np.zeros([20, 40])
     def check_gamma(g):
         y, _, _ = layers.batchnorm(x, g, beta)

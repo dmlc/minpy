@@ -94,12 +94,12 @@ def batchnorm(x,
     out = None
     if mode == 'train':
         mean = np.sum(x, axis=0) / N
-        x_mean = (x - mean)
+        x_mean = (x - np.expand_dims(mean, axis=0))
         sqr_x_mean = x_mean ** 2
         var = np.sum(sqr_x_mean, axis=0) / N
         sqrt_var = np.sqrt(var + eps)
         inv_sqrt_var = 1.0 / sqrt_var
-        x_hat = x_mean * inv_sqrt_var
+        x_hat = x_mean * np.expand_dims(inv_sqrt_var, axis=0)
         out = gamma * x_hat + beta
 
         running_mean = momentum * running_mean + (1.0 - momentum) * mean
