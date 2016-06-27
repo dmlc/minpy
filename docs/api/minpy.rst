@@ -13,8 +13,6 @@ Subpackages
 
     minpy.array_variants
     minpy.dispatch
-    minpy.nn
-    minpy.numpy
     minpy.utils
 
 Submodules
