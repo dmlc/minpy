@@ -106,7 +106,7 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
         # forward
         # TODO: is_train flag
         executor.forward(is_train=True)
-        # TODO: Handle with multiple outputs, including the order of outputs
+        # TODO: Minpy currently doesn't support multiple outputs
         return executor.outputs[0]
     func.__name__ = sym_name
 
