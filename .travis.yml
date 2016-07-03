@@ -6,10 +6,10 @@ addons:
     - gfortran
 language: python
 python:
-- "3.5"
 - "2.7"
+- "3.5"
 script:
-- echo "No tests yet"
+- python ./dmlc-core/scripts/lint.py python minpy
 deploy:
   provider: pypi
   user: hotpxl
