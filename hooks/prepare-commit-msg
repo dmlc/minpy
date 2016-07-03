@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+branch=$(git symbolic-ref HEAD | sed -e "s#refs/heads/##")
+sed -i -e "1s/^/[${branch}] /" "$1"
+

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if git show --pretty="" --name-only HEAD | grep -q VERSION; then
+  git tag "v$(cat VERSION)"
+  git push --tags
+fi
