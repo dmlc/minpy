@@ -226,8 +226,13 @@ class Solver(object):
 
         # Compute predictions in batches
         num_batches = N // batch_size
-        if N % batch_size != 0:
-            num_batches += 1
+        # XXX(minjie): the trailing batches will not be checked since
+        # mxnet cannot support dynamic shapes. Also, the ground truth is
+        # trimmed to the samples that are checked.
+        #if N % batch_size != 0:
+            #num_batches += 1
+        y = y[0:num_batches * batch_size]
+
         y_pred = []
         for i in range(num_batches):
             start = i * batch_size
@@ -279,8 +284,11 @@ class Solver(object):
             if first_it or last_it or epoch_end:
                 train_acc = self.check_accuracy(self.X_train,
                                                 self.y_train,
-                                                num_samples=1000)
-                val_acc = self.check_accuracy(self.X_val, self.y_val)
+                                                num_samples=1000,
+                                                batch_size=self.batch_size)
+                val_acc = self.check_accuracy(self.X_val,
+                                              self.y_val,
+                                              batch_size=self.batch_size)
                 self.train_acc_history.append(train_acc)
                 self.val_acc_history.append(val_acc)
 

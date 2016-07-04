@@ -75,7 +75,7 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
     # TODO: Policy Control
     policy_cpu = False
     dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
-    dshape = {name: shape for name, shape in input_shapes}
+    dshape = {name: shape for name, shape in input_shapes.items()}
     executor = symbol.simple_bind(dev, 'write', **dshape)
     arg_names = symbol.list_arguments()
     """ In train model of mxnet example, there's no grad of input(data)
