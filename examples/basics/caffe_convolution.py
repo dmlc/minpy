@@ -34,22 +34,19 @@ data = mx.symbol.Variable(name='x')
 conv1 = mx.symbol.CaffeOperator(
     name='conv',
     data_0=data,
-    prototxt="layer { convolution_param { num_output: 5 kernel_size: 5 stride: 1} }",
-    op_type_string="Conv")
-act1 = mx.symbol.CaffeOperator(data_0=conv1, op_type_string="Tanh")
+    prototxt="layer {type:\"Convolution\" convolution_param { num_output: 5 kernel_size: 5 stride: 1} }")
+act1 = mx.symbol.CaffeOperator(data_0=conv1, prototxt="layer {type:\"TanH\"}")
 pool1 = mx.symbol.CaffeOperator(
     data_0=act1,
-    prototxt="layer { pooling_param { pool: MAX kernel_size: 2 stride: 2}}",
-    op_type_string="Pool")
+    prototxt="layer {type:\"Pooling\" pooling_param { pool: MAX kernel_size: 2 stride: 2}}")
 
 fc1 = mx.symbol.CaffeOperator(
     name='fc',
     data_0=pool1,
-    prototxt="layer { inner_product_param{num_output: 250} }",
-    op_type_string="InnerProduct")
-act2 = mx.symbol.CaffeOperator(data_0=fc1, op_type_string="Tanh")
+    prototxt="layer {type:\"InnerProduct\" inner_product_param{num_output: 250} }")
+act2 = mx.symbol.CaffeOperator(data_0=fc1, prototxt="layer {type:\"Sigmoid\"}")
 
-f = core.function(act2, [('x', xshape)])
+f = core.function(act2, {'x': xshape})
 
 
 def predict(inputs, fc_weight, fc_bias, conv_weight, conv_bias):
@@ -65,7 +62,6 @@ def training_loss(inputs, targets, fc_weight, fc_bias, conv_weight, conv_bias):
     preds = predict(inputs, fc_weight, fc_bias, conv_weight, conv_bias)
     label_probabilities = preds * targets + (1 - preds) * (1 - targets)
     return -np.sum(np.log(label_probabilities))
-
 
 training_gradient_fun = core.grad_and_loss(training_loss, range(2, 6))
 
