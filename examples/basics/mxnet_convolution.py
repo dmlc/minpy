@@ -39,7 +39,7 @@ flatten = mx.symbol.Flatten(data=pool1)
 fc = mx.sym.FullyConnected(name='fc', data=flatten, num_hidden=250)
 act = mx.sym.Activation(data=fc, act_type='sigmoid')
 
-f = core.function(act, [('x', xshape)])
+f = core.function(act, {'x': xshape})
 
 def predict(inputs, fc_weight, fc_bias, conv_weight, conv_bias):
     #return f( data=[('x', inputs)], weight=[('fc_weight', weights)], ctx=mx.cpu())
