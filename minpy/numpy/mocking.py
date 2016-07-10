@@ -18,8 +18,9 @@ from .. import array
 
 
 class Module(object):
-    """ Mocking module class for name dispatching. It will register primitives from
-    `minpy.array_variants`.
+    """Mocking module class for name dispatching.
+    
+    It will register primitives from :mod:`minpy.array_variant`.
     """
 
     def __init__(self, old, name=None):
@@ -37,13 +38,13 @@ class Module(object):
             self._logger.info('Importing from {}.'.format(modname))
             primitive_wrapper = lambda func, *args, **kwargs:\
                     array.Primitive(func, variants[vname], *args, **kwargs)
-            # register all primitives of the module
+            # Register all primitives of the module.
             before = len(self._registry._reg)
             mod.register_primitives(self._registry, primitive_wrapper)
             self._logger.info('Got {} primitives from {}'.format(
                 len(self._registry._reg) - before, modname))
             primitive_getter = lambda name: self._registry.get(name, variants[vname])
-            # define gradients of primitives
+            # Define gradients of primitives.
             mod.def_grads(self._registry, primitive_getter)
         self._logger.info('Import {} primitives'.format(len(
             self._registry._reg)))
