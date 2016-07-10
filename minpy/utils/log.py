@@ -60,7 +60,7 @@ _handler = logging.StreamHandler()
 _handler.setFormatter(_Formatter())
 
 
-def get_logger(name=None, level=INFO):
+def get_logger(name=None, level=WARNING):
     """Get customized logger.
 
     Args:
