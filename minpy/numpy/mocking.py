@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" Mocking module class
+"""Mocking module class.
+
 It is used to dispatch names to different implementations (primitives). The primitive is decided
 by policy which could be specified by user.
 """
@@ -15,14 +16,12 @@ from ..dispatch import primitive_selector
 from ..array_variants import variants
 from .. import array
 
-class DynamicLookupError(KeyError):
-    """ Error when no name is found """
-    pass
 
 class Module(object):
     """ Mocking module class for name dispatching. It will register primitives from
     `minpy.array_variants`.
     """
+
     def __init__(self, old, name=None):
         self._registry = registry.Registry()
         self._policy = policy.PreferMXNetPolicy()
@@ -50,13 +49,23 @@ class Module(object):
             self._registry._reg)))
 
     def set_policy(self, plc):
-        """ Set name dispatch policy """
-        assert isinstance(plc, policy.Policy), 'Need an instance of `minpy.dispatch.Policy`.'
+        """Set name dispatch policy.
+
+        :param plc: New policy.
+        """
+        assert isinstance(
+            plc, policy.Policy), 'Need an instance of `minpy.dispatch.Policy`.'
         self._policy = plc
 
     def __getattr__(self, name):
-        """ Fetch attributes from this module. If the name is contained in the primitive registry,
-        it will return a primitive selector for further name dispatching
+        """Fetch attributes from this module.
+        
+        If the name is contained in the primitive registry,
+        it will return a primitive selector for further name dispatching.
+
+        :param name: Name of attribute.
+        :return: Primitive selector.
+        :raises AttributeError: Cannot find attribute.
         """
         # Special members for internal use.
         if name == '__registry__':
@@ -64,9 +73,11 @@ class Module(object):
         elif name == '__all__':
             return self._old.__all__
         elif self._registry.has_name(name):
-            return primitive_selector.PrimitiveSelector(name, self._registry, self._policy)
+            return primitive_selector.PrimitiveSelector(name, self._registry,
+                                                        self._policy)
         elif name in self._old:
-            self._logger.info('No entry found for "{}" in registry, fallback.'.format(name))
+            self._logger.info(
+                'No entry found for "{}" in registry, fallback.'.format(name))
             return self._old[name]
         else:
-            raise DynamicLookupError('Cannot find name "{}".'.format(name))
+            raise AttributeError('Cannot find name "{}".'.format(name))
