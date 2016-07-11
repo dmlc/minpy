@@ -12,8 +12,6 @@ from .utils import log
 from . import array
 from .array_variants import ArrayType, array_types, number_types
 
-import collections
-
 _logger = log.get_logger(__name__)
 
 
@@ -145,10 +143,10 @@ def _minpy_to_numpy(var):
 def numpy_to_minpy(var):
     """ Convert numpy array(s) to minpy array(s)
 
-    :param var: singular or iterable of numpy array(s)
-    :return: singular or iterable of minpy array(s)
+    :param var: singular, list, or tuple of numpy array(s)
+    :return: singular, list, or tuple of minpy array(s)
     """
-    if isinstance(var, collections.Iterable):
+    if isinstance(var, tuple) or isinstance(var, list):
         return type(var)(array.Value.wrap(x) for x in var)
     else:
         return array.Value.wrap(var)
@@ -157,10 +155,10 @@ def numpy_to_minpy(var):
 def minpy_to_numpy(var):
     """ Convert a minpy array to numpy array
 
-    :param var: singular or iterable of minpy array(s)
-    :return: singular or iterable of numpy array(s)
+    :param var: singular, list, or tuple of minpy array(s)
+    :return: singular, list, or tuple of numpy array(s)
     """
-    if isinstance(var, collections.Iterable):
+    if isinstance(var, tuple) or isinstance(var, list):
         return type(var)(array.Value.wrap(x).get_data(ArrayType.NUMPY) for x in var)
     else:
         return array.Value.wrap(var).get_data(ArrayType.NUMPY)
