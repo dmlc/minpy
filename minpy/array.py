@@ -378,12 +378,20 @@ class Array(Value):
         return self._node
 
     def has_type(self, atype):
-        """Return whether array data of given type exists in the underlying storage.
+        """ Return whether array data of given type exists in the underlying storage.
         """
         return atype in self._data.keys()
 
     def reshape(self, *args):
-        """ Function for reshape this array """
+        """ Function for reshape this array
+
+        Usage example:
+        Assume a = np.ones([10, 10])
+        b = a.reshape([5, 20])
+        b = a.reshape(5, 20)
+        :param args: a single iterable or a sequence of ints representing a new shape
+        :return: reshaped array (minpy array)
+        """
         # Although this usage is not documented in numpy official doc, it is renowned and
         # widely used in practice
         if len(args) == 1 and isinstance(args[0], collections.Iterable):
