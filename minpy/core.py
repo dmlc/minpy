@@ -12,6 +12,8 @@ from .utils import log
 from . import array
 from .array_variants import ArrayType, array_types, number_types
 
+import collections
+
 _logger = log.get_logger(__name__)
 
 
@@ -130,14 +132,38 @@ class MinpyWrapperError(TypeError):
     pass
 
 
-def numpy_to_minpy(var):
+def _numpy_to_minpy(var):
     """ Convert a numpy array to minpy array """
     return array.Value.wrap(var)
 
 
-def minpy_to_numpy(var):
+def _minpy_to_numpy(var):
     """ Convert a minpy array to numpy array """
     return array.Value.wrap(var).get_data(ArrayType.NUMPY)
+
+
+def numpy_to_minpy(var):
+    """ Convert numpy array(s) to minpy array(s)
+
+    :param var: singular or iterable of numpy array(s)
+    :return: singular or iterable of minpy array(s)
+    """
+    if isinstance(var, collections.Iterable):
+        return type(var)(array.Value.wrap(x) for x in var)
+    else:
+        return array.Value.wrap(var)
+
+
+def minpy_to_numpy(var):
+    """ Convert a minpy array to numpy array
+
+    :param var: singular or iterable of minpy array(s)
+    :return: singular or iterable of numpy array(s)
+    """
+    if isinstance(var, collections.Iterable):
+        return type(var)(array.Value.wrap(x).get_data(ArrayType.NUMPY) for x in var)
+    else:
+        return array.Value.wrap(var).get_data(ArrayType.NUMPY)
 
 
 def convert(val, converter, basic_types):
@@ -186,8 +212,8 @@ def wraps(mode='lazy'):
                 basic_types += num_type_lists
             basic_types += [array.Number, array.Array, array.Value]
             # convert input arguments into minpy structure
-            mpy_args = convert(args, numpy_to_minpy, basic_types)
-            mpy_kwargs = convert(kwargs, numpy_to_minpy, basic_types)
+            mpy_args = convert(args, _numpy_to_minpy, basic_types)
+            mpy_kwargs = convert(kwargs, _numpy_to_minpy, basic_types)
             # call func
             mpy_res = func(*mpy_args, **mpy_kwargs)
             # convert return value
@@ -196,7 +222,7 @@ def wraps(mode='lazy'):
                 return mpy_res
             elif mode == 'numpy':
                 # convert every returned array to numpy.ndarray
-                return convert(mpy_res, minpy_to_numpy, basic_types)
+                return convert(mpy_res, _minpy_to_numpy, basic_types)
             else:
                 raise MinpyWrapperError('Unknown wrapper mode: %s' % mode)
         return real_wrapper
