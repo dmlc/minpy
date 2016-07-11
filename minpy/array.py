@@ -19,6 +19,7 @@ from .array_variants import number_types
 
 import mxnet
 import numpy
+import collections
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__, logging.WARN)
@@ -311,6 +312,9 @@ class Number(Value, float):
     def __str__(self):
         return str(self._val)
 
+    def __repr__(self):
+        return self.__str__()
+
     def get_data(self, dtype):
         """Get data of given type. Directly return the underlying value here."""
         return self._val
@@ -365,6 +369,9 @@ class Array(Value):
     def __str__(self):
         return str(self.get_data(ArrayType.NUMPY))
 
+    def __repr__(self):
+        return self.__str__()
+
     @property
     def node(self):
         """ get node which contains derivative information from this array """
@@ -375,9 +382,19 @@ class Array(Value):
         """
         return atype in self._data.keys()
 
-    def reshape(self, new_shape):
+    def reshape(self, *args):
         """ Function for reshape this array """
+        # Although this usage is not documented in numpy official doc, it is renowned and
+        # widely used in practice
+        if len(args) == 1 and isinstance(args[0], collections.Iterable):
+            new_shape = args[0]
+        else:
+            new_shape = tuple(x for x in args)
         return Value._ns.reshape(self, new_shape)
+
+    def dot(self, *args):
+        """ Function for dot production """
+        return Value._ns.dot(self, *args)
 
     def _synchronize_data(self):
         """ Synchronize the data of different array types. """
