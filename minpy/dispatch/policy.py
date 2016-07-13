@@ -75,12 +75,12 @@ def resolve_name(name, reg, plc, args, kwargs):
     bp_kwargs = tuple(map(fst, filter(lambda x: isinstance(
         x[1], array.Value) and x[1].marked_for_bp, kwargs.items())))
     if not reg.has_name:
-        raise ValueError(
+        raise PrimitivePolicyError(
             "Cannot find function: {}() in the primitive registry.".format(name))
     available = reg.iter_available_types(name, bp_args, bp_kwargs)
     preference = plc.decide(available, args, kwargs)
     if preference is None:
-        raise ValueError(
+        raise PrimitivePolicyError(
             "Cannot find gradient implementation for function: {}() under "
             "policy: {}.".format(name, plc.name))
     return reg.get(name, preference)
