@@ -29,6 +29,10 @@ class Policy(object):
         """
         raise PrimitivePolicyError('Unimplemented.')
 
+    @property
+    def name(self):
+        return type(self).__name__
+
 
 class PreferMXNetPolicy(Policy):
     """Perfer using MXNet functions."""
@@ -70,9 +74,13 @@ def resolve_name(name, reg, plc, args, kwargs):
         x[1], array.Value) and x[1].marked_for_bp, enumerate(args))))
     bp_kwargs = tuple(map(fst, filter(lambda x: isinstance(
         x[1], array.Value) and x[1].marked_for_bp, kwargs.items())))
+    if not reg.has_name:
+        raise ValueError(
+            "Cannot find function: {}() in the primitive registry.".format(name))
     available = reg.iter_available_types(name, bp_args, bp_kwargs)
     preference = plc.decide(available, args, kwargs)
     if preference is None:
         raise ValueError(
-            "Cannot find proper implementation by {} for: {}.".format(type(plc), name))
+            "Cannot find gradient implementation for function: {}() under "
+            "policy: {}.".format(name, plc.name))
     return reg.get(name, preference)
