@@ -74,5 +74,5 @@ def resolve_name(name, reg, plc, args, kwargs):
     preference = plc.decide(available, args, kwargs)
     if preference is None:
         raise ValueError(
-            "Cannot find proper functions among: {}.".format(name))
+            "Cannot find proper implementation by {} for: {}.".format(type(plc), name))
     return reg.get(name, preference)
