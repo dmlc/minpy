@@ -34,10 +34,13 @@ class PreferMXNetPolicy(Policy):
     """Perfer using MXNet functions."""
 
     def decide(self, candidates, args, kwargs):
-        if ArrayType.MXNET in [x.type for x in candidates]:
+        possible_impl = set(x.type for x in candidates)
+        if ArrayType.MXNET in possible_impl:
             return ArrayType.MXNET
-        else:
+        elif ArrayType.NUMPY in possible_impl:
             return ArrayType.NUMPY
+        else:
+            return None
 
 
 class OnlyNumpyPolicy(Policy):
@@ -47,8 +50,7 @@ class OnlyNumpyPolicy(Policy):
         if ArrayType.NUMPY in [x.type for x in candidates]:
             return ArrayType.NUMPY
         else:
-            raise ValueError(
-                "Cannot find proper functions among: {}.".format(candidates))
+            return None
 
 
 def resolve_name(name, reg, plc, args, kwargs):
@@ -70,4 +72,7 @@ def resolve_name(name, reg, plc, args, kwargs):
         x[1], array.Value) and x[1].marked_for_bp, kwargs.items())))
     available = reg.iter_available_types(name, bp_args, bp_kwargs)
     preference = plc.decide(available, args, kwargs)
+    if preference is None:
+        raise ValueError(
+            "Cannot find proper functions among: {}.".format(name))
     return reg.get(name, preference)
