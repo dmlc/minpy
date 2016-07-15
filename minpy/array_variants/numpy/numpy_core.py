@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # pylint: disable= invalid-name
-"""Definition of grads of core functions"""
+"""Definition of grads of core functions for numpy implementation"""
 from . import numpy_wrapper
 
 import operator
 import numpy as np
+
+
+def _identity(x):
+    """ identity function lambda x: x """
+    return x
 
 
 def _minpy_getitem(arr, index):
@@ -18,6 +23,56 @@ def _minpy_getitem_grad(arr, index, g):
     ret = np.zeros_like(arr)
     np.add.at(ret, index, g)
     return ret
+
+
+def _minpy_amax_grad(ans, a, axis, out, keepdims):
+    """ Gradient of amax function """
+    repeater, _ = match_shape(a, axis, keepdims=keepdims)
+    argmax_locations = a == repeater(ans)
+    return lambda g: repeater(g) * argmax_locations
+
+
+def match_shape(a, axis, keepdims):
+    """ Return a function repeats input to match a given shape
+
+    This function generates a function f l: m, n that repeats
+    l along axis to match the shape of x. l must be compatible
+    with the arguments.
+
+    :param a: the array template for f to match
+    :param axis: the axis for f to repeat in order to match x
+    :type axis: None, or Int, or Tuple
+    :param keepdims: True if the same dim of x, l is expected
+    :type keepdims: Bool
+    :return: function f, number of repetition
+    """
+    assert isinstance(axis, (type(None), int, tuple)), "axis must be None, int, or tuple."
+
+    if not isinstance(a, np.ndarray):
+        return _identity, 1
+    shape = a.shape
+    if axis is None:
+        # np.full() has a bug for complex numbers, explicit type is needed
+        if np.iscomplexobj(a):
+            dtype = a.dtype
+        else:
+            dtype = None
+        return lambda g: np.full(shape, g, dtype=dtype), np.prod(shape)
+    elif isinstance(axis, int):
+        if keepdims:
+            return lambda g: np.repeat(g, shape[axis], axis), shape[axis]
+        else:
+            return lambda g: np.repeat(np.expand_dims(g, axis),
+                                       shape[axis], axis), shape[axis]
+    else:
+        repeats = [shape[i] if i in axis else 1 for i in xrange(len(shape))]
+        expanded = [shape[i] if i not in axis else 1 for i in xrange(len(shape))]
+        num_reps = np.prod(np.array(shape)[list(axis)])
+
+        if keepdims:
+            return lambda g: np.tile(g, repeats), num_reps
+        else:
+            return lambda g: np.tile(np.reshape(g, expanded), repeats), num_reps
 
 
 def register_primitives(reg, prim_wrapper):
@@ -73,7 +128,6 @@ def gen_sum_grad(ans, x, axis, keepdims):
 
 def def_grads(reg, prims):
     """ Define gradient function for primitives """
-    identity = lambda x: x
     # Dot.
     prims('dot').def_grad(lambda ans, a, b: lambda g: np.dot(g, b.T))
     prims('dot').def_grad(lambda ans, a, b: lambda g: np.dot(a.T, g), argnum=1)
@@ -94,10 +148,10 @@ def def_grads(reg, prims):
     prims('multiply').def_grad(
         lambda ans, x, y: unbroadcast(ans, y, lambda g: x * g),
         argnum=1)
-    prims('add').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
-    prims('add').def_grad(lambda ans, x, y: unbroadcast(ans, y, identity),
+    prims('add').def_grad(lambda ans, x, y: unbroadcast(ans, x, _identity))
+    prims('add').def_grad(lambda ans, x, y: unbroadcast(ans, y, _identity),
                           argnum=1)
-    prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
+    prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, x, _identity))
     prims('subtract').def_grad(
         lambda ans, x, y: unbroadcast(ans, y, operator.neg),
         argnum=1)
@@ -116,7 +170,7 @@ def def_grads(reg, prims):
     prims('power').def_grad(
         lambda ans, x, y: unbroadcast(ans, y, lambda g: g * np.log(x) * x**y),
         argnum=1)
-    prims('mod').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
+    prims('mod').def_grad(lambda ans, x, y: unbroadcast(ans, x, _identity))
     prims('mod').def_grad(
         lambda ans, x, y: unbroadcast(ans, y, lambda g: -g * np.floor(x / y)),
         argnum=1)
@@ -154,3 +208,6 @@ def def_grads(reg, prims):
     prims('append').def_grad(
         lambda ans, arr, values, axis=None: lambda g: np.split(g, [arr.shape[axis]], axis)[1],
         argnum=1)
+    prims('max').def_grad(
+        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_grad(ans, a, axis, out, keepdims)
+    )
