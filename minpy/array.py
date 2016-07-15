@@ -16,6 +16,7 @@ from .utils import log
 from .array_variants import ArrayType
 from .array_variants import array_types
 from .array_variants import number_types
+from .context import Context, cpu, gpu, current_context
 
 import mxnet
 import numpy
@@ -397,7 +398,7 @@ class Array(Value):
             # pylint: enable= fixme
             self._data[
                 ArrayType.MXNET] = mxnet.ndarray.array(
-                nparray, ctx=mxnet.gpu(0))
+                nparray, ctx=current_context().as_mxnet_ctx())
         self._latest_version = None
 
     def enforce_data(self, dtype):
@@ -566,7 +567,7 @@ class Primitive(object):
         # Call the real function with raw value.
         if self.type == ArrayType.MXNET:
             # Currently all mxnet function call will be performed on GPU #0
-            with mxnet.gpu(0) as ctx:
+            with current_context().as_mxnet_ctx() as ctx:
                 result_value = self._func(*arg_values, **kwargs_values)
         else:
             result_value = self._func(*arg_values, **kwargs_values)
