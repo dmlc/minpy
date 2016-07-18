@@ -30,10 +30,11 @@ def grad_and_loss(func, argnum=0):
         for i in argnums:
             arrays[i]._marked_for_bp = True
         result_array = func(*arrays)
-        _logger.debug('---Forward pass finished. Start backward pass')
+        _logger.debug('Forward pass finished. Start backward pass.')
         grad_vals = []
         for i in argnums:
-            grad_vals.append(arrays[i].node.partial_derivative(result_array.node))
+            grad_vals.append(arrays[i].node.partial_derivative(
+                result_array.node))
             arrays[i]._marked_for_bp = False
         if len(grad_vals) == 1:
             grad_vals = grad_vals[0]
@@ -56,6 +57,7 @@ def grad(func, argnum=0):
     @functools.wraps(grad_with_loss_func)
     def wrapped(*args):
         return grad_with_loss_func(*args)[0]
+
     return wrapped
     # pylint: enable= missing-docstring
 
@@ -101,13 +103,13 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
                 value.copyto(executor.arg_dict[name])
             else:
                 raise MXNetSymbolError(
-                    'find arg name: %s not in executors arg_list' %
-                    name)
+                    'find arg name: %s not in executors arg_list' % name)
         # forward
         # TODO: is_train flag
         executor.forward(is_train=True)
         # TODO: Minpy currently doesn't support multiple outputs
         return executor.outputs[0]
+
     func.__name__ = sym_name
 
     def def_grad_kw(keyname):
@@ -116,8 +118,11 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
                 executor.backward(out_grads=g)
                 ret = executor.grad_arrays[param_names.index(keyname)]
                 return ret
+
             return grad_func
+
         return grad_wrapper
+
     prim = array.Primitive(func, ArrayType.MXNET)
     for name in param_names:
         prim.def_grad_kw(def_grad_kw(name), name)
@@ -158,25 +163,24 @@ def convert(val, converter, basic_types):
     elif isinstance(val, list):
         ret = list(convert(v, converter, basic_types) for v in val)
     elif isinstance(val, dict):
-        ret = {k: convert(v, converter, basic_types)
-               for k, v in val.items()}
+        ret = {k: convert(v, converter, basic_types) for k, v in val.items()}
     else:
-        raise MinpyWrapperError(
-            'Unexpected %s type found in core.convert' %
-            type(val))
+        raise MinpyWrapperError('Unexpected %s type found in core.convert' %
+                                type(val))
     return ret
 
 
 def wraps(mode='lazy'):
     """Convenient wrapper function separate MinPy and NumPy data structure.
-    
+
     The wrapper will convert all array types in the input arguments as MinPy arrays.
     The return type will be converted according to the mode that is given.
 
-    * In ``lazy`` mode, no conversion will be performed for the return values. So users need to 
+    * In ``lazy`` mode, no conversion will be performed for the return values. So users need to
       handle the return value type themselves.
     * In ``numpy`` mode, all MinPy arrays will be converted to NumPy arrays.
     """
+
     #pylint: disable= missing-docstring
     def wrapper(func):
         @functools.wraps(func)
@@ -199,6 +203,7 @@ def wraps(mode='lazy'):
                 return convert(mpy_res, minpy_to_numpy, basic_types)
             else:
                 raise MinpyWrapperError('Unknown wrapper mode: %s' % mode)
+
         return real_wrapper
     # pylint: enable= missing-docstring
     return wrapper
