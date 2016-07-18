@@ -158,6 +158,7 @@ class NDArrayIter(DataIter):
 
         self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
         self.num_source = len(self.data_list)
+        self.num_iterations_per_batch = self.data[0][1].shape[0] / batch_size
 
         # batching
         if last_batch_handle == 'discard':
@@ -234,5 +235,15 @@ class NDArrayIter(DataIter):
             return self.cursor + self.batch_size - self.num_data
         else:
             return 0
+    
+    def getsubiter(self, num_samples):
+        """Create a sub dataiter which samples part of the data in the dataset"""
+        idx = np.arange(self.data[0][1].shape[0])
+        np.random.shuffle(idx)
+        mask = idx[0:num_samples]
+        data = [v[mask] for k, v in self.data]
+        label = [v[mask] for k, v in self.label]
+        return NDArrayIter(data, label, self.batch_size, True)
 
-
+    def getnumiterations(self):
+        return self.num_iterations_per_batch
