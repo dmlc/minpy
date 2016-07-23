@@ -22,7 +22,7 @@ import mxnet
 import numpy
 
 # pylint: disable= invalid-name
-_logger = log.get_logger(__name__, logging.WARN)
+_logger = log.get_logger(__name__, logging.INFO)
 # pylint: enable= invalid-name
 
 
@@ -568,6 +568,7 @@ class Primitive(object):
         if self.type == ArrayType.MXNET:
             # Currently all mxnet function call will be performed on GPU #0
             with current_context().as_mxnet_ctx() as ctx:
+                _logger.info("mxnet.current_context: {0}".format(mxnet.current_context()))
                 result_value = self._func(*arg_values, **kwargs_values)
         else:
             result_value = self._func(*arg_values, **kwargs_values)

@@ -11,6 +11,7 @@ import functools
 from .utils import log
 from . import array
 from .array_variants import ArrayType, array_types, number_types
+from .context import Context, cpu, gpu, current_context
 
 _logger = log.get_logger(__name__)
 
@@ -74,7 +75,8 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
     """
     # TODO: Policy Control
     policy_cpu = False
-    dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
+    #dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
+    dev = current_context().as_mxnet_ctx()
     dshape = {name: shape for name, shape in input_shapes.items()}
     executor = symbol.simple_bind(dev, 'write', **dshape)
     arg_names = symbol.list_arguments()
@@ -169,11 +171,11 @@ def convert(val, converter, basic_types):
 
 def wraps(mode='lazy'):
     """Convenient wrapper function separate MinPy and NumPy data structure.
-    
+
     The wrapper will convert all array types in the input arguments as MinPy arrays.
     The return type will be converted according to the mode that is given.
 
-    * In ``lazy`` mode, no conversion will be performed for the return values. So users need to 
+    * In ``lazy`` mode, no conversion will be performed for the return values. So users need to
       handle the return value type themselves.
     * In ``numpy`` mode, all MinPy arrays will be converted to NumPy arrays.
     """
