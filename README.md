@@ -11,6 +11,12 @@ This repository aims at prototyping a pure [NumPy](http://www.numpy.org/) interf
 * Graceful fallback for missing operations to NumPy.
 * Transparent device and partition specification.
 
+## MXNet version
+
+Currently both MXNet and MinPy are going through rapid development. MinPy is not guaranteed to work with all MXNet versions.
+
+This version of MinPy is tested to work with MXNet at 3fb29a3.
+
 ## How to get started
 
 The project is still a work-in-progress. You could look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents are hosted [here](https://minpy.readthedocs.io/en/latest/).
