@@ -507,6 +507,11 @@ class Array(Value):
         return Value._ns.transpose(self)
     # pylint: enable= invalid-name
 
+    @property
+    def size(self):
+        """ Get number of elements in the array """
+        return Value._ns.prod(self.shape)
+
 
 class Primitive(object):
     """ Class for primitives. It includes both forward function and gradient definition """
