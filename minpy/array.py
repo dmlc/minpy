@@ -22,6 +22,7 @@ import numpy
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__, logging.WARN)
+
 # pylint: enable= invalid-name
 
 
@@ -51,43 +52,63 @@ class Node(object):
         self._partial_derivative_cache = {}
 
     def add_partial_derivative(self, grad_func, res, prim):
-        """ Add partial derivative information
+        """Add partial derivative information.
 
-        :param function grad_func: the function to calculate derivative with respect to res
-        :param Node res: variable that represent the target of derivative
-        :param Primitive prim: the primitive that the gradient function belongs to
+        :param function grad_func: The function to calculate derivative with respect to result.
+        :param Node res: Variable that represent the result of original function.
+        :param Primitive prim: Primitive that the gradient function belongs to.
         """
-        assert(isinstance(res, Node))
+        assert isinstance(res, Node), 'Result is not of type `Node`.'
         self._partial_derivatives.append((grad_func, res, prim))
 
     def partial_derivative(self, target):
-        """ Add partial derivative information
+        """Get partial derivative.
 
-        :param Node target: target variable to compute partial derivative
+        :param Node target: Target variable to compute partial derivative.
+        :return: Partial derivative.
         """
-        def _call_pd(rec):
-            """ helper function for calling gradient function """
+
+        def _call_partial_derivative(rec):
+            """Helper function for calling gradient function."""
             # if you want to do profiling, try to use "with minprof(<some
             # info>): ... "
-            grad = rec[1].partial_derivative(target)
+            grad = rec[1]._partial_derivative_cache[target]
             grad_value = grad.get_data(rec[2]._type)
-            _logger.debug('Call derivative func of: {}'.format(rec[2]._func))
-            res = rec[0](grad_value)
-            return res
-        assert(isinstance(target, Node))
-        if target not in self._partial_derivative_cache:
-            if self is target:  # Partial derivative of self is one.
-                res = 1.0 if isinstance(
-                    self._value, Number) else numpy.ones(
-                    self._value.shape)
+            _logger.debug('Call derivative func of "{}".'.format(rec[2]._func))
+            if rec[2].type == ArrayType.MXNET:
+                # Currently all MXNet function call will be performed on GPU 0.
+                with mxnet.gpu(0) as ctx:
+                    res = rec[0](grad_value)
             else:
-                res = functools.reduce(operator.add,
-                                       [_call_pd(pd) for pd in self._partial_derivatives],
-                                       Value.wrap(0.0))
-                # in case _partial_derivatives is empty
-                if len(self._partial_derivatives) == 0 and not isinstance(self._value, Number):
-                    res = numpy.zeros(self._value.shape)
-            self._partial_derivative_cache[target] = Value.wrap(res)
+                res = rec[0](grad_value)
+            return res
+
+        pending_derivatives = []
+
+        pending_nodes = [self]
+        while len(pending_nodes) != 0:
+            c = pending_nodes.pop()
+            assert isinstance(target, Node), 'Type is not `Node`.'
+            if target in c._partial_derivative_cache:
+                continue
+            else:
+                pending_derivatives.append(c)
+                c._partial_derivative_cache[target] = Value.wrap(
+                    0.0
+                    if isinstance(c._value, Number) else numpy.zeros(c._value.shape))
+                for i in c._partial_derivatives:
+                    pending_nodes.append(i[1])
+
+        for c in reversed(pending_derivatives):
+            if c is target:
+                c._partial_derivative_cache[target] = Value.wrap(
+                    1.0
+                    if isinstance(c._value, Number) else numpy.ones(c._value.shape))
+            else:
+                for i in c._partial_derivatives:
+                    c._partial_derivative_cache[target] += Value.wrap(
+                        _call_partial_derivative(i))
+
         return self._partial_derivative_cache[target]
 
 
@@ -382,21 +403,18 @@ class Array(Value):
     def _synchronize_data(self):
         """ Synchronize the data of different array types. """
         if self._latest_version == ArrayType.MXNET:
-            _logger.info(
-                'Copy from mxnet array to numpy array Node#{}'.format(
-                    id(self)))
+            _logger.info('Copy from mxnet array to numpy array Node#{}'.format(
+                id(self)))
             mxarray = self._data[ArrayType.MXNET]
             self._data[ArrayType.NUMPY] = mxarray.asnumpy()
         elif self._latest_version == ArrayType.NUMPY:
-            _logger.info(
-                'Copy from numpy array to mxnet array Node#{}'.format(
-                    id(self)))
+            _logger.info('Copy from numpy array to mxnet array Node#{}'.format(
+                id(self)))
             nparray = self._data[ArrayType.NUMPY]
             # pylint: disable= fixme
             # TODO currently, we only use one gpu
             # pylint: enable= fixme
-            self._data[
-                ArrayType.MXNET] = mxnet.ndarray.array(
+            self._data[ArrayType.MXNET] = mxnet.ndarray.array(
                 nparray, ctx=mxnet.gpu(0))
         self._latest_version = None
 
@@ -440,9 +458,7 @@ class Array(Value):
         conversion to NumPy array.
         """
         np_index = None
-        to_np = lambda x: x if isinstance(
-            x, slice) else Value.wrap(x).get_data(
-            ArrayType.NUMPY)
+        to_np = lambda x: x if isinstance(x, slice) else Value.wrap(x).get_data(ArrayType.NUMPY)
         if isinstance(index, tuple):
             np_index = tuple(to_np(i) for i in index)
         else:
@@ -457,9 +473,7 @@ class Array(Value):
         """
         np_index = None
         np_val = Value.wrap(val).get_data(ArrayType.NUMPY)
-        to_np = lambda x: x if isinstance(
-            x, slice) else Value.wrap(x).get_data(
-            ArrayType.NUMPY)
+        to_np = lambda x: x if isinstance(x, slice) else Value.wrap(x).get_data(ArrayType.NUMPY)
         if isinstance(index, tuple):
             np_index = tuple(to_np(i) for i in index)
         else:
@@ -484,14 +498,15 @@ class Array(Value):
 
 
 class Primitive(object):
-    """ Class for primitives. It includes both forward function and gradient definition """
+    """Class for primitives. It includes both forward function and gradient definition."""
     __slots__ = [
         '_func',
         '_grad_func',
         '_grad_func_kw',
         '_type',
         '_mutate_args',
-        '_mutate_kw']
+        '_mutate_kw',
+    ]
 
     def __init__(self, func, ty, mutate_args=None, mutate_kw=None):
         """Initialize.
@@ -512,36 +527,31 @@ class Primitive(object):
 
     @property
     def typestr(self):
-        """ Return the string representation of primitive type """
+        """Return the string representation of primitive type.
+
+        :return: String representation.
+        """
         if self._type == ArrayType.NUMPY:
-            return "numpy"
+            return "NumPy"
         elif self._type == ArrayType.MXNET:
-            return "mxnet"
+            return "MXNet"
         else:
-            return "N/A"
+            raise NotImplementedError()
 
     def __str__(self):
         return self._func.__name__
 
     def __call__(self, *args, **kwargs):
         """Call wrapped function.
-        Args:
-            *args:
-                Arguments for the wrapped function.
-            **kwargs:
-                Arguments for the wrapped function.
 
-        Returns:
-            An `Value` representing the result.
-
-        Raises:
-            IndexError:
-                No corresponding gradient function.
-            KeyError:
-                No corresponding gradient function.
+        :param args: Arguments for the wrapped function.
+        :param kwargs: Arguments for the wrapped function.
+        :return: An :class:`array.Value` representing the result.
+        :raises IndexError: No corresponding gradient function.
+        :raises KeyError: No corresponding gradient function.
         """
         # pylint: disable= missing-docstring, invalid-name
-        _logger.debug('Calling {} type {}'.format(self._func, self.typestr))
+        _logger.debug('Calling {} type {}.'.format(self._func, self.typestr))
 
         def get_val(x, mutate):
             try:
@@ -550,22 +560,19 @@ class Primitive(object):
                     return xv.get_data_mutable(self._type)
                 else:
                     return xv.get_data(self._type)
-            except UnknownArrayTypeError:  # if wrap failed, just return the original value
-                pass
-            return x
+            # If wrap failed, just return the original value.
+            except UnknownArrayTypeError:
+                return x
         # Get underlying data.
         arg_values = tuple(
-            get_val(
-                args[i],
-                i in self._mutate_args) for i in range(
-                len(args)))
+            get_val(args[i], i in self._mutate_args) for i in range(len(args)))
         kwargs_values = {
-            k: get_val(
-                kwargs[k],
-                k in self._mutate_kw) for k in kwargs}
+            k: get_val(kwargs[k], k in self._mutate_kw)
+            for k in kwargs
+        }
         # Call the real function with raw value.
         if self.type == ArrayType.MXNET:
-            # Currently all mxnet function call will be performed on GPU #0
+            # Currently all MXNet function call will be performed on GPU 0.
             with mxnet.gpu(0) as ctx:
                 result_value = self._func(*arg_values, **kwargs_values)
         else:
@@ -582,9 +589,8 @@ class Primitive(object):
         # Check whether the result value is on the path of bp phase
         # If all the input arguments are not on the bp path, the result value
         # is not as well.
-        need_bp = functools.reduce(
-            scan, itertools.chain(
-                args, kwargs.values()), False)
+        need_bp = functools.reduce(scan, itertools.chain(
+            args, kwargs.values()), False)
         # Wrap the result raw value with wrapper and node.
         result = Value.wrap(result_value, marked=need_bp)
         if need_bp:
@@ -593,35 +599,29 @@ class Primitive(object):
             for i, arg in enumerate(args):
                 if isinstance(arg, Value) and arg.marked_for_bp:
                     if i >= len(self._grad_func):
-                        _logger.info('Warning: partial derivative of func {0} on #{1} \
-                            arg is not defined'.format(self._func.__name__, i))
+                        _logger.warn('Partial derivative of func "{}" on #{} \
+                            arg is not defined.'
+                                     .format(self._func.__name__, i))
                         continue
                     _logger.debug(
-                        'Adding partial derivative to func {} on #{} arg' .format(
+                        'Adding partial derivative to func "{}" on #{} arg.'.format(
                             self._func, i))
-                    arg.node.add_partial_derivative(
-                        self._grad_func[i](
-                            result_value,
-                            *arg_values,
-                            **kwargs_values),
-                        result.node,
-                        self)
+                    arg.node.add_partial_derivative(self._grad_func[i](
+                        result_value, *arg_values, **kwargs_values),
+                                                    result.node, self)
             for k, arg in kwargs.items():
                 if isinstance(arg, Value) and arg.marked_for_bp:
                     if k not in self._grad_func_kw:
-                        _logger.info('Warning: partial derivative of func {0} on kwarg "{1}"\
-                            is not defined'.format(self._func.__name__, k))
+                        _logger.warn(
+                            'Partial derivative of func "{}" on kwarg "{}"\
+                            is not defined.'.format(self._func.__name__, k))
                         continue
                     _logger.debug(
-                        'Adding partial derivative to func {} on kwarg "{}"' .format(
+                        'Adding partial derivative to func "{}" on kwarg "{}".'.format(
                             self._func, k))
-                    arg.node.add_partial_derivative(
-                        self._grad_func_kw[k](
-                            result_value,
-                            *arg_values,
-                            **kwargs_values),
-                        result.node,
-                        self)
+                    arg.node.add_partial_derivative(self._grad_func_kw[k](
+                        result_value, *arg_values, **kwargs_values),
+                                                    result.node, self)
         return result
         # pylint: enable= missing-docstring, invalid-name
 
