@@ -22,7 +22,7 @@ import mxnet
 import numpy
 
 # pylint: disable= invalid-name
-_logger = log.get_logger(__name__, logging.INFO)
+_logger = log.get_logger(__name__, logging.WARN)
 # pylint: enable= invalid-name
 
 
