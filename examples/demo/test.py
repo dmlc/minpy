@@ -5,7 +5,8 @@ from minpy.core import grad_and_loss, function
 import util
 import mxnet as mx
 
-logging.getLogger('minpy.array').setLevel(logging.WARN)
+logging.getLogger('minpy.array').setLevel(logging.DEBUG)
+logging.getLogger('minpy.core').setLevel(logging.DEBUG)
 
 x = mx.symbol.Variable('x')
 sm = mx.symbol.SoftmaxOutput(data=x, name='softmax', grad_scale=1/10000.0)

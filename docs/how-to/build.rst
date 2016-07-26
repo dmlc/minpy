@@ -20,10 +20,14 @@ good stop for advice.
 MinPy version numbers conform to `Semver <http://semver.org/>`_
 rules. To ensure consistency between version numbers on PyPI and git
 tags, there are a few utility scripts at the root of the
-repositry. After you make some changes, run ``./bump_version (major |
-minor | patch)`` to increment the version number. Then make a commit
-and push to upstream. Lastly run ``./push_version`` to tag the latest
-commit and push it upstream. Travis CI will test and build the commit,
-and if there is a tag, release new version to PyPI.
+repositry.
 
-In short, ``bump_version`` before commit, and ``push_version`` after.
+First run ``./install_hooks.sh`` once to install some Git hooks. This
+will automatically tag your commits upon version change, and push them
+if necessary. Now after you make some changes, run ``./bump_version (major |
+minor | patch)`` to increment the version number. Then make a commit
+and push to upstream. If your Git version is not too old, it will push the tags
+along the commit. Otherwise you would have to push the tags manually.
+
+Travis CI will test and build the commit, and if there is a tag, release new version to PyPI.
+

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import minpy 
 import minpy.array
 from minpy.array_variants import ArrayType
@@ -39,13 +41,13 @@ weights = random.rand(*wshape) - 0.5
 #training_gradient_fun_0 = grad(training_loss, 0)
 grad_arg0 = grad_and_loss(training_loss, 0)
 grad, loss = grad_arg0(weights, inputs)
-print '1st arg\'s grad by single grad func', grad
+print('1st arg\'s grad by single grad func', grad)
 
 grad_arg1 = grad_and_loss(training_loss, 1)
 grad, loss = grad_arg1(weights, inputs)
-print '2nd arg\'s grad by single grad func', grad
+print('2nd arg\'s grad by single grad func', grad)
 
 grad_args = grad_and_loss(training_loss, [0, 1])
 grads, loss = grad_args(weights, inputs)
-print '1st arg\'s grad by single grad func', grads[0]
-print '2nd arg\'s grad by single grad func', grads[1]
+print('1st arg\'s grad by single grad func', grads[0])
+print('2nd arg\'s grad by single grad func', grads[1])
