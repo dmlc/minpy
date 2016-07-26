@@ -10,7 +10,7 @@ logging.getLogger('minpy.array').setLevel(logging.WARN)
 x = mx.symbol.Variable('x')
 sm = mx.symbol.SoftmaxOutput(data=x, name='softmax', grad_scale=1/10000.0)
 
-softmax = function(sm, [('x', (10000, 5)), ('softmax_label', (10000,))])
+softmax = function(sm, {'x': (10000, 5), 'softmax_label': (10000,)})
 
 x, t = util.get_data()
 #w = np.random.randn(500, 5)
@@ -45,11 +45,11 @@ print w
 '''
 def loss(w, x):
     prob = predict(w, x)
-    return -np.sum(np.log(prob) * t) / 10000  + 0.5 * w * w
+    return np.reshape(-np.sum(np.log(prob) * t) / 10000, (1, 1))  + 0.5 * w * w
 
 gl = grad_and_loss(loss)
 
 for i in range(10):
     dw, loss = gl(w, x)
-    print loss
+    print(loss)
     w -= 0.1 * dw
