@@ -53,4 +53,4 @@ gl = grad_and_loss(loss)
 for i in range(10):
     dw, loss = gl(w, x)
     print(loss)
-    w -= 0.1 * dw
+    w -= 0.1 * dw.asnumpy()
