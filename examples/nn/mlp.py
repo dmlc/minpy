@@ -7,6 +7,7 @@ from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
 from minpy.utils.data_utils import get_CIFAR10_data
+from minpy.nn.io import NDArrayIter
 
 class TwoLayerNet(ModelBase):
     def __init__(self,
@@ -35,8 +36,20 @@ def main(_):
     data['X_train'] = data['X_train'].reshape([data['X_train'].shape[0], 3 * 32 * 32])
     data['X_val'] = data['X_val'].reshape([data['X_val'].shape[0], 3 * 32 * 32])
     data['X_test'] = data['X_test'].reshape([data['X_test'].shape[0], 3 * 32 * 32])
+
+    train_dataiter = NDArrayIter(data['X_train'],
+                         data['y_train'],
+                         100,
+                         True)
+
+    test_dataiter = NDArrayIter(data['X_test'],
+                         data['y_test'],
+                         100,
+                         True)
+
     solver = Solver(model,
-                    data,
+                    train_dataiter,
+                    test_dataiter,
                     num_epochs=10,
                     init_rule='xavier',
                     update_rule='sgd_momentum',

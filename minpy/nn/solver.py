@@ -29,15 +29,18 @@ class Solver(object):
   the accuracies of the model on the training and validation set at each epoch.
   
   Example usage might look something like this:
-  
-  data = {
-    'X_train': # training data
-    'y_train': # training labels
-    'X_val': # validation data
-    'X_train': # validation labels
-  }
+ 
+  train_dataiter = NDArrayIter(data['X_train'],
+                         data['y_train'],
+                         100,
+                         True)
+  test_dataiter = NDArrayIter(data['X_val'],
+                         data['y_val'],
+                         100,
+                         True)
+
   model = MyAwesomeModel(hidden_size=100, reg=10)
-  solver = Solver(model, data,
+  solver = Solver(model, train_dataiter, test_dataiter,
                   update_rule='sgd',
                   optim_config={
                     'learning_rate': 1e-3,
@@ -46,45 +49,18 @@ class Solver(object):
                   num_epochs=10, batch_size=100,
                   print_every=100)
   solver.train()
-
-
-  A Solver works on a model object that must conform to the following API:
-
-  - model.params must be a dictionary mapping string parameter names to numpy
-    arrays containing parameter values.
-
-  - model.loss(X, y) must be a function that computes training-time loss and
-    gradients, and test-time classification scores, with the following inputs
-    and outputs:
-
-    Inputs:
-    - X: Array giving a minibatch of input data of shape (N, d_1, ..., d_k)
-    - y: Array of labels, of shape (N,) giving labels for X where y[i] is the
-      label for X[i].
-
-    Returns:
-    If y is None, run a test-time forward pass and return:
-    - scores: Array of shape (N, C) giving classification scores for X where
-      scores[i, c] gives the score of class c for X[i].
-
-    If y is not None, run a training time forward and backward pass and return
-    a tuple of:
-    - loss: Scalar giving the loss
-    - grads: Dictionary with the same keys as self.params mapping parameter
-      names to gradients of the loss with respect to those parameters.
   """
 
-    def __init__(self, model, data, **kwargs):
+    def __init__(self, model, train_dataiter, test_dataiter, **kwargs):
         """
         Construct a new Solver instance.
         
         Required arguments:
         - model: A model object conforming to the API described above
-        - data: A dictionary of training and validation data with the following:
-          'X_train': Array of shape (N_train, d_1, ..., d_k) giving training images
-          'X_val': Array of shape (N_val, d_1, ..., d_k) giving validation images
-          'y_train': Array of shape (N_train,) giving labels for training images
-          'y_val': Array of shape (N_val,) giving labels for validation images
+        - train_dataiter: A data iterator for training data, we can get batch from it
+          'batch.data': Array of shape (N_train, d_1, ..., d_k) giving training images
+          'batch.label': Array of shape (N_val, d_1, ..., d_k) giving validation images
+        - test_dataiter: A data iterator for training data, we can get batch from it
           
         Optional arguments:
         - update_rule: A string giving the name of an update rule in optim.py.
@@ -104,10 +80,8 @@ class Solver(object):
           training.
         """
         self.model = model
-        self.X_train = data['X_train']
-        self.y_train = data['y_train']
-        self.X_val = data['X_val']
-        self.y_val = data['y_val']
+        self.train_dataiter = train_dataiter
+        self.test_dataiter = test_dataiter
 
         # Unpack keyword arguments
         self.init_rule = kwargs.pop('init_rule', 'xavier')
@@ -151,6 +125,8 @@ class Solver(object):
         self.loss_history = []
         self.train_acc_history = []
         self.val_acc_history = []
+        self.train_dataiter.reset()
+        self.test_dataiter.reset()
 
         # Make a deep copy of the optim_config for each parameter
         self.optim_configs = {}
@@ -165,16 +141,14 @@ class Solver(object):
             d = {k: v for k, v in self.init_config.items()}
             self.init_configs[p] = d
 
-    def _step(self):
+    def _step(self, batch):
         """
         Make a single gradient update. This is called by train() and should not
         be called manually.
         """
-        # Make a minibatch of training data
-        num_train = self.X_train.shape[0]
-        batch_mask = np.random.choice(num_train, self.batch_size)
-        X_batch = self.X_train[batch_mask]
-        y_batch = self.y_train[batch_mask]
+        # Get a minibatch of training data
+        X_batch = batch.data[0]
+        y_batch = batch.label[0]
 
         # Compute loss and gradient
         def loss_func(*params):
@@ -199,13 +173,12 @@ class Solver(object):
             self.model.params[p] = next_w
             self.optim_configs[p] = next_config
 
-    def check_accuracy(self, X, y, num_samples=None, batch_size=100):
+    def check_accuracy(self, dataiter, num_samples=None, batch_size=100):
         """
         Check accuracy of the model on the provided data.
         
         Inputs:
-        - X: Array of data, of shape (N, d_1, ..., d_k)
-        - y: Array of labels, of shape (N,)
+        - dataiter: data iterator that can produce batch
         - num_samples: If not None, subsample the data and only test the model
           on num_samples datapoints.
         - batch_size: Split X and y into batches of this size to avoid using too
@@ -217,32 +190,19 @@ class Solver(object):
         """
 
         # Maybe subsample the data
-        N = X.shape[0]
+        N = dataiter.num_data
+        check_dataiter = dataiter
         if num_samples is not None and N > num_samples:
-            mask = np.random.choice(N, num_samples)
-            N = num_samples
-            X = X[mask]
-            y = y[mask]
-
-        # Compute predictions in batches
-        num_batches = N // batch_size
-        # XXX(minjie): the trailing batches will not be checked since
-        # mxnet cannot support dynamic shapes. Also, the ground truth is
-        # trimmed to the samples that are checked.
-        #if N % batch_size != 0:
-            #num_batches += 1
-        y = y[0:num_batches * batch_size]
-
-        y_pred = []
-        for i in range(num_batches):
-            start = i * batch_size
-            end = (i + 1) * batch_size
-            predict = self.model.forward(X[start:end]).asnumpy()
-            y_pred.append(np.argmax(predict, axis=1))
-        y_pred = np.hstack(y_pred)
-        acc = np.mean(y_pred == y)
-
-        return acc
+          # Sample an sub iter
+          check_dataiter = dataiter.getsubiter(num_samples)
+        
+        acc_count = 0
+        num_samples = 0
+        for each_batch in check_dataiter:
+            predict = self.model.forward(each_batch.data[0]).asnumpy()
+            acc_count += np.sum(np.argmax(predict, axis=1) == each_batch.label[0])
+            num_samples += check_dataiter.batch_size
+        return float(acc_count) / num_samples
 
     def init(self):
         """
@@ -252,58 +212,52 @@ class Solver(object):
             self.model.params[name] = self.init_rule(config['shape'],
                                                self.init_configs[name])
 
-
     def train(self):
         """
         Run optimization to train the model.
         """
-        num_train = self.X_train.shape[0]
-        iterations_per_epoch = max(num_train // self.batch_size, 1)
-        num_iterations = self.num_epochs * iterations_per_epoch
+        num_iterations = self.train_dataiter.getnumiterations() * self.num_epochs
+        t = 0
+        for epoch in xrange(self.num_epochs):
+            print 'epoch %d ' % (epoch)
+            for each_batch in self.train_dataiter:
+                self._step(each_batch)
+                 # Maybe print training loss
+                if self.verbose and t % self.print_every == 0:
+                    print('(Iteration %d / %d) loss: %f' % (t + 1, num_iterations, self.loss_history[-1]))
+                t += 1
+           
 
-        for t in range(num_iterations):
-            self._step()
 
-            # Maybe print training loss
-            if self.verbose and t % self.print_every == 0:
-                print('(Iteration %d / %d) loss: %f' % (t + 1, num_iterations,
-                                                        self.loss_history[-1]))
+            # evaluate after each epoch
+            train_acc = self.check_accuracy(self.train_dataiter,
+                                            num_samples=1000,
+                                            batch_size=self.batch_size)
+            val_acc = self.check_accuracy(self.test_dataiter,
+                                          batch_size=self.batch_size)
+            self.train_acc_history.append(train_acc)
+            self.val_acc_history.append(val_acc)            
+            
+            
+            # TODO: should call reset automatically
+            self.train_dataiter.reset()
+            self.test_dataiter.reset()
 
-            # At the end of every epoch, increment the epoch counter and decay the
-            # learning rate.
-            epoch_end = (t + 1) % iterations_per_epoch == 0
-            if epoch_end:
-                self.epoch += 1
-                for k in self.optim_configs:
-                    self.optim_configs[k]['learning_rate'] *= self.lr_decay
+            if self.verbose:
+                print('(Epoch %d / %d) train acc: %f; val_acc: %f' % (
+                    self.epoch, self.num_epochs, train_acc, val_acc))
 
-            # Check train and val accuracy on the first iteration, the last
-            # iteration, and at the end of each epoch.
-            first_it = (t == 0)
-            last_it = (t == num_iterations + 1)
-            if first_it or last_it or epoch_end:
-                train_acc = self.check_accuracy(self.X_train,
-                                                self.y_train,
-                                                num_samples=1000,
-                                                batch_size=self.batch_size)
-                val_acc = self.check_accuracy(self.X_val,
-                                              self.y_val,
-                                              batch_size=self.batch_size)
-                self.train_acc_history.append(train_acc)
-                self.val_acc_history.append(val_acc)
-
-                if self.verbose:
-                    print('(Epoch %d / %d) train acc: %f; val_acc: %f' % (
-                        self.epoch, self.num_epochs, train_acc, val_acc))
-
-                # Keep track of the best model
-                if val_acc > self.best_val_acc:
-                    self.best_val_acc = val_acc
-                    self.best_params = {}
-                    for k, v in self.model.params.items():
-                        #TODO: Missing Copy Method
-                        #self.best_params[k] = v.copy()
-                        self.best_params[k] = v
+            # Keep track of the best model
+            if val_acc > self.best_val_acc:
+                self.best_val_acc = val_acc
+                self.best_params = {}
+                for k, v in self.model.params.items():
+                    #TODO: Missing Copy Method
+                    #self.best_params[k] = v.copy()
+                    self.best_params[k] = v
+   
+            for k in self.optim_configs:
+                self.optim_configs[k]['learning_rate'] *= self.lr_decay
 
         # At the end of training swap the best params into the model
         self.model.params = self.best_params

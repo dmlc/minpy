@@ -9,6 +9,7 @@ from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
 from minpy.utils.data_utils import get_CIFAR10_data
 from minpy import core
+from minpy.nn.io import NDArrayIter
 
 class TwoLayerNet(ModelBase):
     def __init__(self,
@@ -31,7 +32,8 @@ class TwoLayerNet(ModelBase):
                                     data=act,
                                     num_hidden=num_classes)
         # ATTENTION: when using mxnet symbols, input shape (including batch size) should be fixed
-        self.fwd_fn = core.function(fc2, {'X': (128, input_size)})
+        # TODO: Why we need to set batchsize here?
+        self.fwd_fn = core.function(fc2, {'X': (100, input_size)})
 
     def forward(self, X):
         return self.fwd_fn(X=X,
@@ -51,8 +53,20 @@ def main(_):
     data['X_val'] = data['X_val'].reshape([data['X_val'].shape[0], 3 * 32 * 32])
     data['X_test'] = data['X_test'].reshape([data['X_test'].shape[0], 3 * 32 * 32])
     # ATTENTION: the batch size should be the same as the input shape declared above.
+    
+    train_dataiter = NDArrayIter(data['X_train'],
+                         data['y_train'],
+                         100,
+                         True)
+
+    test_dataiter = NDArrayIter(data['X_test'],
+                         data['y_test'],
+                         100,
+                         True)
+
     solver = Solver(model,
-                    data,
+                    train_dataiter,
+                    test_dataiter,
                     num_epochs=10,
                     batch_size=128,
                     init_rule='xavier',

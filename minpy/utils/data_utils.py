@@ -7,7 +7,8 @@ from scipy.misc import imread
 def load_CIFAR_batch(filename):
     """ load single batch of cifar """
     with open(filename, 'rb') as f:
-        datadict = pickle.load(f, encoding='latin1')
+        #datadict = pickle.load(f, encoding='latin1')
+        datadict = pickle.load(f)
         X = datadict['data']
         Y = datadict['labels']
         X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
@@ -38,7 +39,7 @@ def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000):
     condensed to a single function.
     """
     # Load the raw CIFAR-10 data
-    cifar10_dir = '/home/jermaine/data/cifar/cifar-10-batches-py'
+    cifar10_dir = '/mnt/data/tianjun/cifar/cifar-10-batches-py'
     X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
 
     # Subsample the data
