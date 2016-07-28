@@ -1,4 +1,4 @@
-""" Simple multi-layer perception neural network using Minpy and MXNet symbols """
+""" Simple multi-layer perception neural network using Caffe Op through minpy and MXNet symbols """
 import sys
 import minpy
 import numpy as np
@@ -9,13 +9,14 @@ from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
 from minpy.utils.data_utils import get_CIFAR10_data
 from minpy import core
+from minpy.nn.io import NDArrayIter
 
-class TwoLayerNet(ModelBase):
+class TwoLayerCaffeNet(ModelBase):
     def __init__(self,
                  input_size=3 * 32 * 32,
                  hidden_size=512,
                  num_classes=10):
-        super(TwoLayerNet, self).__init__()
+        super(TwoLayerCaffeNet, self).__init__()
         # ATTENTION: mxnet's weight dimension arrangement is different; it is [out_size, in_size]
         self.param_configs['w1'] = { 'shape': [hidden_size, input_size] }
         self.param_configs['b1'] = { 'shape': [hidden_size,] }
@@ -27,13 +28,14 @@ class TwoLayerNet(ModelBase):
                              data_0=data,
                              num_weight=2,
                              prototxt="layer {type:\"InnerProduct\" inner_product_param{num_output: %d} }"%hidden_size)
-        act = mx.sym.Activation(data=fc1, act_type='relu')
+        act = mx.sym.CaffeOp(data_0=fc1,
+                             prototxt="layer {type:\"ReLU\"}")
         fc2 = mx.sym.CaffeOp(name='fc2',
                              data_0=act,
                              num_weight=2,
                              prototxt="layer {type:\"InnerProduct\" inner_product_param{num_output: %d} }"%num_classes)
         # ATTENTION: when using mxnet symbols, input shape (including batch size) should be fixed
-        self.fwd_fn = core.function(fc2, {'X': (128, input_size)})
+        self.fwd_fn = core.function(fc2, {'X': (100, input_size)})
 
     def forward(self, X):
         return self.fwd_fn(X=X,
@@ -46,15 +48,25 @@ class TwoLayerNet(ModelBase):
         return layers.softmax_loss(predict, y)
 
 def main(_):
-    model = TwoLayerNet()
+    model = TwoLayerCaffeNet()
     data = get_CIFAR10_data()
     # reshape all data to matrix
     data['X_train'] = data['X_train'].reshape([data['X_train'].shape[0], 3 * 32 * 32])
     data['X_val'] = data['X_val'].reshape([data['X_val'].shape[0], 3 * 32 * 32])
     data['X_test'] = data['X_test'].reshape([data['X_test'].shape[0], 3 * 32 * 32])
     # ATTENTION: the batch size should be the same as the input shape declared above.
+    train_dataiter = NDArrayIter(data['X_train'],
+                         data['y_train'],
+                         100,
+                         True)
+
+    test_dataiter = NDArrayIter(data['X_test'],
+                         data['y_test'],
+                         100,
+                         True)
     solver = Solver(model,
-                    data,
+                    train_dataiter,
+                    test_dataiter,
                     num_epochs=10,
                     batch_size=128,
                     init_rule='xavier',
