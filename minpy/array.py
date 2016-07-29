@@ -398,6 +398,16 @@ class Array(Value):
         """ get node which contains derivative information from this array """
         return self._node
 
+    @property
+    def ndim(self):
+        """ Number of array dimensions """
+        if ArrayType.NUMPY in self._data:
+            return self._data[ArrayType.NUMPY].ndim
+        else:
+            # TODO add ndim in MXNet ndarray
+            # return self._data[ArrayType.MXNET].shape
+            return numpy.array(self.get_data(ArrayType.NUMPY)).ndim
+
     def has_type(self, atype):
         """ Return whether array data of given type exists in the underlying storage.
         """
@@ -424,12 +434,15 @@ class Array(Value):
         else:
             new_shape = tuple(x for x in args)
         if 'order' in kwargs and kwargs['order'] != 'C':
-            raise ValueError('Orders other than C are not currently supported')
+            raise ValueError('Orders other than C are not currently supported.')
         return Value._ns.reshape(self, new_shape)
 
     def dot(self, b, out=None):
         """ Function for dot production. """
-        return Value._ns.dot(self, b, out)
+        if out is not None:
+            # TODO: Support out argument
+            raise ValueError('out option is not supported.')
+        return Value._ns.dot(self, b)
 
     def _synchronize_data(self):
         """ Synchronize the data of different array types. """
@@ -526,6 +539,11 @@ class Array(Value):
         """ Get transposed array """
         return Value._ns.transpose(self)
     # pylint: enable= invalid-name
+
+    @property
+    def size(self):
+        """ Get number of elements in the array """
+        return Value._ns.prod(self.shape)
 
 
 class Primitive(object):
