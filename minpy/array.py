@@ -382,13 +382,17 @@ class Array(Value):
         """
         return atype in self._data.keys()
 
-    def reshape(self, *args):
+    def reshape(self, *args, **kwargs):
         """ Function for reshape this array
 
         Usage example:
         Assume a = np.ones([10, 10])
         b = a.reshape([5, 20])
         b = a.reshape(5, 20)
+
+        See http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html
+        for further explanation.
+
         :param args: a single iterable or a sequence of ints representing a new shape
         :return: reshaped array (minpy array)
         """
@@ -398,11 +402,13 @@ class Array(Value):
             new_shape = args[0]
         else:
             new_shape = tuple(x for x in args)
+        if 'order' in kwargs and kwargs['order'] != 'C':
+            raise ValueError('Orders other than C are not currently supported')
         return Value._ns.reshape(self, new_shape)
 
-    def dot(self, *args):
-        """ Function for dot production """
-        return Value._ns.dot(self, *args)
+    def dot(self, b, out=None):
+        """ Function for dot production. """
+        return Value._ns.dot(self, b, out)
 
     def _synchronize_data(self):
         """ Synchronize the data of different array types. """
