@@ -424,12 +424,15 @@ class Array(Value):
         else:
             new_shape = tuple(x for x in args)
         if 'order' in kwargs and kwargs['order'] != 'C':
-            raise ValueError('Orders other than C are not currently supported')
+            raise ValueError('Orders other than C are not currently supported.')
         return Value._ns.reshape(self, new_shape)
 
     def dot(self, b, out=None):
         """ Function for dot production. """
-        return Value._ns.dot(self, b, out)
+        if out is not None:
+            # TODO: Support out argument
+            raise ValueError('out option is not supported.')
+        return Value._ns.dot(self, b)
 
     def _synchronize_data(self):
         """ Synchronize the data of different array types. """
