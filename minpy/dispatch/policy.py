@@ -35,7 +35,7 @@ class Policy(object):
 
 
 class PreferMXNetPolicy(Policy):
-    """Prefer using MXNet functions."""
+    """ Prefer using MXNet functions. Return None if no required function. """
 
     def decide(self, candidates, args, kwargs):
         possible_impl = set(x.type for x in candidates)
@@ -48,7 +48,7 @@ class PreferMXNetPolicy(Policy):
 
 
 class OnlyNumpyPolicy(Policy):
-    """Only use Numpy functions."""
+    """ Only use Numpy functions. Return None if no required function. """
 
     def decide(self, candidates, args, kwargs):
         if ArrayType.NUMPY in tuple(x.type for x in candidates):
@@ -58,7 +58,7 @@ class OnlyNumpyPolicy(Policy):
 
 
 class OnlyMXNetPolicy(Policy):
-    """Only use MXNet functions."""
+    """ Only use MXNet functions. Return None if no required function. """
 
     def decide(self, candidates, args, kwargs):
         if ArrayType.MXNET in tuple(x.type for x in candidates):
