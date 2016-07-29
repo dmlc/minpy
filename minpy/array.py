@@ -398,16 +398,6 @@ class Array(Value):
         """ get node which contains derivative information from this array """
         return self._node
 
-    @property
-    def ndim(self):
-        """ Number of array dimensions """
-        if ArrayType.NUMPY in self._data:
-            return self._data[ArrayType.NUMPY].ndim
-        else:
-            # TODO add ndim in MXNet ndarray
-            # return self._data[ArrayType.MXNET].shape
-            return numpy.array(self.get_data(ArrayType.NUMPY)).ndim
-
     def has_type(self, atype):
         """ Return whether array data of given type exists in the underlying storage.
         """
@@ -539,11 +529,6 @@ class Array(Value):
         """ Get transposed array """
         return Value._ns.transpose(self)
     # pylint: enable= invalid-name
-
-    @property
-    def size(self):
-        """ Get number of elements in the array """
-        return Value._ns.prod(self.shape)
 
 
 class Primitive(object):
