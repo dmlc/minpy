@@ -77,9 +77,7 @@ class Node(object):
             grad_value = grad.get_data(rec[2]._type)
             _logger.debug('Call derivative func of "{}".'.format(rec[2]._func))
             if rec[2].type == ArrayType.MXNET:
-                # Currently all MXNet function call will be performed on GPU 0.
-                with mxnet.gpu(0) as ctx:
-                    res = rec[0](grad_value)
+                res = rec[0](grad_value)
             else:
                 res = rec[0](grad_value)
             return res
@@ -364,13 +362,17 @@ class Array(Value):
     __slots__ = ['_node', '_data', '_latest_version', '_marked_for_bp']
     __array_priority__ = 100.0  # highest priority when compute with numpy.ndarray
 
-    def __init__(self, data, marked=False):
+    def __init__(self, data, marked=False, context=None):
         super(Array, self).__init__(marked)
         self._data = {}
         self._node = Node(self)
         atype = Array.to_array_type(data)
         self._data[atype] = data
         self._latest_version = atype
+        if context is None:
+            self._context = current_context()
+        else:
+            self._context = context
 
     @staticmethod
     def to_array_type(arr):
@@ -391,6 +393,10 @@ class Array(Value):
     def node(self):
         """ get node which contains derivative information from this array """
         return self._node
+
+    @property
+    def context(self):
+        return self._context
 
     def has_type(self, atype):
         """Return whether array data of given type exists in the underlying storage.
@@ -413,10 +419,9 @@ class Array(Value):
                 id(self)))
             nparray = self._data[ArrayType.NUMPY]
             # pylint: disable= fixme
-            # TODO currently, we only use one gpu
             # pylint: enable= fixme
             self._data[ArrayType.MXNET] = mxnet.ndarray.array(
-                nparray, ctx=current_context().as_mxnet_ctx())
+                nparray, ctx=self._context.as_mxnet_ctx())
         self._latest_version = None
 
     def enforce_data(self, dtype):
@@ -573,10 +578,7 @@ class Primitive(object):
         }
         # Call the real function with raw value.
         if self.type == ArrayType.MXNET:
-            # Currently all mxnet function call will be performed on GPU #0
-            with current_context().as_mxnet_ctx() as ctx:
-                _logger.info("mxnet.current_context: {0}".format(mxnet.current_context()))
-                result_value = self._func(*arg_values, **kwargs_values)
+            result_value = self._func(*arg_values, **kwargs_values)
         else:
             result_value = self._func(*arg_values, **kwargs_values)
         # if you want to do profiling, try to use minprof(<func>):
