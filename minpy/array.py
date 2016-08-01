@@ -10,6 +10,7 @@ import functools
 import itertools
 import operator
 import logging
+import collections
 
 from .utils import log
 #from .utils.minprof import minprof
@@ -40,6 +41,7 @@ class AutogradError(ValueError):
     """ Error during auto differentiation """
     pass
 
+GradRecord = collections.namedtuple('GradRecord', ['grad_func', 'result', 'primitive'])
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -59,55 +61,70 @@ class Node(object):
         :param Primitive prim: Primitive that the gradient function belongs to.
         """
         assert isinstance(res, Node), 'Result is not of type `Node`.'
-        self._partial_derivatives.append((grad_func, res, prim))
+        self._partial_derivatives.append(GradRecord(grad_func=grad_func,
+                                                    result=res,
+                                                    primitive=prim))
 
     def partial_derivative(self, target):
-        """Get partial derivative.
+        """Get partial derivative. Mathematically, this function computes
+           
+           \\frac{\\partial{}target}{\\partial{}self}
 
         :param Node target: Target variable to compute partial derivative.
         :return: Partial derivative.
         """
-
         def _call_partial_derivative(rec):
-            """Helper function for calling gradient function."""
-            # if you want to do profiling, try to use "with minprof(<some
-            # info>): ... "
-            grad = rec[1]._partial_derivative_cache[target]
-            grad_value = grad.get_data(rec[2]._type)
-            _logger.debug('Call derivative func of "{}".'.format(rec[2]._func))
-            if rec[2].type == ArrayType.MXNET:
+            """Helper function for calling gradient function.
+
+            :param GradRecord rec: The gradient record to be called.
+            :return: Gradient result.
+            """
+            # The gradient of the target with respect to the result node should already be
+            # computed.
+            result_grad = rec.result._partial_derivative_cache[target]
+            result_grad_value = result_grad.get_data(rec.primitive._type)
+            _logger.debug('Call derivative func of "{}".'.format(rec.primitive._func))
+            # Call gradient function to compute input gradient from result gradient
+            if rec.primitive.type == ArrayType.MXNET:
                 # Currently all MXNet function call will be performed on GPU 0.
                 with mxnet.gpu(0) as ctx:
-                    res = rec[0](grad_value)
+                    grad = rec.grad_func(result_grad_value)
             else:
-                res = rec[0](grad_value)
-            return res
+                grad = rec.grad_func(result_grad_value)
+            return grad
 
+        # Array used to store intermediate gradients to be computed.
         pending_derivatives = []
 
-        pending_nodes = [self]
-        while len(pending_nodes) != 0:
-            c = pending_nodes.pop()
+        # Use BFS search to find all derivatives need to be computed in order to get the gradient
+        # of final target
+        bfs_queue = [self]
+        while len(bfs_queue) != 0:
+            node = bfs_queue.pop()
             assert isinstance(target, Node), 'Type is not `Node`.'
-            if target in c._partial_derivative_cache:
+            if target in node._partial_derivative_cache:
                 continue
             else:
-                pending_derivatives.append(c)
-                c._partial_derivative_cache[target] = Value.wrap(
-                    0.0
-                    if isinstance(c._value, Number) else numpy.zeros(c._value.shape))
-                for i in c._partial_derivatives:
-                    pending_nodes.append(i[1])
+                pending_derivatives.append(node)
+                # Init gradient buffer for accumulation
+                node._partial_derivative_cache[target] = Value.wrap(
+                    0.0 if isinstance(node._value, Number) else numpy.zeros(node._value.shape))
+                for rec in node._partial_derivatives:
+                    # Search required gradient computation.
+                    bfs_queue.append(rec.result)
 
-        for c in reversed(pending_derivatives):
-            if c is target:
-                c._partial_derivative_cache[target] = Value.wrap(
-                    1.0
-                    if isinstance(c._value, Number) else numpy.ones(c._value.shape))
+        # Compute gradient using chain rule.
+        # NOTE: the resolve order is the reversed order from target to input.
+        for node in reversed(pending_derivatives):
+            if node is target:
+                # Current gradient node is the target node, the gradient is one.
+                node._partial_derivative_cache[target] = Value.wrap(
+                    1.0 if isinstance(node._value, Number) else numpy.ones(node._value.shape))
             else:
-                for i in c._partial_derivatives:
-                    c._partial_derivative_cache[target] += Value.wrap(
-                        _call_partial_derivative(i))
+                # Call saved gradient function to compute gradient of each input.
+                for rec in node._partial_derivatives:
+                    node._partial_derivative_cache[target] += Value.wrap(
+                        _call_partial_derivative(rec))
 
         return self._partial_derivative_cache[target]
 

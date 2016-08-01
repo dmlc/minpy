@@ -33,7 +33,7 @@ weights = random.rand(*wshape) - 0.5
 
 training_gradient_fun = grad(training_loss)
 
-for i in range(20):
-    print('Trained loss accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))
+for i in range(200):
+    print('Trained accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))
     gr = training_gradient_fun(weights, inputs)
     weights -= gr * 0.01

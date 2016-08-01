@@ -39,12 +39,6 @@ weights = random.rand(*wshape) - 0.5
 
 training_gradient_fun = grad(training_loss)
 
-def NumpyVarToMinpy(var):
-  return minpy.array.Value.wrap(var)
-
-def MinpyVarToNumpy(var):
-  return minpy.array.Value.wrap(var).get_data(ArrayType.NUMPY)
-
 for i in range(20):
     print('Trained loss accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))
     gr = training_gradient_fun(weights, inputs)

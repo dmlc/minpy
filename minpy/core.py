@@ -120,7 +120,6 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
                 return ret
 
             return grad_func
-
         return grad_wrapper
 
     prim = array.Primitive(func, ArrayType.MXNET)

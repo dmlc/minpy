@@ -11,7 +11,7 @@ from mxnet.ndarray import NDArray
 from . import mxnet_wrapper
 
 
-def unbroadcast(ans, x, gradfun):
+def _unbroadcast(ans, x, gradfun):
     """ Append the gradient function with an unbroadcast function """
     #pylint: disable= missing-docstring
     if isinstance(ans, NDArray) and isinstance(x, NDArray):
@@ -33,17 +33,8 @@ def unbroadcast(ans, x, gradfun):
         return gradfun
     #pylint: enable= missing-docstring
 
-
-def register_primitives(reg, prim_wrapper):
-    """ Register primitives in mxnet package """
-    mxnet_wrapper.wrap_namespace(mxnet.ndarray.__dict__, reg, prim_wrapper)
-    # Additional primitives due to naming issues in MXNet.
-    reg.register('reshape', prim_wrapper(NDArray.reshape))
-
-
-def gen_sum_grad(ans, x, axis, keepdims):
+def _sum_grad(ans, x, axis=None, keepdims=False):
     """ Generate gradient function of sum """
-    xshape = list(x.shape)
     if axis is None:
         def grad(g):
             if isinstance(g, float) or isinstance(g, int):
@@ -55,10 +46,19 @@ def gen_sum_grad(ans, x, axis, keepdims):
         axis = [axis]
     elif isinstance(axis, tuple):
         axis = list(axis)
+    ans_shape_expanded = list(x.shape)
     for a in axis:
-        xshape[a] = 1
-    return lambda g: ndarray.zeros(x.shape, ctx=g.context) + g.reshape(tuple(xshape))
+        ans_shape_expanded[a] = 1
+    xshape = x.shape  # Only shape is needed, hope array `x` could be GC'ed.
+    return lambda g: ndarray.zeros(xshape, ctx=g.context) + g.reshape(tuple(ans_shape_expanded))
 
+################################################################
+# Functions exposed for primitive & gradient registry
+def register_primitives(reg, prim_wrapper):
+    """ Register primitives in mxnet package """
+    mxnet_wrapper.wrap_namespace(mxnet.ndarray.__dict__, reg, prim_wrapper)
+    # Additional primitives due to naming issues in MXNet.
+    reg.register('reshape', prim_wrapper(NDArray.reshape))
 
 def def_grads(reg, prims):
     """ Define gradient function for primitives """
@@ -72,39 +72,34 @@ def def_grads(reg, prims):
     prims('exp').def_grad(lambda ans, x: lambda g: g * ans)
     prims('log').def_grad(lambda ans, x: lambda g: g / x)
     # reduce
-    prims('sum').def_grad(
-        lambda ans, x, axis=None, keepdims=False: gen_sum_grad(
-            ans,
-            x,
-            axis,
-            keepdims))
+    prims('sum').def_grad(_sum_grad)
     # + - * /
     prims('multiply').def_grad(
-        lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y))
+        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y))
     prims('multiply').def_grad(
-        lambda ans, x, y: unbroadcast(ans, y, lambda g: x * g),
+        lambda ans, x, y: _unbroadcast(ans, y, lambda g: x * g),
         argnum=1)
-    prims('add').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
-    prims('add').def_grad(lambda ans, x, y: unbroadcast(ans, y, identity),
+    prims('add').def_grad(lambda ans, x, y: _unbroadcast(ans, x, identity))
+    prims('add').def_grad(lambda ans, x, y: _unbroadcast(ans, y, identity),
                           argnum=1)
-    prims('subtract').def_grad(lambda ans, x, y: unbroadcast(ans, x, identity))
+    prims('subtract').def_grad(lambda ans, x, y: _unbroadcast(ans, x, identity))
     prims('subtract').def_grad(
-        lambda ans, x, y: unbroadcast(ans, y, operator.neg),
+        lambda ans, x, y: _unbroadcast(ans, y, operator.neg),
         argnum=1)
     prims('divide').def_grad(
-        lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
+        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g / y))
     prims('divide').def_grad(
-        lambda ans, x, y: unbroadcast(ans, y, lambda g: -g * x / (y * y)),
+        lambda ans, x, y: _unbroadcast(ans, y, lambda g: -g * x / (y * y)),
         argnum=1)
     prims('true_divide').def_grad(
-        lambda ans, x, y: unbroadcast(ans, x, lambda g: g / y))
+        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g / y))
     prims('true_divide').def_grad(
-        lambda ans, x, y: unbroadcast(ans, y, lambda g: -g * x / (y * y)),
+        lambda ans, x, y: _unbroadcast(ans, y, lambda g: -g * x / (y * y)),
         argnum=1)
     # mod
-    #prims.mod.def_grad(lambda ans, x, y : unbroadcast(ans, x, identity))
+    #prims.mod.def_grad(lambda ans, x, y : _unbroadcast(ans, x, identity))
     #prims.mod.def_grad(
-    #lambda ans, x, y : unbroadcast(ans, y, lambda g : - g * ndarray.floor(x/y)), argnum=1)
+    #lambda ans, x, y : _unbroadcast(ans, y, lambda g : - g * ndarray.floor(x/y)), argnum=1)
     # negate
     prims('negative').def_grad(lambda ans, x: operator.neg)
     prims('transpose').def_grad(lambda ans, x: mxnet.nd.transpose)
@@ -117,9 +112,9 @@ def def_grads(reg, prims):
     prims('sin').def_grad(lambda ans, x: lambda g: g * mxnet.nd.cos(x))
     prims('cos').def_grad(lambda ans, x: lambda g: -g * mxnet.nd.sin(x))
     prims('power').def_grad(
-        lambda ans, x, y: unbroadcast(ans, x, lambda g: g * y * mxnet.nd.power(x, y - 1)))
+        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y * mxnet.nd.power(x, y - 1)))
     prims('power').def_grad(
-        lambda ans, x, y: unbroadcast(ans, y, lambda g: g * mxnet.nd.log(x) * ans),
+        lambda ans, x, y: _unbroadcast(ans, y, lambda g: g * mxnet.nd.log(x) * ans),
         argnum=1)
     prims('reshape').def_grad(
         lambda _0, x, _1: lambda g: mxnet.nd.NDArray.reshape(g, x.shape))
