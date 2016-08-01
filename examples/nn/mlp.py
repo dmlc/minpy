@@ -1,13 +1,14 @@
 """ Simple multi-layer perception neural network using Minpy """
 import sys
+import argparse
+
 import minpy
-import numpy as np
-import numpy.random as npr
+import minpy.numpy as np
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
-from minpy.utils.data_utils import get_CIFAR10_data
 from minpy.nn.io import NDArrayIter
+from examples.utils.data_utils import get_CIFAR10_data
 
 class TwoLayerNet(ModelBase):
     def __init__(self,
@@ -29,9 +30,9 @@ class TwoLayerNet(ModelBase):
     def loss(self, predict, y):
         return layers.softmax_loss(predict, y)
 
-def main(_):
+def main(args):
     model = TwoLayerNet()
-    data = get_CIFAR10_data()
+    data = get_CIFAR10_data(args.data_dir)
     # reshape all data to matrix
     data['X_train'] = data['X_train'].reshape([data['X_train'].shape[0], 3 * 32 * 32])
     data['X_val'] = data['X_val'].reshape([data['X_val'].shape[0], 3 * 32 * 32])
@@ -39,13 +40,13 @@ def main(_):
 
     train_dataiter = NDArrayIter(data['X_train'],
                          data['y_train'],
-                         100,
-                         True)
+                         batch_size=10,
+                         shuffle=True)
 
     test_dataiter = NDArrayIter(data['X_test'],
                          data['y_test'],
-                         100,
-                         True)
+                         batch_size=10,
+                         shuffle=False)
 
     solver = Solver(model,
                     train_dataiter,
@@ -58,9 +59,14 @@ def main(_):
                         'momentum': 0.9
                     },
                     verbose=True,
-                    print_every=20)
+                    print_every=1)
     solver.init()
     solver.train()
 
 if __name__ == '__main__':
-    main(sys.argv)
+    parser = argparse.ArgumentParser(description="Multi-layer perceptron example using minpy operators")
+    parser.add_argument('--data_dir',
+                        type=str,
+                        required=True,
+                        help='Directory that contains cifar10 data')
+    main(parser.parse_args())

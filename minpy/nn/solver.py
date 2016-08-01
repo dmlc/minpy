@@ -1,6 +1,7 @@
 """ SGD solver class for quick training. Adapted from cs231n lab codes. """
 from __future__ import division
 from __future__ import absolute_import
+from __future__ import print_function
 
 from minpy.nn import optim, init
 from minpy import core
@@ -32,12 +33,12 @@ class Solver(object):
  
   train_dataiter = NDArrayIter(data['X_train'],
                          data['y_train'],
-                         100,
-                         True)
+                         batch_size=100,
+                         shuffle=True)
   test_dataiter = NDArrayIter(data['X_val'],
                          data['y_val'],
-                         100,
-                         True)
+                         batch_size=100,
+                         shuffle=False)
 
   model = MyAwesomeModel(hidden_size=100, reg=10)
   solver = Solver(model, train_dataiter, test_dataiter,
@@ -46,7 +47,7 @@ class Solver(object):
                     'learning_rate': 1e-3,
                   },
                   lr_decay=0.95,
-                  num_epochs=10, batch_size=100,
+                  num_epochs=10,
                   print_every=100)
   solver.train()
   """
@@ -71,8 +72,6 @@ class Solver(object):
           'learning_rate' parameter so that should always be present.
         - lr_decay: A scalar for learning rate decay; after each epoch the learning
           rate is multiplied by this value.
-        - batch_size: Size of minibatches used to compute loss and gradient during
-          training.
         - num_epochs: The number of epochs to run for during training.
         - print_every: Integer; training losses will be printed every print_every
           iterations.
@@ -89,7 +88,6 @@ class Solver(object):
         self.update_rule = kwargs.pop('update_rule', 'sgd')
         self.optim_config = kwargs.pop('optim_config', {})
         self.lr_decay = kwargs.pop('lr_decay', 1.0)
-        self.batch_size = kwargs.pop('batch_size', 100)
         self.num_epochs = kwargs.pop('num_epochs', 10)
 
         self.print_every = kwargs.pop('print_every', 10)
@@ -173,7 +171,7 @@ class Solver(object):
             self.model.params[p] = next_w
             self.optim_configs[p] = next_config
 
-    def check_accuracy(self, dataiter, num_samples=None, batch_size=100):
+    def check_accuracy(self, dataiter, num_samples=None):
         """
         Check accuracy of the model on the provided data.
         
@@ -181,8 +179,6 @@ class Solver(object):
         - dataiter: data iterator that can produce batch
         - num_samples: If not None, subsample the data and only test the model
           on num_samples datapoints.
-        - batch_size: Split X and y into batches of this size to avoid using too
-          much memory.
           
         Returns:
         - acc: Scalar giving the fraction of instances that were correctly
@@ -218,8 +214,8 @@ class Solver(object):
         """
         num_iterations = self.train_dataiter.getnumiterations() * self.num_epochs
         t = 0
-        for epoch in xrange(self.num_epochs):
-            print 'epoch %d ' % (epoch)
+        for epoch in range(self.num_epochs):
+            print('epoch %d ' % (epoch))
             for each_batch in self.train_dataiter:
                 self._step(each_batch)
                  # Maybe print training loss
@@ -231,10 +227,8 @@ class Solver(object):
 
             # evaluate after each epoch
             train_acc = self.check_accuracy(self.train_dataiter,
-                                            num_samples=1000,
-                                            batch_size=self.batch_size)
-            val_acc = self.check_accuracy(self.test_dataiter,
-                                          batch_size=self.batch_size)
+                                            num_samples=1000)
+            val_acc = self.check_accuracy(self.test_dataiter)
             self.train_acc_history.append(train_acc)
             self.val_acc_history.append(val_acc)            
             

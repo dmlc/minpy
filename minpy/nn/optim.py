@@ -64,17 +64,9 @@ def sgd_momentum(w, dw, config=None):
     config.setdefault('momentum', 0.9)
     v = config.get('velocity', np.zeros_like(w))
 
-    #############################################################################
-    # TODO: Implement the momentum update formula. Store the updated value in   #
-    # the next_w variable. You should also use and update the velocity v.       #
-    #############################################################################
-
     v = v * config['momentum'] - dw * config['learning_rate']
     next_w = w + v
 
-    #############################################################################
-    #                             END OF YOUR CODE                              #
-    #############################################################################
     config['velocity'] = v
 
     return next_w, config
@@ -102,7 +94,7 @@ def rmsprop(x, dx, config=None):
     cache = config['cache']
     #############################################################################
     # TODO: Implement the RMSprop update formula, storing the next value of x   #
-    # in the next_x variable. Don't forget to update cache value stored in      #  
+    # in the next_x variable. Don't forget to update cache value stored in      #
     # config['cache'].                                                          #
     #############################################################################
     cache = cache * config['decay_rate'] + dx**2 * (1 - config['decay_rate'])

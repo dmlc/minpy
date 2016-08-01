@@ -110,7 +110,7 @@ def batchnorm(x,
     else:
         raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
-    # return the updated running means 
+    # return the updated running means
     return out, running_mean, running_var
 
 @wraps('lazy')
@@ -198,4 +198,5 @@ def softmax_loss(x, y):
 
 @wraps('lazy')
 def l2_loss(x, y):
-    return np.sum((x - y) ** 2)
+    N = x.shape[0]
+    return np.sum((x - y) ** 2) / N

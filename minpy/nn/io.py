@@ -208,8 +208,8 @@ class NDArrayIter(DataIter):
 
     def next(self):
         if self.iter_next():
-            return DataBatch(data=self.getdata(), label=self.getlabel(), \
-                    pad=self.getpad(), index=None)
+            return DataBatch(data=self.getdata(), label=self.getlabel(),
+                             pad=self.getpad(), index=None)
         else:
             raise StopIteration
 
@@ -217,7 +217,7 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays, internal use only"""
         assert(self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            return [x[1][self.cursor:self.cursor+self.batch_size] for x in data_source]
+            return [x[1][self.cursor:self.cursor + self.batch_size] for x in data_source]
         else:
             pad = self.batch_size - self.num_data + self.cursor
             return [np.concatenate((x[1][self.cursor:], x[1][:pad]),
@@ -235,7 +235,7 @@ class NDArrayIter(DataIter):
             return self.cursor + self.batch_size - self.num_data
         else:
             return 0
-    
+
     def getsubiter(self, num_samples):
         """Create a sub dataiter which samples part of the data in the dataset"""
         idx = np.arange(self.data[0][1].shape[0])

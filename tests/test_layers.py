@@ -12,9 +12,10 @@ def test_affine():
     x = rng.randn(20, 10)
     b = rng.randn(20, 1)
     fake_y = np.zeros([20, 5])
+    fake_y[:,0] = 1
 
     def check_fn(w):
-        return layers.l2_loss(layers.affine(x, w, b), fake_y)
+        return layers.softmax_loss(layers.affine(x, w, b), fake_y)
 
     w = rng.randn(10, 5)
     gradient_checker.quick_grad_check(check_fn, w, rs=rng)
@@ -65,7 +66,7 @@ def test_mxnet_affine():
     weights = rng.randn(20, 40) - 0.5
     inputs = mx.sym.Variable(name='x')
     fc = mx.sym.FullyConnected(name='fc', data=inputs, num_hidden=20)
-    f = core.function(fc, [('x', xshape)])
+    f = core.function(fc, {'x': xshape})
 
     def check_fn(x):
         return layers.l2_loss(f(x=x, fc_weight=weights), fake_y)
