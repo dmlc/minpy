@@ -97,26 +97,31 @@ class Node(object):
         # Array used to store intermediate gradients to be computed.
         pending_derivatives = []
 
-        # Use BFS search to find all derivatives need to be computed in order to get the gradient
-        # of final target
-        bfs_queue = [self]
-        while len(bfs_queue) != 0:
-            node = bfs_queue.pop()
+        # Use DFS search to find all derivatives need to be computed in order to get the gradient
+        # of final target.
+        dfs_queue = [self]
+        while len(dfs_queue) != 0:
+            node = dfs_queue[-1]
             assert isinstance(target, Node), 'Type is not `Node`.'
-            if target in node._partial_derivative_cache:
-                continue
-            else:
-                pending_derivatives.append(node)
-                # Init gradient buffer for accumulation
-                node._partial_derivative_cache[target] = Value.wrap(
-                    0.0 if isinstance(node._value, Number) else numpy.zeros(node._value.shape))
+            ready = True
+            if target is not node:
                 for rec in node._partial_derivatives:
-                    # Search required gradient computation.
-                    bfs_queue.append(rec.result)
+                    n = rec.result
+                    if target not in n._partial_derivative_cache:
+                        dfs_queue.append(n)
+                        ready = False
+            # Successors all enqueued.
+            if ready:
+                dfs_queue.pop()
+                if target not in node._partial_derivative_cache:
+                    pending_derivatives.append(node)
+                    # Init gradient buffer for accumulation.
+                    node._partial_derivative_cache[target] = Value.wrap(
+                        0.0 if isinstance(node._value, Number) else numpy.zeros(node._value.shape))
 
         # Compute gradient using chain rule.
-        # NOTE: the resolve order is the reversed order from target to input.
-        for node in reversed(pending_derivatives):
+        # The resolve order is the reversed order from target to input.
+        for node in pending_derivatives:
             if node is target:
                 # Current gradient node is the target node, the gradient is one.
                 node._partial_derivative_cache[target] = Value.wrap(
