@@ -60,7 +60,7 @@ class Registry(object):
         :param str name: Primitive name.
         :param tuple bp_args: Positional arguments that need back propagation.
         :param tuple bp_kwargs: Keyword arguments that need back propagation.
-        :return: Primitives that satisfy above requirements.
+        :return: Primitives that satisfy the requirements above.
         """
         if name not in self._reg:
             return iter([])

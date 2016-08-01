@@ -15,8 +15,8 @@ def _minpy_getitem(arr, index):
 
 def _minpy_getitem_grad(arr, index, g):
     """ Gradient of slice operation """
-    ret = np.zeros(arr.shape)
-    ret[index] = g
+    ret = np.zeros_like(arr)
+    np.add.at(ret, index, g)
     return ret
 
 
@@ -186,3 +186,8 @@ def def_grads(reg, prims):
         lambda ans, x, index: lambda g: _minpy_getitem_grad(x, index, g))
     prims('reshape').def_grad(
         lambda ans, x, _1: lambda g: np.reshape(g, x.shape))
+    prims('append').def_grad(
+        lambda ans, arr, values, axis=None: lambda g: np.split(g, [arr.shape[axis]], axis)[0])
+    prims('append').def_grad(
+        lambda ans, arr, values, axis=None: lambda g: np.split(g, [arr.shape[axis]], axis)[1],
+        argnum=1)
