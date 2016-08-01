@@ -3,7 +3,7 @@ from minpy.core import wraps
 import minpy.dispatch.policy as policy
 
 
-np.set_policy(policy.OnlyNumpyPolicy())
+#np.set_policy(policy.OnlyNumPyPolicy())
 
 
 @wraps()
