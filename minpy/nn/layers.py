@@ -110,7 +110,7 @@ def batchnorm(x,
     else:
         raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
-    # return the updated running means 
+    # return the updated running means
     return out, running_mean, running_var
 
 @wraps('lazy')

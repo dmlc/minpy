@@ -94,7 +94,7 @@ def rmsprop(x, dx, config=None):
     cache = config['cache']
     #############################################################################
     # TODO: Implement the RMSprop update formula, storing the next value of x   #
-    # in the next_x variable. Don't forget to update cache value stored in      #  
+    # in the next_x variable. Don't forget to update cache value stored in      #
     # config['cache'].                                                          #
     #############################################################################
     cache = cache * config['decay_rate'] + dx**2 * (1 - config['decay_rate'])
