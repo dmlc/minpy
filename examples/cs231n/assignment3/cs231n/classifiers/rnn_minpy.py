@@ -29,7 +29,7 @@ class CaptioningRNN(object):
     - input_dim: Dimension D of input image feature vectors.
     - wordvec_dim: Dimension W of word vectors.
     - hidden_dim: Dimension H for the hidden state of the RNN.
-    - cell_type: What type of RNN to use; either 'rnn' or 'lstm'.
+    - cell_type: What type of RNN to use; either 'rnn' or 'l#stm'.
     - dtype: numpy datatype to use; use float32 for training and float64 for
       numeric gradient checking.
     """
@@ -192,7 +192,8 @@ class CaptioningRNN(object):
       of captions should be the first sampled word, not the <START> token.
     """
     N = features.shape[0]
-    captions = self._null * np.ones((N, max_length), dtype=np.int32)
+    #captions = self._null * np.ones((N, max_length), dtype=np.int32)
+    captions = self._null * np.ones((N, max_length), dtype=int)
 
     # Unpack parameters
     W_proj, b_proj = self.params['W_proj'], self.params['b_proj']
@@ -200,29 +201,30 @@ class CaptioningRNN(object):
     Wx, Wh, b = self.params['Wx'], self.params['Wh'], self.params['b']
     W_vocab, b_vocab = self.params['W_vocab'], self.params['b_vocab']
     
-    h, _ = affine_forward(features, W_proj, b_proj)
+    h = affine_forward(features, W_proj, b_proj)
 
     if self.cell_type == 'lstm':
-      c = np.zeros(h0.shape)
+      c = np.zeros(h.shape)
 
     start = self._start * np.ones(N, dtype=int)
 
     for t in xrange(max_length):
       # (1) Embed the previous word using the learned word embeddings
-      embed, _ = word_embedding_forward(start, W_embed)
+      embed = word_embedding_forward(start, W_embed)
       # (2) Make an RNN / LSTM step using the previous hidden state and the
       #      embedded current word to get the next hidden state.
       if self.cell_type == 'rnn':
-        h, _ = rnn_step_forward(embed, h, Wx, Wh, b)
+        h = rnn_step_forward(embed, h, Wx, Wh, b)
       else:
-        h, c, _ = lstm_step_forward(embed, h, c, Wx, Wh, b)
+        h, c = lstm_step_forward(embed, h, c, Wx, Wh, b)
       # (3) Apply the learned affine transformation to the next hidden state to
       #     get scores for all words in the vocabulary
-      out, _ = affine_forward(h, W_vocab, b_vocab)
+      out = affine_forward(h, W_vocab, b_vocab)
 
       # (4) Select the word with the highest score as the next word, writing it
       #     to the appropriate slot in the captions variable  
-      x = out.argmax(axis=1)
+      #x = out.argmax(axis=1)
+      x = np.argmax(out, axis=1)
 
       captions[:, t] = x
     ############################################################################

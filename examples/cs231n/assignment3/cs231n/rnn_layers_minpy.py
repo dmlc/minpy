@@ -1,13 +1,17 @@
 import minpy.numpy as np
 import minpy.dispatch.policy as policy
 from minpy.core import wraps
-from minpy.symbol import sigmoid
 
 
 np.set_policy(policy.OnlyNumpyPolicy())
 
 
 # This function returns minpy array.
+@wraps()
+def sigmoid(x):
+  return 1/(1+np.exp(-x)) 
+
+
 @wraps()
 def rnn_step_forward(x, prev_h, Wx, Wh, b):
   """
