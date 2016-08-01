@@ -68,7 +68,7 @@ class Node(object):
 
     def partial_derivative(self, target):
         """Get partial derivative. Mathematically, this function computes
-           
+
            \\frac{\\partial{}target}{\\partial{}self}
 
         :param Node target: Target variable to compute partial derivative.
