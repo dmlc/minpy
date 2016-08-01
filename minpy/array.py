@@ -472,6 +472,20 @@ class Array(Value):
             raise ValueError('out option is not supported.')
         return Value._ns.dot(self, b)
 
+    def argmax(self, axis=None, out=None):
+        """ Returns the indices of the maximum values along an axis
+
+        See `here <http://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_
+        for further explanation.
+
+        :param axis: int. By default, the index is into the flattened array,
+            otherwise along the specified axis.
+        :param out: If provided, the result will be inserted into this array.
+            It should be of the appropriate shape and dtype.
+        :return: Array of indices into the array.
+        """
+        return Value._ns.argmax(self, axis)
+
     def _synchronize_data(self):
         """ Synchronize the data of different array types. """
         if self._latest_version == ArrayType.MXNET:

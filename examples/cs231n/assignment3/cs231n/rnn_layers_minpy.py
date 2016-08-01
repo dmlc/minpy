@@ -3,7 +3,7 @@ import minpy.dispatch.policy as policy
 from minpy.core import wraps
 
 
-#np.set_policy(policy.OnlyNumPyPolicy())
+np.set_policy(policy.OnlyNumPyPolicy())
 
 
 # This function returns minpy array.
