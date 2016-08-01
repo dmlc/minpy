@@ -30,7 +30,7 @@ _logger = log.get_logger(__name__, logging.WARN)
 
 class UnknownArrayTypeError(TypeError):
     """Unsupported underlying array type.
-    
+
     Now only support ``numpy.ndarray`` and ``mxnet.ndarray``.
     """
     pass
@@ -65,7 +65,9 @@ class Node(object):
     def partial_derivative(self, target):
         """Get partial derivative. Mathematically, this function computes
 
-           \\frac{\\partial{}target}{\\partial{}self}
+        .. math::
+
+           \\frac{\\partial target}{\\partial self}.
 
         :param Node target: Target variable to compute partial derivative.
         :return: Partial derivative.
