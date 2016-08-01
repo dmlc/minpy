@@ -3,7 +3,7 @@ import minpy.numpy as np
 import minpy.numpy.random as random
 import minpy.dispatch.policy as policy
 from minpy.utils import gradient_checker
-#np.set_policy(policy.OnlyNumpyPolicy())
+#np.set_policy(policy.OnlyNumPyPolicy())
 
 wshape = (500, 250)
 weights = random.rand(*wshape) - 0.5

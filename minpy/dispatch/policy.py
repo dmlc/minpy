@@ -47,8 +47,8 @@ class PreferMXNetPolicy(Policy):
             return None
 
 
-class OnlyNumpyPolicy(Policy):
-    """ Only use Numpy functions. Return None if no required function. """
+class OnlyNumPyPolicy(Policy):
+    """ Only use NumPy functions. Return None if no required function. """
 
     def decide(self, candidates, args, kwargs):
         if ArrayType.NUMPY in tuple(x.type for x in candidates):

@@ -7,7 +7,7 @@ from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
 import minpy.numpy.random as random
 
-np.set_policy(policy.OnlyNumpyPolicy())
+np.set_policy(policy.OnlyNumPyPolicy())
 #np.set_policy(policy.PreferMXNetPolicy())
 
 
