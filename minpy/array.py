@@ -428,27 +428,30 @@ class Array(Value):
         return atype in self._data.keys()
 
     def reshape(self, *args, **kwargs):
-        """ Function for reshape this array
+        """Function for reshape this array.
 
         Usage example:
-        Assume a = np.ones([10, 10])
-        b = a.reshape([5, 20])
-        b = a.reshape(5, 20)
 
-        See http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html
+        ::
+
+            a = np.ones([10, 10])
+            b = a.reshape([5, 20])
+            b = a.reshape(5, 20)
+
+        See `here <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`_
         for further explanation.
 
-        :param args: a single iterable or a sequence of ints representing a new shape
-        :return: reshaped array (minpy array)
+        :param args: A single iterable or a sequence of integers representing a new shape.
+            Although it being an iterable is not documented in official document, it is renowned and
+            widely used in practice.
+        :return: Reshaped array.
         """
-        # Although this usage is not documented in numpy official doc, it is renowned and
-        # widely used in practice
         if len(args) == 1 and isinstance(args[0], collections.Iterable):
             new_shape = args[0]
         else:
             new_shape = tuple(x for x in args)
         if 'order' in kwargs and kwargs['order'] != 'C':
-            raise ValueError(
+            raise NotImplementedError(
                 'Orders other than C are not currently supported.')
         return Value._ns.reshape(self, new_shape)
 
