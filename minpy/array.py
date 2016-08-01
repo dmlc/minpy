@@ -42,7 +42,10 @@ class AutogradError(ValueError):
     """ Error during auto differentiation """
     pass
 
-GradRecord = collections.namedtuple('GradRecord', ['grad_func', 'result', 'primitive'])
+
+GradRecord = collections.namedtuple('GradRecord',
+                                    ['grad_func', 'result', 'primitive'])
+
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -62,9 +65,9 @@ class Node(object):
         :param Primitive prim: Primitive that the gradient function belongs to.
         """
         assert isinstance(res, Node), 'Result is not of type `Node`.'
-        self._partial_derivatives.append(GradRecord(grad_func=grad_func,
-                                                    result=res,
-                                                    primitive=prim))
+        self._partial_derivatives.append(
+            GradRecord(
+                grad_func=grad_func, result=res, primitive=prim))
 
     def partial_derivative(self, target):
         """Get partial derivative. Mathematically, this function computes
@@ -74,6 +77,7 @@ class Node(object):
         :param Node target: Target variable to compute partial derivative.
         :return: Partial derivative.
         """
+
         def _call_partial_derivative(rec):
             """Helper function for calling gradient function.
 
@@ -84,7 +88,8 @@ class Node(object):
             # computed.
             result_grad = rec.result._partial_derivative_cache[target]
             result_grad_value = result_grad.get_data(rec.primitive._type)
-            _logger.debug('Call derivative func of "{}".'.format(rec.primitive._func))
+            _logger.debug('Call derivative func of "{}".'.format(
+                rec.primitive._func))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
                 # Currently all MXNet function call will be performed on GPU 0.
@@ -117,7 +122,8 @@ class Node(object):
                     pending_derivatives.append(node)
                     # Init gradient buffer for accumulation.
                     node._partial_derivative_cache[target] = Value.wrap(
-                        0.0 if isinstance(node._value, Number) else numpy.zeros(node._value.shape))
+                        0.0 if isinstance(node._value, Number) else
+                        numpy.zeros(node._value.shape))
 
         # Compute gradient using chain rule.
         # The resolve order is the reversed order from target to input.
@@ -125,7 +131,8 @@ class Node(object):
             if node is target:
                 # Current gradient node is the target node, the gradient is one.
                 node._partial_derivative_cache[target] = Value.wrap(
-                    1.0 if isinstance(node._value, Number) else numpy.ones(node._value.shape))
+                    1.0 if isinstance(node._value, Number) else numpy.ones(
+                        node._value.shape))
             else:
                 # Call saved gradient function to compute gradient of each input.
                 for rec in node._partial_derivatives:
@@ -446,7 +453,8 @@ class Array(Value):
         else:
             new_shape = tuple(x for x in args)
         if 'order' in kwargs and kwargs['order'] != 'C':
-            raise ValueError('Orders other than C are not currently supported.')
+            raise ValueError(
+                'Orders other than C are not currently supported.')
         return Value._ns.reshape(self, new_shape)
 
     def dot(self, b, out=None):
