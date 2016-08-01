@@ -206,11 +206,11 @@ class CaptioningRNN(object):
     if self.cell_type == 'lstm':
       c = np.zeros(h.shape)
 
-    start = self._start * np.ones(N, dtype=int)
+    embed = self._start * np.ones(N, dtype=int)
 
     for t in xrange(max_length):
       # (1) Embed the previous word using the learned word embeddings
-      embed = word_embedding_forward(start, W_embed)
+      embed = word_embedding_forward(embed, W_embed)
       # (2) Make an RNN / LSTM step using the previous hidden state and the
       #      embedded current word to get the next hidden state.
       if self.cell_type == 'rnn':
@@ -224,9 +224,9 @@ class CaptioningRNN(object):
       # (4) Select the word with the highest score as the next word, writing it
       #     to the appropriate slot in the captions variable  
       #x = out.argmax(axis=1)
-      x = np.argmax(out, axis=1)
+      embed = np.argmax(out, axis=1)
 
-      captions[:, t] = x
+      captions[:, t] = embed
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
