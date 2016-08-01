@@ -29,17 +29,10 @@ _logger = log.get_logger(__name__, logging.WARN)
 
 
 class UnknownArrayTypeError(TypeError):
-    """ Unsupported underlying array type (now only support: numpy.ndarray and mxnet.ndarray)"""
-    pass
-
-
-class NoImplementationError(ValueError):
-    """ Throw if not implemented currently """
-    pass
-
-
-class AutogradError(ValueError):
-    """ Error during auto differentiation """
+    """Unsupported underlying array type.
+    
+    Now only support ``numpy.ndarray`` and ``mxnet.ndarray``.
+    """
     pass
 
 
@@ -178,7 +171,7 @@ class Value(object):
             raise UnknownArrayTypeError('cannot wrap type: {}'.format(dtype))
 
     def __cmp__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __eq__(self, other):
         return Value._ns.equal(self, other)
@@ -199,28 +192,28 @@ class Value(object):
         return Value._ns.greater_equal(self, other)
 
     def __pos__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __neg__(self):
         return Value._ns.negative(self)
 
     def __abs__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __invert__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __round__(self, nbits):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __floor__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __ceil__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __trunc__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __add__(self, other):
         return Value._ns.add(self, other)
@@ -232,7 +225,7 @@ class Value(object):
         return Value._ns.multiply(self, other)
 
     def __floordiv__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __div__(self, other):
         return Value._ns.divide(self, other)
@@ -244,25 +237,25 @@ class Value(object):
         return Value._ns.mod(self, other)
 
     def __divmod__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __pow__(self, other):
         return Value._ns.power(self, other)
 
     def __lshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __and__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __or__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __xor__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __radd__(self, other):
         return Value._ns.add(other, self)
@@ -274,7 +267,7 @@ class Value(object):
         return Value._ns.multiply(other, self)
 
     def __rfloordiv__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rdiv__(self, other):
         return Value._ns.divide(other, self)
@@ -292,19 +285,19 @@ class Value(object):
         return Value._ns.power(other, self)
 
     def __rlshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rrshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rand__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __ror__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rxor__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __iadd__(self, other):
         return Value._ns.add(self, other)
@@ -316,7 +309,7 @@ class Value(object):
         return Value._ns.multiply(self, other)
 
     def __ifloordiv__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __idiv__(self, other):
         return Value._ns.divide(self, other)
@@ -331,19 +324,19 @@ class Value(object):
         return Value._ns.power(self, other)
 
     def __ilshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __irshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __iand__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __ior__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __ixor__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
     # pylint: enable= no-self-use
 
 

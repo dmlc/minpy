@@ -27,7 +27,7 @@ class Policy(object):
         :param dict kwargs: The keyword arguments passed to the primitive.
         :return: Which implementation type will be used.
         """
-        raise PrimitivePolicyError('Unimplemented.')
+        raise NotImplementedError()
 
     @property
     def name(self):
