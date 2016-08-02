@@ -25,7 +25,7 @@ def _minpy_getitem_grad(arr, index, g):
     return ret
 
 
-def _minpy_amax_grad(ans, a, axis, out, keepdims):
+def _minpy_amax_amin_grad(ans, a, axis, out, keepdims):
     """ Gradient of amax function """
     repeater, _ = _match_shape(a, axis, keepdims=keepdims)
     argmax_locations = a == repeater(ans)
@@ -126,6 +126,7 @@ def _sum_grad(ans, x, axis=None, keepdims=False):
     xshape = x.shape  # Only shape is needed, hope array `x` could be GC'ed.
     return lambda g: np.zeros(xshape) + np.reshape(g, ans_shape_expanded)
 
+# TODO: Clean one of the implementations
 import sys
 def _chooser_grad(ans, x, axis=None, keepdims=False):
     """ Generate gradient function of max """
@@ -177,19 +178,20 @@ def def_grads(reg, prims):
 
     # Reducing functions.
     prims('sum').def_grad(_sum_grad)
-    #prims('max').def_grad(_chooser_grad)
-    #prims('min').def_grad(_chooser_grad)
-    #prims('amax').def_grad(_chooser_grad)
-    #prims('amin').def_grad(_chooser_grad)
-    prims('min').def_grad_zero()
-    prims('amin').def_grad_zero()
     prims('max').def_grad(
-        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_grad(ans, a, axis, out, keepdims)
+        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_amin_grad(ans, a, axis, out, keepdims)
     )
     prims('amax').def_grad(
-        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_grad(ans, a, axis, out, keepdims)
+        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_amin_grad(ans, a, axis, out, keepdims)
     )
-   # Binary functions
+    prims('min').def_grad(
+        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_amin_grad(ans, a, axis, out, keepdims)
+    )
+    prims('amin').def_grad(
+        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_amin_grad(ans, a, axis, out, keepdims)
+    )
+    
+    # Binary functions
     prims('multiply').def_grad(
         lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y))
     prims('multiply').def_grad(
