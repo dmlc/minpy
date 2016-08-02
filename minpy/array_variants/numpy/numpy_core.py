@@ -257,6 +257,3 @@ def def_grads(reg, prims):
     prims('append').def_grad(
         lambda ans, arr, values, axis=None: lambda g: np.split(g, [arr.shape[axis]], axis)[1],
         argnum=1)
-    prims('max').def_grad(
-        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_grad(ans, a, axis, out, keepdims)
-    )
