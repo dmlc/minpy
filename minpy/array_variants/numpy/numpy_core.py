@@ -27,12 +27,12 @@ def _minpy_getitem_grad(arr, index, g):
 
 def _minpy_amax_grad(ans, a, axis, out, keepdims):
     """ Gradient of amax function """
-    repeater, _ = match_shape(a, axis, keepdims=keepdims)
+    repeater, _ = _match_shape(a, axis, keepdims=keepdims)
     argmax_locations = a == repeater(ans)
     return lambda g: repeater(g) * argmax_locations
 
 
-def match_shape(a, axis, keepdims):
+def _match_shape(a, axis, keepdims):
     """ Return a function repeats input to match a given shape
 
     This function generates a function f l: m, n that repeats
