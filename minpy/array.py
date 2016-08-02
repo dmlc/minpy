@@ -484,6 +484,9 @@ class Array(Value):
             It should be of the appropriate shape and dtype.
         :return: Array of indices into the array.
         """
+        if out is not None:
+            # TODO: Support out argument
+            raise ValueError('out option is not supported.')
         return Value._ns.argmax(self, axis)
 
     def _synchronize_data(self):
