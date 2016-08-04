@@ -31,9 +31,6 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
   Returns a tuple of:
   - next_h: Next hidden state, of shape (N, H)
   """
-  # Note that currently minpy does not fully support a.dot(b) property method
-  # the following is preferred:
-  # next_h = np.tanh(np.dot(x, Wx) + np.dot(prev_h, Wh) + b)
   next_h = np.tanh(x.dot(Wx) + prev_h.dot(Wh) + b)
   return next_h
 
