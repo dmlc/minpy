@@ -87,7 +87,7 @@ class Node(object):
                 rec.primitive._func))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
-                # Currently all MXNet function call will be performed on GPU 0.
+                # Currently all MXNet function calls are performed on GPU 0.
                 with mxnet.gpu(0) as ctx:
                     grad = rec.grad_func(result_grad_value)
             else:
