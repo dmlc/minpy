@@ -10,16 +10,17 @@ from minpy.nn.solver import Solver
 from minpy.nn.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
+
 class TwoLayerNet(ModelBase):
     def __init__(self,
                  input_size=3 * 32 * 32,
                  hidden_size=512,
                  num_classes=10):
         super(TwoLayerNet, self).__init__()
-        self.param_configs['w1'] = { 'shape': [input_size, hidden_size] }
-        self.param_configs['b1'] = { 'shape': [hidden_size,] }
-        self.param_configs['w2'] = { 'shape': [hidden_size, num_classes] }
-        self.param_configs['b2'] = { 'shape': [num_classes,] }
+        self.add_param(name='w1', shape=(input_size, hidden_size))\
+            .add_param(name='b1', shape=(hidden_size,))\
+            .add_param(name='w2', shape=(hidden_size, num_classes))\
+            .add_param(name='b2', shape=(num_classes,))
 
     def forward(self, X):
         y1 = layers.affine(X, self.params['w1'], self.params['b1'])
