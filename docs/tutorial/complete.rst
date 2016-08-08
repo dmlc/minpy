@@ -11,6 +11,9 @@ Flow:
 
 Example 1: two layer fully connected, with batch normalization and drop out (i.e. cs231n); fairly complete code snippets, with link to the full code
 
+.. literalinclude:: mlp.py
+  :linenos:
+
 Example 2: adding bn/dropout(?) to show more flexibility
 
 Example 3: replace some of the bottom layers with convolution, using mxnet symbolic computation; link to the code. Keypoint: only show the changes in the model and layer part; keypoint is solver/optimizer need not be touched
