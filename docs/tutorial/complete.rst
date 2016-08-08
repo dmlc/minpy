@@ -1,6 +1,11 @@
 Complete solver and optimizer guide
 ===================================
 
+In general, we advocate following the common coding style with the following modular partition:
+* *Model*: your main job!
+* *Layers*: building block of your model.
+* *Solver* and *optimizer*: takes your model, training and testing data, train it.
+
 The layer->model->solver (optimizer) pipeline
 
 Flow: 
