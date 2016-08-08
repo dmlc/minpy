@@ -3,7 +3,7 @@ import minpy.numpy as np
 import minpy.numpy.random as random
 import minpy.dispatch.policy as policy
 
-#np.set_policy(policy.OnlyNumpyPolicy())
+#np.set_policy(policy.OnlyNumPyPolicy())
 
 def sigmoid(x):
     return 1.0 / (1 + np.exp(-x))

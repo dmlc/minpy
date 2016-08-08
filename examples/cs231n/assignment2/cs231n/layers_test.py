@@ -6,7 +6,7 @@ from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
 import minpy.numpy.random as random
 
-np.set_policy(policy.OnlyNumpyPolicy())
+np.set_policy(policy.OnlyNumPyPolicy())
 
 #np.set_policy(policy.PreferMXNetPolicy())
 
@@ -528,7 +528,7 @@ def svm_loss(x, y, mode):
   - dx: Gradient of the loss with respect to x
   """
     if mode == 'cpu':
-        np.set_policy(policy.OnlyNumpyPolicy())
+        np.set_policy(policy.OnlyNumPyPolicy())
     else:
         np.set_policy(policy.PreferMXNetPolicy())
 

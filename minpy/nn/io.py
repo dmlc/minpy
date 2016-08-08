@@ -235,7 +235,7 @@ class NDArrayIter(DataIter):
             return self.cursor + self.batch_size - self.num_data
         else:
             return 0
-    
+
     def getsubiter(self, num_samples):
         """Create a sub dataiter which samples part of the data in the dataset"""
         idx = np.arange(self.data[0][1].shape[0])

@@ -29,20 +29,16 @@ _logger = log.get_logger(__name__)
 
 
 class UnknownArrayTypeError(TypeError):
-    """ Unsupported underlying array type (now only support: numpy.ndarray and mxnet.ndarray)"""
+    """Unsupported underlying array type.
+
+    Now only support ``numpy.ndarray`` and ``mxnet.ndarray``.
+    """
     pass
 
 
-class NoImplementationError(ValueError):
-    """ Throw if not implemented currently """
-    pass
+GradRecord = collections.namedtuple('GradRecord',
+                                    ['grad_func', 'result', 'primitive'])
 
-
-class AutogradError(ValueError):
-    """ Error during auto differentiation """
-    pass
-
-GradRecord = collections.namedtuple('GradRecord', ['grad_func', 'result', 'primitive'])
 
 class Node(object):
     """Node representing data with gradient information."""
@@ -62,18 +58,21 @@ class Node(object):
         :param Primitive prim: Primitive that the gradient function belongs to.
         """
         assert isinstance(res, Node), 'Result is not of type `Node`.'
-        self._partial_derivatives.append(GradRecord(grad_func=grad_func,
-                                                    result=res,
-                                                    primitive=prim))
+        self._partial_derivatives.append(
+            GradRecord(
+                grad_func=grad_func, result=res, primitive=prim))
 
     def partial_derivative(self, target):
         """Get partial derivative. Mathematically, this function computes
-           
-           \\frac{\\partial{}target}{\\partial{}self}
+
+        .. math::
+
+           \\frac{\\partial target}{\\partial self}.
 
         :param Node target: Target variable to compute partial derivative.
         :return: Partial derivative.
         """
+
         def _call_partial_derivative(rec):
             """Helper function for calling gradient function.
 
@@ -84,7 +83,8 @@ class Node(object):
             # computed.
             result_grad = rec.result._partial_derivative_cache[target]
             result_grad_value = result_grad.get_data(rec.primitive._type)
-            _logger.debug('Call derivative func of "{}".'.format(rec.primitive._func))
+            _logger.debug('Call derivative func of "{}".'.format(
+                rec.primitive._func))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
                 # Currently all MXNet function call will be performed on GPU 0.
@@ -97,30 +97,37 @@ class Node(object):
         # Array used to store intermediate gradients to be computed.
         pending_derivatives = []
 
-        # Use BFS search to find all derivatives need to be computed in order to get the gradient
-        # of final target
-        bfs_queue = [self]
-        while len(bfs_queue) != 0:
-            node = bfs_queue.pop()
+        # Use DFS search to find all derivatives need to be computed in order to get the gradient
+        # of final target.
+        dfs_queue = [self]
+        while len(dfs_queue) != 0:
+            node = dfs_queue[-1]
             assert isinstance(target, Node), 'Type is not `Node`.'
-            if target in node._partial_derivative_cache:
-                continue
-            else:
-                pending_derivatives.append(node)
-                # Init gradient buffer for accumulation
-                node._partial_derivative_cache[target] = Value.wrap(
-                    0.0 if isinstance(node._value, Number) else numpy.zeros(node._value.shape))
+            ready = True
+            if target is not node:
                 for rec in node._partial_derivatives:
-                    # Search required gradient computation.
-                    bfs_queue.append(rec.result)
+                    n = rec.result
+                    if target not in n._partial_derivative_cache:
+                        dfs_queue.append(n)
+                        ready = False
+            # Successors all enqueued.
+            if ready:
+                dfs_queue.pop()
+                if target not in node._partial_derivative_cache:
+                    pending_derivatives.append(node)
+                    # Init gradient buffer for accumulation.
+                    node._partial_derivative_cache[target] = Value.wrap(
+                        0.0 if isinstance(node._value, Number) else
+                        numpy.zeros(node._value.shape))
 
         # Compute gradient using chain rule.
-        # NOTE: the resolve order is the reversed order from target to input.
-        for node in reversed(pending_derivatives):
+        # The resolve order is the reversed order from target to input.
+        for node in pending_derivatives:
             if node is target:
                 # Current gradient node is the target node, the gradient is one.
                 node._partial_derivative_cache[target] = Value.wrap(
-                    1.0 if isinstance(node._value, Number) else numpy.ones(node._value.shape))
+                    1.0 if isinstance(node._value, Number) else numpy.ones(
+                        node._value.shape))
             else:
                 # Call saved gradient function to compute gradient of each input.
                 for rec in node._partial_derivatives:
@@ -166,7 +173,7 @@ class Value(object):
             raise UnknownArrayTypeError('cannot wrap type: {}'.format(dtype))
 
     def __cmp__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __eq__(self, other):
         return Value._ns.equal(self, other)
@@ -187,28 +194,28 @@ class Value(object):
         return Value._ns.greater_equal(self, other)
 
     def __pos__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __neg__(self):
         return Value._ns.negative(self)
 
     def __abs__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __invert__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __round__(self, nbits):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __floor__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __ceil__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __trunc__(self):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __add__(self, other):
         return Value._ns.add(self, other)
@@ -220,7 +227,7 @@ class Value(object):
         return Value._ns.multiply(self, other)
 
     def __floordiv__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __div__(self, other):
         return Value._ns.divide(self, other)
@@ -232,25 +239,25 @@ class Value(object):
         return Value._ns.mod(self, other)
 
     def __divmod__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __pow__(self, other):
         return Value._ns.power(self, other)
 
     def __lshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __and__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __or__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __xor__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __radd__(self, other):
         return Value._ns.add(other, self)
@@ -262,7 +269,7 @@ class Value(object):
         return Value._ns.multiply(other, self)
 
     def __rfloordiv__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rdiv__(self, other):
         return Value._ns.divide(other, self)
@@ -280,19 +287,19 @@ class Value(object):
         return Value._ns.power(other, self)
 
     def __rlshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rrshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rand__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __ror__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __rxor__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __iadd__(self, other):
         return Value._ns.add(self, other)
@@ -304,7 +311,7 @@ class Value(object):
         return Value._ns.multiply(self, other)
 
     def __ifloordiv__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __idiv__(self, other):
         return Value._ns.divide(self, other)
@@ -319,19 +326,19 @@ class Value(object):
         return Value._ns.power(self, other)
 
     def __ilshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __irshift__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __iand__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __ior__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
 
     def __ixor__(self, other):
-        raise NoImplementationError('Not implemented')
+        raise NotImplementedError()
     # pylint: enable= no-self-use
 
 
@@ -421,27 +428,31 @@ class Array(Value):
         return atype in self._data.keys()
 
     def reshape(self, *args, **kwargs):
-        """ Function for reshape this array
+        """Function for reshape this array.
 
         Usage example:
-        Assume a = np.ones([10, 10])
-        b = a.reshape([5, 20])
-        b = a.reshape(5, 20)
 
-        See http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html
+        ::
+
+            a = np.ones([10, 10])
+            b = a.reshape([5, 20])
+            b = a.reshape(5, 20)
+
+        See `here <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`_
         for further explanation.
 
-        :param args: a single iterable or a sequence of ints representing a new shape
-        :return: reshaped array (minpy array)
+        :param args: A single iterable or a sequence of integers representing a new shape.
+            Although it being an iterable is not documented in official document, it is renowned and
+            widely used in practice.
+        :return: Reshaped array.
         """
-        # Although this usage is not documented in numpy official doc, it is renowned and
-        # widely used in practice
         if len(args) == 1 and isinstance(args[0], collections.Iterable):
             new_shape = args[0]
         else:
             new_shape = tuple(x for x in args)
         if 'order' in kwargs and kwargs['order'] != 'C':
-            raise ValueError('Orders other than C are not currently supported.')
+            raise NotImplementedError(
+                'Orders other than C are not currently supported.')
         return Value._ns.reshape(self, new_shape)
 
     def dot(self, b, out=None):

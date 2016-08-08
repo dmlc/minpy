@@ -120,6 +120,7 @@ def function(symbol, input_shapes, sym_name='mxnet_symbol'):
                 return ret
 
             return grad_func
+
         return grad_wrapper
 
     prim = array.Primitive(func, ArrayType.MXNET)
@@ -163,7 +164,8 @@ def minpy_to_numpy(var):
     :return: singular, list, or tuple of numpy array(s)
     """
     if isinstance(var, tuple) or isinstance(var, list):
-        return type(var)(array.Value.wrap(x).get_data(ArrayType.NUMPY) for x in var)
+        return type(var)(array.Value.wrap(x).get_data(ArrayType.NUMPY)
+                         for x in var)
     else:
         return array.Value.wrap(var).get_data(ArrayType.NUMPY)
 

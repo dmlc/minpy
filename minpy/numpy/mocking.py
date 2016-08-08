@@ -19,7 +19,7 @@ from .. import array
 
 class Module(object):
     """Mocking module class for name dispatching.
-    
+
     It will register primitives from :mod:`minpy.array_variant`.
     """
 
@@ -60,7 +60,7 @@ class Module(object):
 
     def __getattr__(self, name):
         """Fetch attributes from this module.
-        
+
         If the name is contained in the primitive registry,
         it will return a primitive selector for further name dispatching.
 

@@ -6,7 +6,7 @@ from minpy.dispatch import policy
 
 logging.getLogger('minpy.array').setLevel(logging.DEBUG)
 logging.getLogger('minpy.core').setLevel(logging.DEBUG)
-np.set_policy(policy.OnlyNumpyPolicy())
+np.set_policy(policy.OnlyNumPyPolicy())
 
 def f(x, y):
     return np.multiply(x, y)
