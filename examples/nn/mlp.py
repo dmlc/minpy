@@ -40,12 +40,12 @@ def main(args):
 
     train_dataiter = NDArrayIter(data['X_train'],
                          data['y_train'],
-                         batch_size=10,
+                         batch_size=100,
                          shuffle=True)
 
     test_dataiter = NDArrayIter(data['X_test'],
                          data['y_test'],
-                         batch_size=10,
+                         batch_size=100,
                          shuffle=False)
 
     solver = Solver(model,
@@ -59,7 +59,7 @@ def main(args):
                         'momentum': 0.9
                     },
                     verbose=True,
-                    print_every=1)
+                    print_every=20)
     solver.init()
     solver.train()
 
