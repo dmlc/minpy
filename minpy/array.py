@@ -23,7 +23,7 @@ import numpy
 import collections
 
 # pylint: disable= invalid-name
-_logger = log.get_logger(__name__, logging.WARN)
+_logger = log.get_logger(__name__)
 
 # pylint: enable= invalid-name
 
