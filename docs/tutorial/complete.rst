@@ -1,6 +1,10 @@
 Complete solver and optimizer guide
 ===================================
 
+----
+Feedforward networks
+----
+
 In general, we advocate following the common coding style with the following modular partition:
 
 * *Model*: your main job!
@@ -23,9 +27,33 @@ Minpy leverages and integrates seemlessly with MXNet's symbolic programming (see
 The following code chance shows how we replace the first layer with two layers of convolutional kernels, using MXNet.
 
 Of course, in this example, we can program it completely, in fully MXNet symbolic way. As the followings:
+(code snippet here)
 
-The advantage of Minpy is that it brings in additional flexibility when needed. Say we want to add a regularization in the loss term, this is done as the followings.
+However, the advantage of Minpy is that it brings in additional flexibility when needed, this is especially useful for quick prototyping to validate new ideas. Say we want to add a regularization in the loss term, this is done as the followings.
 
+(code snippet here)
+
+
+----
+Recurrent networks
+----
+
+Vanilla RNN
+
+GRU
+
+---------
+Put it together: feedforward + recurrent networks
+---------
+
+CS231n image captioning
+
+---------
+Reinforcement learning with policy gradient
+---------
+
+===============================
+(overflow texts)
 
 The layer->model->solver (optimizer) pipeline
 
