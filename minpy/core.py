@@ -70,69 +70,75 @@ class MXNetSymbolError(ValueError):
     """ Error class for creating mxnet symbols """
     pass
 
+class Function(object):
+    def __init__(self, symbol, input_shapes, sym_name='mxnet_symbol'):
+        """Construct a differentiable function from MXNet symbol.
 
-def function(symbol, input_shapes, sym_name='mxnet_symbol'):
-    """Construct a differentiable function from MXNet symbol.
+        There is a known issue with current implementation. If SoftmaxLoss symbol is used, the
+        ground truth label will be passed in in the forward. Therefore, even if no ground truth
+        is provided during backward, the backward will "magically" run well since the required
+        information has already been provided.
 
-    :param symbol: Target symbol as function output.
-    :param input_shapes: A dictionary of input names to input shapes, used for shape inference.
-    :return: A function that could be called (and differentiated) as normal primitive.
-    """
-    # TODO: Policy Control
-    policy_cpu = False
-    dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
-    dshape = {name: shape for name, shape in input_shapes.items()}
-    executor = symbol.simple_bind(dev, 'write', **dshape)
-    arg_names = symbol.list_arguments()
-    """ In train model of mxnet example, there's no grad of input(data)
-    While it has grad of input in Minpy's calling example
-    Possible culprit: In model, training is complete, i.e. loss is computed in symbol. Not in Minpy.
-    ```python
-    input_names = dshape.keys()
-    raw_param_names = list(set(arg_names) - set(input_names))
-    raw_param_names = list(set(arg_names))
-    param_idx = [i for i in range(len(arg_names)) if arg_names[i] in raw_param_names]
-    param_names = [arg_names[i] for i in param_idx]
-    ```
-    """
-    # pylint: disable= missing-docstring
-    param_names = arg_names
+        :param symbol: Target symbol as function output.
+        :param input_shapes: A dictionary of input names to input shapes, used for shape inference.
+        :return: A function that could be called (and differentiated) as normal primitive.
+        """
+        self.symbol = symbol
+        self.input_shapes = input_shapes
+        self.sym_name = sym_name
+        self.prim = self._create_prim()
 
-    def func(*args, **kwargs):
-        if len(args) > 0:
-            raise MXNetSymbolError('find arg with no name specified')
-        # Set Data & Parameters
-        for name, value in kwargs.items():
-            if name in executor.arg_dict:
-                value.copyto(executor.arg_dict[name])
-            else:
-                raise MXNetSymbolError(
-                    'find arg name: %s not in executors arg_list' % name)
-        # forward
-        # TODO: is_train flag
-        executor.forward(is_train=True)
-        # TODO: Minpy currently doesn't support multiple outputs
-        return executor.outputs[0]
+    def _create_prim(self):
+        # TODO(haoran): Policy Control
+        policy_cpu = False
+        dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
+        executor = self.symbol.simple_bind(dev, 'write', **self.input_shapes)
+        arg_names = self.symbol.list_arguments()
+        # pylint: disable= missing-docstring
+        param_names = arg_names
 
-    func.__name__ = sym_name
+        # Define raw forward function.
+        def func(**kwargs):
+            # Set Data & Parameters
+            for name, value in kwargs.items():
+                if name in executor.arg_dict:
+                    value.copyto(executor.arg_dict[name])
+                else:
+                    _logger.debug('Ignore unknown input (%s) to symbol (%s)' \
+                            % (name, self.sym_name))
+            # Forward computation.
+            # TODO(haoran): How to set `is_train` flag
+            executor.forward(is_train=True)
+            # TODO(haoran): Currently doesn't support multiple outputs.
+            return executor.outputs[0]
+        # Set function name to be the given symbol name.
+        func.__name__ = self.sym_name
+        # Define gradient function generator.
+        def gen_grad_kw(keyname):
+            def grad_wrapper(ans, **kwargs):
+                def grad_func(g):
+                    executor.backward(out_grads=g)
+                    ret = executor.grad_arrays[param_names.index(keyname)]
+                    return ret
+                return grad_func
+            return grad_wrapper
+        # Create primitives.
+        prim = array.Primitive(func, ArrayType.MXNET)
+        for name in param_names:
+            prim.def_grad_kw(gen_grad_kw(name), name)
+        return prim
+        # pylint: enable= missing-docstring
 
-    def def_grad_kw(keyname):
-        def grad_wrapper(ans, *arg_values, **kwargs_values):
-            def grad_func(g):
-                executor.backward(out_grads=g)
-                ret = executor.grad_arrays[param_names.index(keyname)]
-                return ret
+    def __call__(self, **kwargs):
+        return self.prim(**kwargs)
 
-            return grad_func
-
-        return grad_wrapper
-
-    prim = array.Primitive(func, ArrayType.MXNET)
-    for name in param_names:
-        prim.def_grad_kw(def_grad_kw(name), name)
-    return prim
-    # pylint: enable= missing-docstring
-
+    def get_params(self):
+        arg_shapes, _, _ = self.symbol.infer_shape(**self.input_shapes)
+        param_configs = {}
+        for i, name in enumerate(self.symbol.list_arguments()):
+            if name not in self.input_shapes:
+                param_configs[name] = { 'shape': arg_shapes[i] }
+        return param_configs
 
 class MinpyWrapperError(TypeError):
     """ Error when wrapping function return values """

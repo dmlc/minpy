@@ -46,7 +46,6 @@ class PreferMXNetPolicy(Policy):
         else:
             return None
 
-
 class OnlyNumPyPolicy(Policy):
     """ Only use NumPy functions. Return None if no required function. """
 
