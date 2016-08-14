@@ -199,6 +199,8 @@ def convert(val, converter, basic_types):
         ret = list(convert(v, converter, basic_types) for v in val)
     elif isinstance(val, dict):
         ret = {k: convert(v, converter, basic_types) for k, v in val.items()}
+    else:
+        ret = val
     # else:
         # raise MinpyWrapperError('Unexpected %s type found in core.convert' %
                                 # type(val))
