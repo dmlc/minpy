@@ -173,7 +173,7 @@ def minpy_to_numpy(var):
     :param var: singular, list, or tuple of minpy array(s)
     :return: singular, list, or tuple of numpy array(s)
     """
-    if isinstance(var, tuple) or isinstance(var, list):
+    if isinstance(var, (tuple, list)):
         return type(var)(array.Value.wrap(x).get_data(ArrayType.NUMPY)
                          for x in var)
     else:
