@@ -535,10 +535,10 @@ class Array(Value):
     @property
     def shape(self):
         """ Get the shape of array """
-        if ArrayType.NUMPY in self._data:
-            return self._data[ArrayType.NUMPY].shape
+        if self._latest_version is not None:
+            return self.get_data(self._latest_version).shape
         else:
-            return self._data[ArrayType.MXNET].shape
+            return self.get_data(ArrayType.NUMPY).shape  # data is synced
 
     def __getitem__(self, index):
         """NumPy indexing operations.
