@@ -425,12 +425,12 @@ class Array(Value):
     @property
     def ndim(self):
         """ Number of array dimensions """
-        if ArrayType.NUMPY in self._data:
-            return self._data[ArrayType.NUMPY].ndim
-        else:
-            # TODO add ndim in MXNet ndarray
-            # return self._data[ArrayType.MXNET].shape
-            return numpy.array(self.get_data(ArrayType.NUMPY)).ndim
+        # TODO (Yihe) add ndim in MXNet ndarray
+        # if self._latest_version is not None:
+            # return self.get_data(self._latest_version).ndim
+        # else:
+            # return self.get_data(ArrayType.NUMPY).ndim  # data is synced
+        return self.get_data(ArrayType.NUMPY).ndim
 
     def has_type(self, atype):
         """ Return whether array data of given type exists in the underlying storage.
