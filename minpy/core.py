@@ -67,7 +67,7 @@ class MXNetSymbolError(ValueError):
     pass
 
 class Function(object):
-    def __init__(self, symbol, input_shapes, sym_name='mxnet_symbol'):
+    def __init__(self, symbol, input_shapes, name='mxnet_symbol'):
         """Construct a differentiable function from MXNet symbol.
 
         There is a known issue with current implementation. If SoftmaxLoss symbol is used, the
@@ -79,20 +79,33 @@ class Function(object):
         :param input_shapes: A dictionary of input names to input shapes, used for shape inference.
         :return: A function that could be called (and differentiated) as normal primitive.
         """
-        self.symbol = symbol
-        self.input_shapes = input_shapes
-        self.sym_name = sym_name
-        self.prim = self._create_prim()
+        self._symbol = symbol
+        self._input_shapes = input_shapes
+        self._sym_name = name
+        self._prim = self._create_prim()
+        # Infer shapes of parameters and outputs.
+        arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(**self._input_shapes)
+        # Get shapes of learnable parameters.
+        self._param_shapes = {}
+        for i, arg_name in enumerate(symbol.list_arguments()):
+            if arg_name not in input_shapes:
+                self._param_shapes[arg_name] = arg_shapes[i]
+        # Get shapes of output.
+        self._out_shapes = {}
+        for i, out_name in enumerate(symbol.list_outputs()):
+            self._out_shapes[out_name] = out_shapes[i]
+        # Get shapes of auxiliary tensors.
+        self._aux_shapes = {}
+        for i, aux_name in enumerate(symbol.list_auxiliary_states()):
+            self._aux_shapes[aux_name] = aux_shapes[i]
 
     def _create_prim(self):
         # TODO(haoran): Policy Control
         policy_cpu = False
         dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
-        executor = self.symbol.simple_bind(dev, 'write', **self.input_shapes)
-        arg_names = self.symbol.list_arguments()
+        executor = self._symbol.simple_bind(dev, 'write', **self._input_shapes)
+        arg_names = self._symbol.list_arguments()
         # pylint: disable= missing-docstring
-        param_names = arg_names
-
         # Define raw forward function.
         def func(**kwargs):
             # Set Data & Parameters
@@ -101,40 +114,51 @@ class Function(object):
                     value.copyto(executor.arg_dict[name])
                 else:
                     _logger.debug('Ignore unknown input (%s) to symbol (%s)' \
-                            % (name, self.sym_name))
+                            % (name, self._sym_name))
             # Forward computation.
             # TODO(haoran): How to set `is_train` flag
             executor.forward(is_train=True)
             # TODO(haoran): Currently doesn't support multiple outputs.
             return executor.outputs[0]
         # Set function name to be the given symbol name.
-        func.__name__ = self.sym_name
+        func.__name__ = self._sym_name
         # Define gradient function generator.
         def gen_grad_kw(keyname):
             def grad_wrapper(ans, **kwargs):
                 def grad_func(g):
                     executor.backward(out_grads=g)
-                    ret = executor.grad_arrays[param_names.index(keyname)]
+                    ret = executor.grad_arrays[arg_names.index(keyname)]
                     return ret
                 return grad_func
             return grad_wrapper
         # Create primitives.
         prim = array.Primitive(func, ArrayType.MXNET)
-        for name in param_names:
+        for name in arg_names:
             prim.def_grad_kw(gen_grad_kw(name), name)
         return prim
         # pylint: enable= missing-docstring
 
     def __call__(self, **kwargs):
-        return self.prim(**kwargs)
+        # Remove arguments that are not defined in symbol's argument
+        # list.
+        filtered_kwargs = {}
+        for name, val in kwargs.items():
+            if name in self._symbol.list_arguments():
+                filtered_kwargs[name] = val
+        return self._prim(**filtered_kwargs)
 
     def get_params(self):
-        arg_shapes, _, _ = self.symbol.infer_shape(**self.input_shapes)
         param_configs = {}
-        for i, name in enumerate(self.symbol.list_arguments()):
-            if name not in self.input_shapes:
-                param_configs[name] = { 'shape': arg_shapes[i] }
+        for name, shape in self._param_shapes.items():
+            param_configs[name] = { 'shape': shape }
         return param_configs
+
+    def get_output_shapes(self):
+        return self._out_shapes
+
+    def get_one_output_shape(self):
+        assert(len(self._out_shapes) == 1)
+        return list(self._out_shapes.values())[0]
 
 class MinpyWrapperError(TypeError):
     """ Error when wrapping function return values """
