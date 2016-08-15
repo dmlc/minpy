@@ -76,8 +76,7 @@ class Affine(Module):
     return layers.affine(inputs, params[self.weight], params[self.bias])
 
   def parameter_shape(self, input_shape):
-    assert len(input_shape) == 1, 'The input tensor should be 2D.'
-    weight_shape = (input_shape[0], self.hidden_number)
+    weight_shape = (input_shape[-1], self.hidden_number)
     bias_shape   = (self.hidden_number,)
     return {
       self.weight : weight_shape, 
@@ -85,7 +84,7 @@ class Affine(Module):
     }
 
   def output_shape(self, input_shape):
-    return (input_shape[0], self.hidden_number)
+    return (self.hidden_number,)
 
 class BatchNormalization(Module):
   count = 0
@@ -327,8 +326,10 @@ class Model(ModelBase):
     super(Model, self).__init__()
     self.__container = container
     
+    '''
     if len(input_shape) == 1 or len(input_shape) == 3:
       input_shape = tuple([1] + list(input_shape))
+    '''
     shapes = container.parameter_shape(input_shape)
     reduce(
       lambda arg, key : arg.add_param(name=key, shape=shapes[key]),
