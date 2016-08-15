@@ -86,15 +86,15 @@ class TwoLayerNet(ModelBase):
         # Note: types of X, y are mxnet.ndarray
         def train_loss(X, y, W1, W2, b1, b2):
             l1 = affine_relu_forward(X, W1, b1)
-            l2 = affine_forward(l1, W2, b2)
-            scores = l2
-            if y:
-                #[TODO]: softmax is not supported yet
-                # loss, d_scores = softmax_loss(scores, y)
-                loss = svm_loss(scores, y)
-                loss_with_reg = loss + np.sum(W1**2) * 0.5 * self.reg + np.sum(
-                    W2**2) * 0.5 * self.reg
-            return loss_with_reg
+            scores= affine_forward(l1, W2, b2)
+            if y is None:
+                return scores
+            #[TODO]: softmax is not supported yet
+            # loss, d_scores = softmax_loss(scores, y)
+            loss = svm_loss(scores, y) + \
+                   np.sum(W1**2) * 0.5 * self.reg + \
+                   np.sum(W2**2) * 0.5 * self.reg
+            return loss
 
         self.params_array = []
         params_list_name = ['W1', 'W2', 'b1', 'b2']
@@ -262,21 +262,22 @@ class FullyConnectedNet(ModelBase):
             res = X
             for l in xrange(self.num_layers):
                 prev_res = res
-                res = affine_forward(prev_res, args[self.w_idx(l)],
+                res = affine_forward(prev_res,
+                                     args[self.w_idx(l)],
                                      args[self.b_idx(l)])
-                if l < (self.num_layers - 1):
-                    if self.use_batchnorm:
-                        res = batchnorm_forward(res, args[self.bn_ga_idx(l)],
-                                                args[self.bn_bt_idx(l)],
-                                                self.bn_params[l])
-                    res = relu_forward(res)
-                    if self.use_dropout:
+                if l == (self.num_layers - 1):
+                    continue
+                if self.use_batchnorm:
+                    res = batchnorm_forward(res, args[self.bn_ga_idx(l)],
+                                            args[self.bn_bt_idx(l)],
+                                            self.bn_params[l])
+                res = relu_forward(res)
+                if self.use_dropout:
                         res = dropout_forward(res, self.dropout_param)
-            scores = res
-            if mode == 'test':
-                return scores
+            if y is None:
+                return res
             #loss, _ = softmax_loss(scores, y)
-            loss = svm_loss(scores, y)
+            loss = svm_loss(res, y)
             return loss
 
         if y is None:

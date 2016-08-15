@@ -18,29 +18,19 @@ class TwoLayerNet(ModelBase):
                  num_classes=10,
                  batch_size=100):
         super(TwoLayerNet, self).__init__()
-        # ATTENTION: mxnet's weight dimension arrangement is different; it is [out_size, in_size]
-        self.param_configs['w1'] = { 'shape': [hidden_size, input_size] }
-        self.param_configs['b1'] = { 'shape': [hidden_size,] }
-        self.param_configs['w2'] = { 'shape': [num_classes, hidden_size] }
-        self.param_configs['b2'] = { 'shape': [num_classes,] }
-        # define the symbols
+        # Define the symbols.
         data = mx.sym.Variable(name='X')
-        fc1 = mx.sym.FullyConnected(name='fc1',
-                                    data=data,
-                                    num_hidden=hidden_size)
-        act = mx.sym.Activation(data=fc1, act_type='relu')
-        fc2 = mx.sym.FullyConnected(name='fc2',
-                                    data=act,
-                                    num_hidden=num_classes)
+        out = mx.sym.FullyConnected(name='fc1', data=data, num_hidden=hidden_size)
+        out = mx.sym.Activation(data=out, act_type='relu')
+        out = mx.sym.FullyConnected(name='fc2', data=out, num_hidden=num_classes)
+        # Wrap the final symbol into a function.
         # ATTENTION: when using mxnet symbols, input shape (including batch size) should be fixed
-        self.fwd_fn = core.function(fc2, {'X': (self.batch_size, input_size)})
+        self.fwd_fn = core.Function(out, input_shapes={'X': (batch_size, input_size)})
+        # Add parameters.
+        self.add_params(self.fwd_fn.get_params())
 
     def forward(self, X):
-        return self.fwd_fn(X=X,
-                           fc1_weight=self.params['w1'],
-                           fc1_bias=self.params['b1'],
-                           fc2_weight=self.params['w2'],
-                           fc2_bias=self.params['b2'])
+        return self.fwd_fn(X=X, **self.params)
 
     def loss(self, predict, y):
         return layers.softmax_loss(predict, y)

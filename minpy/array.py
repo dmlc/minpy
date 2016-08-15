@@ -23,7 +23,7 @@ import numpy
 import collections
 
 # pylint: disable= invalid-name
-_logger = log.get_logger(__name__, logging.WARN)
+_logger = log.get_logger(__name__)
 
 # pylint: enable= invalid-name
 
@@ -87,7 +87,7 @@ class Node(object):
                 rec.primitive._func))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
-                # Currently all MXNet function call will be performed on GPU 0.
+                # Currently all MXNet function calls are performed on GPU 0.
                 with mxnet.gpu(0) as ctx:
                     grad = rec.grad_func(result_grad_value)
             else:
@@ -425,12 +425,12 @@ class Array(Value):
     @property
     def ndim(self):
         """ Number of array dimensions """
-        if ArrayType.NUMPY in self._data:
-            return self._data[ArrayType.NUMPY].ndim
-        else:
-            # TODO add ndim in MXNet ndarray
-            # return self._data[ArrayType.MXNET].shape
-            return numpy.array(self.get_data(ArrayType.NUMPY)).ndim
+        # TODO (Yihe) add ndim in MXNet ndarray
+        # if self._latest_version is not None:
+            # return self.get_data(self._latest_version).ndim
+        # else:
+            # return self.get_data(ArrayType.NUMPY).ndim  # data is synced
+        return self.get_data(ArrayType.NUMPY).ndim
 
     def has_type(self, atype):
         """ Return whether array data of given type exists in the underlying storage.
@@ -535,10 +535,10 @@ class Array(Value):
     @property
     def shape(self):
         """ Get the shape of array """
-        if ArrayType.NUMPY in self._data:
-            return self._data[ArrayType.NUMPY].shape
+        if self._latest_version is not None:
+            return self.get_data(self._latest_version).shape
         else:
-            return self._data[ArrayType.MXNET].shape
+            return self.get_data(ArrayType.NUMPY).shape  # data is synced
 
     def __getitem__(self, index):
         """NumPy indexing operations.
