@@ -32,7 +32,7 @@ MLP = builder.Sequential(
 
 # train the perceptron on CIFAR-10 dataset
 def main(args):
-    model = builder.Model(MLP, 'softmax', (3 * 32 * 32,))
+    model = builder.Model(MultiLayerPerceptron(512, 10), 'softmax', (3 * 32 * 32,))
     data = get_CIFAR10_data(args.data_dir)
     # reshape all data to matrix
     data['X_train'] = data['X_train'].reshape([data['X_train'].shape[0], 3 * 32 * 32])

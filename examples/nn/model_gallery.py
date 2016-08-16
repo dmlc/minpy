@@ -1,4 +1,5 @@
 import minpy.nn.model_builder as builder
+
 '''
   Network In Network
 
@@ -90,5 +91,22 @@ def residual_network(n):
   network.append(builder.Pooling('avg', (8, 8)))
   network.append(builder.Reshape((64,)))
   network.append(builder.Affine(10))
+
+  return network
+
+# helper function for multi-layer perceptron
+def MultiLayerPerceptron(*args, **kwargs):
+  assert all(isinstance(arg, int) for arg in args)
+  try:
+    activation = kwargs.pop('activation', 'ReLU')
+    activation = getattr(builder, activation)()
+  except:
+    raise Exception('unsupported activation function')
+
+  network = builder.Sequential()
+  for arg in args[:-1]:
+    network.append(builder.Affine(arg))
+    network.append(activation)
+  network.append(builder.Affine(args[-1]))
 
   return network
