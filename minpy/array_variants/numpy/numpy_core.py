@@ -25,7 +25,7 @@ def _minpy_getitem_grad(arr, index, g):
     return ret
 
 
-def _minpy_amax_amin_grad(ans, a, axis, out, keepdims):
+def _chooser_grad(ans, a, axis, out, keepdims):
     """ Gradient of amax function """
     repeater, _ = _match_shape(a, axis, keepdims=keepdims)
     argmax_locations = a == repeater(ans)
@@ -127,35 +127,35 @@ def _sum_grad(ans, x, axis=None, keepdims=False):
     return lambda g: np.zeros(xshape) + np.reshape(g, ans_shape_expanded)
 
 # TODO: Clean one of the implementations
-import sys
-def _chooser_grad(ans, x, axis=None, keepdims=False):
-    """ Generate gradient function of max """
-    #pylint: disable= missing-docstring
-    print('x', x)
-    print('ans', ans)
-    if axis is None:
-        # Reduce for all axis.
-        axis = list(range(len(x.shape)))
-    elif isinstance(axis, int):
-        axis = [axis]
-    elif isinstance(axis, tuple):
-        axis = list(axis)
-    ans_shape_expanded = list(x.shape)
-    for a in axis:
-        ans_shape_expanded[a] = 1
-    # Find locations of the answer elements.
-    ans_repeated = np.zeros(x.shape) + np.reshape(ans, ans_shape_expanded)
-    locations = ans_repeated == x
-    print('locations', locations)
-    xshape = x.shape  # Only shape is needed, hope array `x` could be GC'ed.
-    def _gradfun(g):
-        g_repeated = np.zeros(xshape) + np.reshape(g, ans_shape_expanded)
-        ret = g_repeated * locations
-        print('g', g)
-        print('ret', ret)
-        sys.exit(0)
-    return _gradfun
-    #pylint: enable= missing-docstring
+# import sys
+# def _chooser_grad(ans, x, axis=None, keepdims=False):
+#     """ Generate gradient function of max """
+#     #pylint: disable= missing-docstring
+#     print('x', x)
+#     print('ans', ans)
+#     if axis is None:
+#         # Reduce for all axis.
+#         axis = list(range(len(x.shape)))
+#     elif isinstance(axis, int):
+#         axis = [axis]
+#     elif isinstance(axis, tuple):
+#         axis = list(axis)
+#     ans_shape_expanded = list(x.shape)
+#     for a in axis:
+#         ans_shape_expanded[a] = 1
+#     # Find locations of the answer elements.
+#     ans_repeated = np.zeros(x.shape) + np.reshape(ans, ans_shape_expanded)
+#     locations = ans_repeated == x
+#     print('locations', locations)
+#     xshape = x.shape  # Only shape is needed, hope array `x` could be GC'ed.
+#     def _gradfun(g):
+#         g_repeated = np.zeros(xshape) + np.reshape(g, ans_shape_expanded)
+#         ret = g_repeated * locations
+#         print('g', g)
+#         print('ret', ret)
+#         sys.exit(0)
+#     return _gradfun
+#     #pylint: enable= missing-docstring
 
 ################################################################
 # Functions exposed for primitive & gradient registry
@@ -178,18 +178,10 @@ def def_grads(reg, prims):
 
     # Reducing functions.
     prims('sum').def_grad(_sum_grad)
-    prims('max').def_grad(
-        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_amin_grad(ans, a, axis, out, keepdims)
-    )
-    prims('amax').def_grad(
-        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_amin_grad(ans, a, axis, out, keepdims)
-    )
-    prims('min').def_grad(
-        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_amin_grad(ans, a, axis, out, keepdims)
-    )
-    prims('amin').def_grad(
-        lambda ans, a, axis=None, out=None, keepdims=False: _minpy_amax_amin_grad(ans, a, axis, out, keepdims)
-    )
+    prims('max').def_grad(_chooser_grad)
+    prims('amax').def_grad(_chooser_grad)
+    prims('min').def_grad(_chooser_grad)
+    prims('amin').def_grad(_chooser_grad)
     
     # Binary functions
     prims('multiply').def_grad(
