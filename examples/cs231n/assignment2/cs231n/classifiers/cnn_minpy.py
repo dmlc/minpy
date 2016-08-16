@@ -7,9 +7,8 @@ import mxnet as mx
 import numpy as py_np
 
 from model import ModelBase
-from cs231n.layers import affine_forward, relu_forward, svm_loss, dropout_forward, batchnorm_forward
-
-#TODO(Haoran): write examples in python notebook
+from cs231n.layers import affine_forward, relu_forward, svm_loss_forward, \
+                          dropout_forward, batchnorm_forward
 
 
 class ModelInputDimInconsistencyError(ValueError):
