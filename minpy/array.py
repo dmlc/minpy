@@ -426,7 +426,7 @@ class Array(Value):
     def ndim(self):
         """ Number of array dimensions """
         # TODO (Yihe) add ndim in MXNet ndarray
-        # return self.get_latest_data().ndim
+        # return self._get_latest_data().ndim
         return self.get_data(ArrayType.NUMPY).ndim
 
     def has_type(self, atype):
@@ -511,7 +511,7 @@ class Array(Value):
         self.enforce_data(dtype)
         return self._data[dtype]
 
-    def get_latest_data(self):
+    def _get_latest_data(self):
         """Return the latest version of the raw data"""
         if self._latest_version is not None:
             return self._data[self._latest_version]
@@ -538,7 +538,7 @@ class Array(Value):
     @property
     def shape(self):
         """ Get the shape of array """
-        return self.get_latest_data().shape
+        return self._get_latest_data().shape
 
     def __getitem__(self, index):
         """NumPy indexing operations.
@@ -588,7 +588,7 @@ class Array(Value):
     @property
     def size(self):
         """ Get number of elements in the array """
-        return self.get_latest_data().size
+        return self._get_latest_data().size
 
 
 class Primitive(object):
