@@ -426,10 +426,7 @@ class Array(Value):
     def ndim(self):
         """ Number of array dimensions """
         # TODO (Yihe) add ndim in MXNet ndarray
-        # if self._latest_version is not None:
-            # return self.get_data(self._latest_version).ndim
-        # else:
-            # return self.get_data(ArrayType.NUMPY).ndim  # data is synced
+        # return self.get_latest_data().ndim
         return self.get_data(ArrayType.NUMPY).ndim
 
     def has_type(self, atype):
@@ -475,9 +472,6 @@ class Array(Value):
     def argmax(self, axis=None, out=None):
         """ Returns the indices of the maximum values along an axis
 
-        See `here <http://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_
-        for further explanation.
-
         :param axis: int. By default, the index is into the flattened array,
             otherwise along the specified axis.
         :param out: If provided, the result will be inserted into this array.
@@ -511,12 +505,21 @@ class Array(Value):
         """Enforce array data of given type."""
         if self._latest_version is not None and self._latest_version != dtype:
             self._synchronize_data()
-            self._latest_version = None
 
     def get_data(self, dtype):
         """Get array data of given type."""
         self.enforce_data(dtype)
         return self._data[dtype]
+
+    def get_latest_data(self):
+        """Return the latest version of the raw data"""
+        if self._latest_version is not None:
+            return self._data[self._latest_version]
+        else:
+            if self.has_type(ArrayType.NUMPY):
+                return self._data[ArrayType.NUMPY]
+            else:
+                return self._data[ArrayType.MXNET]
 
     def asnumpy(self):
         """Get raw NumPy array.
@@ -535,10 +538,7 @@ class Array(Value):
     @property
     def shape(self):
         """ Get the shape of array """
-        if self._latest_version is not None:
-            return self.get_data(self._latest_version).shape
-        else:
-            return self.get_data(ArrayType.NUMPY).shape  # data is synced
+        return self.get_latest_data().shape
 
     def __getitem__(self, index):
         """NumPy indexing operations.
@@ -588,7 +588,7 @@ class Array(Value):
     @property
     def size(self):
         """ Get number of elements in the array """
-        return Value._ns.prod(self.shape)
+        return self.get_latest_data().size
 
 
 class Primitive(object):
