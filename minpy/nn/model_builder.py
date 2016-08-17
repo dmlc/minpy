@@ -1,5 +1,5 @@
 '''
-Currently model builder only supports building one model each time.
+  Currently model builder only supports building one model each time.
 '''
 import minpy.numpy as np
 import minpy.core
@@ -251,7 +251,18 @@ class Identity(Module):
     return inputs
   def output_shape(self, input_shape):
     return input_shape
- 
+
+class Export(Identity):
+  def __init__(self, label, storage):
+    super(Export, self).__init__()
+    assert label not in storage, 'duplicated label'
+    self.label, self.storage = label, storage
+    self.storage.update({self.label : None})
+  def forward(self, inputs, params):
+    # TODO policy train_only test_only default
+    self.storage[self.label] = inputs
+    return inputs
+
 class ReLU(Module):
   def __init__(self):
     super(ReLU, self).__init__()
