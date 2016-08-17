@@ -1,13 +1,12 @@
 import minpy
 import minpy.numpy as np
-import minpy.core
-import minpy.array
+import minpy.numpy.random as random
 from minpy.core import wraps
 from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
-import minpy.numpy.random as random
 
 np.set_policy(policy.OnlyNumPyPolicy())
+random.set_policy(policy.OnlyNumPyPolicy())
 
 @wraps('lazy')
 def affine_forward(x, w, b):
@@ -281,7 +280,7 @@ def dropout_backward(dout, cache):
         ###########################################################################
         # TODO: Implement the training phase backward pass for inverted dropout.  #
         ###########################################################################
-        pass
+        dx = dout*mask
         ###########################################################################
         #                            END OF YOUR CODE                             #
         ###########################################################################
