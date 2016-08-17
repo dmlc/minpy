@@ -11,6 +11,7 @@ import itertools
 import operator
 import logging
 import collections
+import inspect
 
 from .utils import log
 #from .utils.minprof import minprof
@@ -83,11 +84,10 @@ class Node(object):
             # computed.
             result_grad = rec.result._partial_derivative_cache[target]
             result_grad_value = result_grad.get_data(rec.primitive._type)
-            _logger.debug('Call derivative func of "{}".'.format(
-                rec.primitive._func))
+            _logger.debug('Call derivative func of "{}".'.format(rec.primitive))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
-                # Currently all MXNet function call will be performed on GPU 0.
+                # Currently all MXNet function calls are performed on GPU 0.
                 with mxnet.gpu(0) as ctx:
                     grad = rec.grad_func(result_grad_value)
             else:
@@ -422,6 +422,13 @@ class Array(Value):
         """ get node which contains derivative information from this array """
         return self._node
 
+    @property
+    def ndim(self):
+        """ Number of array dimensions """
+        # TODO (Yihe) add ndim in MXNet ndarray
+        # return self._get_latest_data().ndim
+        return self.get_data(ArrayType.NUMPY).ndim
+
     def has_type(self, atype):
         """ Return whether array data of given type exists in the underlying storage.
         """
@@ -462,6 +469,20 @@ class Array(Value):
             raise ValueError('out option is not supported.')
         return Value._ns.dot(self, b)
 
+    def argmax(self, axis=None, out=None):
+        """ Returns the indices of the maximum values along an axis
+
+        :param axis: int. By default, the index is into the flattened array,
+            otherwise along the specified axis.
+        :param out: If provided, the result will be inserted into this array.
+            It should be of the appropriate shape and dtype.
+        :return: Array of indices into the array.
+        """
+        if out is not None:
+            # TODO: Support out argument
+            raise ValueError('out option is not supported.')
+        return Value._ns.argmax(self, axis)
+
     def _synchronize_data(self):
         """ Synchronize the data of different array types. """
         if self._latest_version == ArrayType.MXNET:
@@ -484,12 +505,21 @@ class Array(Value):
         """Enforce array data of given type."""
         if self._latest_version is not None and self._latest_version != dtype:
             self._synchronize_data()
-            self._latest_version = None
 
     def get_data(self, dtype):
         """Get array data of given type."""
         self.enforce_data(dtype)
         return self._data[dtype]
+
+    def _get_latest_data(self):
+        """Return the latest version of the raw data"""
+        if self._latest_version is not None:
+            return self._data[self._latest_version]
+        else:
+            if self.has_type(ArrayType.NUMPY):
+                return self._data[ArrayType.NUMPY]
+            else:
+                return self._data[ArrayType.MXNET]
 
     def asnumpy(self):
         """Get raw NumPy array.
@@ -508,10 +538,7 @@ class Array(Value):
     @property
     def shape(self):
         """ Get the shape of array """
-        if ArrayType.NUMPY in self._data:
-            return self._data[ArrayType.NUMPY].shape
-        else:
-            return self._data[ArrayType.MXNET].shape
+        return self._get_latest_data().shape
 
     def __getitem__(self, index):
         """NumPy indexing operations.
@@ -557,6 +584,11 @@ class Array(Value):
         """ Get transposed array """
         return Value._ns.transpose(self)
     # pylint: enable= invalid-name
+
+    @property
+    def size(self):
+        """ Get number of elements in the array """
+        return self._get_latest_data().size
 
 
 class Primitive(object):
