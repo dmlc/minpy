@@ -35,11 +35,11 @@ setting next_w equal to w.
 @wraps('lazy')
 def sgd(w, dw, config=None):
     """
-  Performs vanilla stochastic gradient descent.
-
-  config format:
-  - learning_rate: Scalar learning rate.
-  """
+    Performs vanilla stochastic gradient descent.
+  
+    config format:
+    - learning_rate: Scalar learning rate.
+    """
     if config is None: config = {}
     config.setdefault('learning_rate', 1e-2)
 
@@ -50,15 +50,15 @@ def sgd(w, dw, config=None):
 @wraps('lazy')
 def sgd_momentum(w, dw, config=None):
     """
-  Performs stochastic gradient descent with momentum.
+    Performs stochastic gradient descent with momentum.
 
-  config format:
-  - learning_rate: Scalar learning rate.
-  - momentum: Scalar between 0 and 1 giving the momentum value.
-    Setting momentum = 0 reduces to sgd.
-  - velocity: A numpy array of the same shape as w and dw used to store a moving
-    average of the gradients.
-  """
+    config format:
+    - learning_rate: Scalar learning rate.
+    - momentum: Scalar between 0 and 1 giving the momentum value.
+                Setting momentum = 0 reduces to sgd.
+    - velocity: A numpy array of the same shape as w and dw used to store a moving
+                average of the gradients.
+    """
     if config is None: config = {}
     config.setdefault('learning_rate', 1e-2)
     config.setdefault('momentum', 0.9)
@@ -75,16 +75,16 @@ def sgd_momentum(w, dw, config=None):
 @wraps('lazy')
 def rmsprop(x, dx, config=None):
     """
-  Uses the RMSProp update rule, which uses a moving average of squared gradient
-  values to set adaptive per-parameter learning rates.
-
-  config format:
-  - learning_rate: Scalar learning rate.
-  - decay_rate: Scalar between 0 and 1 giving the decay rate for the squared
-    gradient cache.
-  - epsilon: Small scalar used for smoothing to avoid dividing by zero.
-  - cache: Moving average of second moments of gradients.
-  """
+    Uses the RMSProp update rule, which uses a moving average of squared gradient
+    values to set adaptive per-parameter learning rates.
+  
+    config format:
+    - learning_rate: Scalar learning rate.
+    - decay_rate: Scalar between 0 and 1 giving the decay rate for the squared
+                  gradient cache.
+    - epsilon: Small scalar used for smoothing to avoid dividing by zero.
+    - cache: Moving average of second moments of gradients.
+    """
     if config is None: config = {}
     config.setdefault('learning_rate', 1e-2)
     config.setdefault('decay_rate', 0.99)

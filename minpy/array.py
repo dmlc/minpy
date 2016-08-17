@@ -11,6 +11,7 @@ import itertools
 import operator
 import logging
 import collections
+import inspect
 
 from .utils import log
 #from .utils.minprof import minprof
@@ -83,8 +84,7 @@ class Node(object):
             # computed.
             result_grad = rec.result._partial_derivative_cache[target]
             result_grad_value = result_grad.get_data(rec.primitive._type)
-            _logger.debug('Call derivative func of "{}".'.format(
-                rec.primitive._func))
+            _logger.debug('Call derivative func of "{}".'.format(rec.primitive))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
                 # Currently all MXNet function calls are performed on GPU 0.
