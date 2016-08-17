@@ -96,17 +96,37 @@ def residual_network(n):
 
 # helper function for multi-layer perceptron
 def MultiLayerPerceptron(*args, **kwargs):
+  '''
+    positional arguments:
+      the number of hidden units of each layer
+    keyword arguments(optional):
+      activation:         ReLU by default
+      affine_monitor:     bool
+      activation_monitor: bool
+      storage:            dictionary
+  '''
   assert all(isinstance(arg, int) for arg in args)
   try:
     activation = kwargs.pop('activation', 'ReLU')
     activation = getattr(builder, activation)()
   except:
     raise Exception('unsupported activation function')
+  affine_monitor = kwargs.pop('affine_monitor', False)
+  activation_monitor = kwargs.pop('activation_monitor', False)
+  if affine_monitor or activation_monitor:
+    try:
+      storage = kwargs['storage']
+    except:
+      raise Exception('storage required to monitor intermediate result')
 
   network = builder.Sequential()
-  for arg in args[:-1]:
+  for i, arg in enumerate(args[:-1]):
     network.append(builder.Affine(arg))
+    if affine_monitor:
+      network.append(builder.Export('affine%d' % i, storage))
     network.append(activation)
+    if activation_monitor:
+      network.append(builder.Export('activation%d' % i, storage))
   network.append(builder.Affine(args[-1]))
 
   return network
