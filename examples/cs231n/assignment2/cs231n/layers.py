@@ -102,7 +102,7 @@ def relu_backward(dout, cache):
 
 
 @wraps('lazy')
-def batchnorm_forward(x, gamma, beta, bn_param):
+def batchnorm_forward(x, gamma, beta, running_mean, running_var, bn_param):
     """
   Forward pass for batch normalization.
   
@@ -145,8 +145,10 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     momentum = bn_param.get('momentum', 0.9)
 
     N, D = x.shape
-    running_mean = bn_param.get('running_mean', np.zeros(D))
-    running_var = bn_param.get('running_var', np.zeros(D))
+    if running_mean is None:
+        running_mean = np.zeros(D)
+    if running_var is None:
+        running_var = np.zeros(D)
 
     out = None
     cache = None
@@ -171,12 +173,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     else:
         raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
-    # Store the updated running means back into bn_param
-    bn_param['running_mean'] = running_mean
-    bn_param['running_var'] = running_var
+    return out, running_mean, running_var, cache
 
-    return out, cache
-
+@wraps('lazy')
 def batchnorm_backward(dout, cache):
   """
   Backward pass for batch normalization.
@@ -224,6 +223,44 @@ def batchnorm_backward(dout, cache):
 
   return dx, dgamma, dbeta
 
+@wraps('lazy')
+def batchnorm_backward_alt(dout, cache):
+  """
+  Alternative backward pass for batch normalization.
+
+  For this implementation you should work out the derivatives for the batch
+  normalizaton backward pass on paper and simplify as much as possible. You
+  should be able to derive a simple expression for the backward pass.
+
+  Note: This implementation should expect to receive the same cache variable
+  as batchnorm_backward, but might not use all of the values in the cache.
+
+  Inputs / outputs: Same as batchnorm_backward
+  """
+  dx, dgamma, dbeta = None, None, None
+  #############################################################################
+  # TODO: Implement the backward pass for batch normalization. Store the      #
+  # results in the dx, dgamma, and dbeta variables.                           #
+  #                                                                           #
+  # After computing the gradient with respect to the centered inputs, you     #
+  # should be able to compute gradients with respect to the inputs in a       #
+  # single statement; our implementation fits on a single 80-character line.  #
+  #############################################################################
+  x_hat,gamma,sqr_x_mean,mean,var,sqrt_var,x_mean,inv_sqrt_var = cache
+  N = x_hat.shape[0]
+  dbeta = np.sum(dout,axis=0)
+  dgamma = np.sum(dout*x_hat,axis=0)
+
+  dx = 1.0/N*inv_sqrt_var*gamma*(
+   N*dout
+   -np.sum(dout,axis=0)
+   -x_mean*(inv_sqrt_var**2)*np.sum(dout*x_mean,axis=0)
+  )
+  #############################################################################
+  #                             END OF YOUR CODE                              #
+  #############################################################################
+
+  return dx, dgamma, dbeta
 
 
 @wraps('lazy')

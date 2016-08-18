@@ -205,8 +205,11 @@ class FullyConnectedNet(ModelBase):
         # variances, so we need to pass a special bn_param object to each batch
         # normalization layer.
         self.bn_params = []
+        self.bn_stats = []
         if self.use_batchnorm:
             self.bn_params = [{'mode': 'train'}
+                              for i in xrange(self.num_layers - 1)]
+            self.bn_stats = [{'mean': None, 'std': None}
                               for i in xrange(self.num_layers - 1)]
 
         # Build key's index in loss func's arglist
@@ -267,8 +270,12 @@ class FullyConnectedNet(ModelBase):
                 if l == (self.num_layers - 1):
                     continue
                 if self.use_batchnorm:
-                    res, _ = batchnorm_forward(res, args[self.bn_ga_idx(l)],
+                    res, self.bn_stats[l]['mean'], self.bn_stats[l]['std'], _\
+                        = batchnorm_forward(res,
+                                            args[self.bn_ga_idx(l)],
                                             args[self.bn_bt_idx(l)],
+                                            self.bn_stats[l]['mean'],
+                                            self.bn_stats[l]['std'],
                                             self.bn_params[l])
                 res, _ = relu_forward(res)
                 if self.use_dropout:
