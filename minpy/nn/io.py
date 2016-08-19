@@ -254,7 +254,12 @@ class NDArrayIter(DataIter):
 
 
 def save_data_labels(X, Y, file_name):
-    """ Handy utility to save data """
+    """ Handy utility to save data
+
+    :param X: data vector
+    :param Y: corresponding label vector
+    :param file_name: file saved to
+    """
     with open(file_name, 'wb') as f:
         data = {}
         data['data'] = X
@@ -263,6 +268,11 @@ def save_data_labels(X, Y, file_name):
 
 
 def load_data_labels(file_name):
+    """ Handy utility to unpack data
+
+    :param file_name: file to unpack
+    :return: (X, Y), (data vector, label vector)
+    """
     with open(file_name, 'rb') as f:
         data = cPickle.load(f)
         X = data['data']
