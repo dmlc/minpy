@@ -6,6 +6,7 @@ from collections import OrderedDict
 import sys
 import numpy as np
 
+
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
     def __init__(self, data, label, pad=None, index=None):
@@ -13,6 +14,7 @@ class DataBatch(object):
         self.label = label
         self.pad = pad
         self.index = index
+
 
 class DataIter(object):
     """DataIter object in mxnet. """
@@ -96,6 +98,7 @@ class DataIter(object):
         """
         pass
 
+
 def _init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
     assert (data is not None) or allow_empty
@@ -120,6 +123,7 @@ def _init_data(data, allow_empty, default_name):
                     "should be NDArray or numpy.ndarray")
 
     return list(data.items())
+
 
 class NDArrayIter(DataIter):
     """NDArrayIter object in minpy. Taking numpy array to get dataiter.
@@ -187,7 +191,6 @@ class NDArrayIter(DataIter):
     def provide_label(self):
         """The name and shape of label provided by this iterator"""
         return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.label]
-
 
     def hard_reset(self):
         """Igore roll over data and set to start"""
