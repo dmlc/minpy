@@ -25,7 +25,7 @@ def _minpy_getitem_grad(arr, index, g):
     return ret
 
 
-def _chooser_grad(ans, a, axis, out, keepdims):
+def _chooser_grad(ans, a, axis=None, out=None, keepdims=False):
     """ Gradient of amax function """
     repeater, _ = _match_shape(a, axis, keepdims=keepdims)
     argmax_locations = a == repeater(ans)
