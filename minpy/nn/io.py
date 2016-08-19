@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 import sys
 import numpy as np
+import cPickle
 
 
 class DataBatch(object):
@@ -250,3 +251,21 @@ class NDArrayIter(DataIter):
 
     def getnumiterations(self):
         return self.num_iterations_per_batch
+
+
+def save_data_labels(X, Y, file_name):
+    """ Handy utility to save data """
+    with open(file_name, 'wb') as f:
+        data = {}
+        data['data'] = X
+        data['labels'] = Y
+        cPickle.dump(data, f, protocol=cPickle.HIGHEST_PROTOCOL)
+
+
+def load_data_labels(file_name):
+    with open(file_name, 'rb') as f:
+        data = cPickle.load(f)
+        X = data['data']
+        Y = data['labels']
+        return X, Y
+
