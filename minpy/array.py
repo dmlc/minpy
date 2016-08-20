@@ -677,7 +677,8 @@ class Primitive(object):
         }
         # Call the real function with raw value.
         if self.type == ArrayType.MXNET:
-            result_value = self._func(*arg_values, **kwargs_values)
+            with current_context().as_mxnet_context() as ctx:
+                result_value = self._func(*arg_values, **kwargs_values)
         else:
             result_value = self._func(*arg_values, **kwargs_values)
         # if you want to do profiling, try to use minprof(<func>):

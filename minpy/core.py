@@ -11,7 +11,6 @@ import functools
 from .utils import log
 from . import array
 from .array_variants import ArrayType, array_types, number_types
-from .context import Context, cpu, gpu, current_context
 
 _logger = log.get_logger(__name__)
 
