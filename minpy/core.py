@@ -86,7 +86,7 @@ class Function(object):
         self._symbol = symbol
         self._input_shapes = input_shapes
         self._sym_name = name
-        self._prim = self._create_prim()
+        self._executor, self._prim = self._create_prim()
         # Infer shapes of parameters and outputs.
         arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(**self._input_shapes)
         # Get shapes of learnable parameters.
@@ -139,7 +139,7 @@ class Function(object):
         prim = array.Primitive(func, ArrayType.MXNET)
         for name in arg_names:
             prim.def_grad_kw(gen_grad_kw(name), name)
-        return prim
+        return executor, prim
         # pylint: enable= missing-docstring
 
     def __call__(self, **kwargs):
