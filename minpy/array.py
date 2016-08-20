@@ -77,7 +77,8 @@ class Node(object):
             grad_value = grad.get_data(rec[2]._type)
             _logger.debug('Call derivative func of "{}".'.format(rec[2]._func))
             if rec[2].type == ArrayType.MXNET:
-                res = rec[0](grad_value)
+                with grad.context.as_mxnet_ctx() as ctx:
+                    res = rec[0](grad_value)
             else:
                 res = rec[0](grad_value)
             return res
@@ -119,13 +120,21 @@ class Value(object):
     """
     _ns = None
 
-    def __init__(self, marked):
+    def __init__(self, marked, context):
         self._marked_for_bp = marked
+        if context is None:
+            self._context = current_context()
+        else:
+            self._context = context
 
     @property
     def marked_for_bp(self):
         """Return whether the current Value will be used for autograd."""
         return self._marked_for_bp
+
+    @property
+    def context(self):
+        return self._context
 
     @staticmethod
     def wrap(data, *args, **kwargs):
@@ -323,8 +332,8 @@ class Number(Value, float):
     def __new__(cls, val, marked=False):
         return float.__new__(cls, val)
 
-    def __init__(self, val, marked=False):
-        super(Number, self).__init__(marked=marked)
+    def __init__(self, val, marked=False, context=None):
+        super(Number, self).__init__(marked=marked, context=context)
         self._node = Node(self)
         self._val = val
 
@@ -363,16 +372,12 @@ class Array(Value):
     __array_priority__ = 100.0  # highest priority when compute with numpy.ndarray
 
     def __init__(self, data, marked=False, context=None):
-        super(Array, self).__init__(marked)
+        super(Array, self).__init__(marked, context)
         self._data = {}
         self._node = Node(self)
         atype = Array.to_array_type(data)
         self._data[atype] = data
         self._latest_version = atype
-        if context is None:
-            self._context = current_context()
-        else:
-            self._context = context
 
     @staticmethod
     def to_array_type(arr):
