@@ -17,14 +17,6 @@ minpy.utils.common module
     :undoc-members:
     :show-inheritance:
 
-minpy.utils.data_utils module
------------------------------
-
-.. automodule:: minpy.utils.data_utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 minpy.utils.gradient_checker module
 -----------------------------------
 

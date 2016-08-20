@@ -1,15 +1,12 @@
 import minpy
 import minpy.numpy as np
-import minpy.core
-import minpy.array
+import minpy.numpy.random as random
 from minpy.core import wraps
 from minpy.array_variants import ArrayType
 import minpy.dispatch.policy as policy
-import minpy.numpy.random as random
 
-np.set_policy(policy.OnlyNumpyPolicy())
-#np.set_policy(policy.PreferMXNetPolicy())
-
+np.set_policy(policy.OnlyNumPyPolicy())
+random.set_policy(policy.OnlyNumPyPolicy())
 
 @wraps('lazy')
 def affine_forward(x, w, b):
@@ -32,9 +29,37 @@ def affine_forward(x, w, b):
   """
 
     out = np.dot(x, w) + b
+    cache = (x, w, b)
 
-    return out
+    return out, cache
 
+@wraps('lazy')
+def affine_backward(dout, cache):
+    """
+  Computes the backward pass for an affine layer.
+
+  Inputs:
+  - dout: Upstream derivative, of shape (N, M)
+  - cache: Tuple of:
+    - x: Input data, of shape (N, d_1, ... d_k)
+    - w: Weights, of shape (D, M)
+
+  Returns a tuple of:
+  - dx: Gradient with respect to x, of shape (N, d1, ..., d_k)
+  - dw: Gradient with respect to w, of shape (D, M)
+  - db: Gradient with respect to b, of shape (M,)
+  """
+    x, w, b = cache
+    x_plain = np.reshape(x, (x.shape[0], -1))
+
+    db = np.sum(dout, axis=0)
+
+    dx_plain = np.dot(dout, np.transpose(w))
+
+    dx = np.reshape(dx_plain, x.shape)
+    dw = np.dot(np.transpose(x_plain), dout)
+
+    return dx, dw, db
 
 @wraps('lazy')
 def relu_forward(x):
@@ -49,11 +74,35 @@ def relu_forward(x):
   - cache: x
   """
     out = np.maximum(0, x)
-    return out
+    cache = x
+    return out, cache
+
+@wraps('lazy')
+def relu_backward(dout, cache):
+    """
+  Computes the backward pass for a layer of rectified linear units (ReLUs).
+
+  Input:
+  - dout: Upstream derivatives, of any shape
+  - cache: Input x, of same shape as dout
+
+  Returns:
+  - dx: Gradient with respect to x
+  """
+    #############################################################################
+    # TODO: Implement the ReLU backward pass.                                   #
+    #############################################################################
+
+    x = cache
+    dx = dout * (x > 0)
+    #############################################################################
+    #                             END OF YOUR CODE                              #
+    #############################################################################
+    return dx
 
 
 @wraps('lazy')
-def batchnorm_forward(x, gamma, beta, bn_param):
+def batchnorm_forward(x, gamma, beta, running_mean, running_var, bn_param):
     """
   Forward pass for batch normalization.
   
@@ -96,10 +145,13 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     momentum = bn_param.get('momentum', 0.9)
 
     N, D = x.shape
-    running_mean = bn_param.get('running_mean', np.zeros(D))
-    running_var = bn_param.get('running_var', np.zeros(D))
+    if running_mean is None:
+        running_mean = np.zeros(D)
+    if running_var is None:
+        running_var = np.zeros(D)
 
     out = None
+    cache = None
     if mode == 'train':
         mean = np.sum(x, axis=0) / N
         x_mean = (x - mean)
@@ -112,6 +164,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         x_hat = x_mean * inv_sqrt_var
         out = gamma * x_hat + beta
 
+        cache = (x_hat,gamma, sqr_x_mean, mean, var, sqrt_var, x_mean, inv_sqrt_var)
         running_mean = momentum * running_mean + (1.0 - momentum) * mean
         running_var = momentum * running_var + (1.0 - momentum) * var
     elif mode == 'test':
@@ -120,11 +173,94 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     else:
         raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
-    # Store the updated running means back into bn_param
-    bn_param['running_mean'] = running_mean
-    bn_param['running_var'] = running_var
+    return out, running_mean, running_var, cache
 
-    return out
+@wraps('lazy')
+def batchnorm_backward(dout, cache):
+  """
+  Backward pass for batch normalization.
+
+  For this implementation, you should write out a computation graph for
+  batch normalization on paper and propagate gradients backward through
+  intermediate nodes.
+
+  Inputs:
+  - dout: Upstream derivatives, of shape (N, D)
+  - cache: Variable of intermediates from batchnorm_forward.
+
+  Returns a tuple of:
+  - dx: Gradient with respect to inputs x, of shape (N, D)
+  - dgamma: Gradient with respect to scale parameter gamma, of shape (D,)
+  - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
+  """
+  x_hat, gamma, sqr_x_mean, mean, var, sqrt_var, x_mean, inv_sqrt_var = cache
+  dx, dgamma, dbeta = None, None, None
+  #############################################################################
+  # TODO: Implement the backward pass for batch normalization. Store the      #
+  # results in the dx, dgamma, and dbeta variables.                           #
+  #############################################################################
+  N = x_hat.shape[0]
+
+  dx_hat = dout * gamma
+  dx_mean = dx_hat*inv_sqrt_var
+  dinv_sqrt_var = np.sum(dx_hat*x_mean,axis=0)
+  dsqrt_var = -1.0/(sqrt_var**2)*dinv_sqrt_var
+  dvar = 0.5*inv_sqrt_var*dsqrt_var
+  dsqr_x_mean = 1.0/N*np.ones(sqr_x_mean.shape)*dvar
+  dx_mean += 2*x_mean*dsqr_x_mean
+
+  dmean = -np.sum(dx_mean,axis=0)
+
+  dx1 = dx_mean
+  dx2 = 1.0/N*np.ones(mean.shape)*dmean
+
+  dx = dx1+dx2
+  dgamma = np.sum(x_hat*dout,axis=0)
+  dbeta =  np.sum(dout,axis=0)
+  #############################################################################
+  #                             END OF YOUR CODE                              #
+  #############################################################################
+
+  return dx, dgamma, dbeta
+
+@wraps('lazy')
+def batchnorm_backward_alt(dout, cache):
+  """
+  Alternative backward pass for batch normalization.
+
+  For this implementation you should work out the derivatives for the batch
+  normalizaton backward pass on paper and simplify as much as possible. You
+  should be able to derive a simple expression for the backward pass.
+
+  Note: This implementation should expect to receive the same cache variable
+  as batchnorm_backward, but might not use all of the values in the cache.
+
+  Inputs / outputs: Same as batchnorm_backward
+  """
+  dx, dgamma, dbeta = None, None, None
+  #############################################################################
+  # TODO: Implement the backward pass for batch normalization. Store the      #
+  # results in the dx, dgamma, and dbeta variables.                           #
+  #                                                                           #
+  # After computing the gradient with respect to the centered inputs, you     #
+  # should be able to compute gradients with respect to the inputs in a       #
+  # single statement; our implementation fits on a single 80-character line.  #
+  #############################################################################
+  x_hat,gamma,sqr_x_mean,mean,var,sqrt_var,x_mean,inv_sqrt_var = cache
+  N = x_hat.shape[0]
+  dbeta = np.sum(dout,axis=0)
+  dgamma = np.sum(dout*x_hat,axis=0)
+
+  dx = 1.0/N*inv_sqrt_var*gamma*(
+   N*dout
+   -np.sum(dout,axis=0)
+   -x_mean*(inv_sqrt_var**2)*np.sum(dout*x_mean,axis=0)
+  )
+  #############################################################################
+  #                             END OF YOUR CODE                              #
+  #############################################################################
+
+  return dx, dgamma, dbeta
 
 
 @wraps('lazy')
@@ -161,7 +297,33 @@ def dropout_forward(x, dropout_param):
     else:
         out = x
 
-    return out
+    cache = (dropout_param, mask)
+    return out, cache
+
+@wraps('lazy')
+def dropout_backward(dout, cache):
+    """
+  Perform the backward pass for (inverted) dropout.
+
+  Inputs:
+  - dout: Upstream derivatives, of any shape
+  - cache: (dropout_param, mask) from dropout_forward.
+  """
+    dropout_param, mask = cache
+    mode = dropout_param['mode']
+
+    dx = None
+    if mode == 'train':
+        ###########################################################################
+        # TODO: Implement the training phase backward pass for inverted dropout.  #
+        ###########################################################################
+        dx = dout*mask
+        ###########################################################################
+        #                            END OF YOUR CODE                             #
+        ###########################################################################
+    elif mode == 'test':
+        dx = dout
+    return dx
 
 
 def conv_forward_naive(x, w, b, conv_param):
@@ -267,7 +429,7 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
 
 
 @wraps('lazy')
-def svm_loss(x, y):
+def svm_loss_forward(x, y):
     """
   Computes the loss and gradient using for multiclass SVM classification.
 
@@ -279,7 +441,7 @@ def svm_loss(x, y):
 
   Returns a tuple of:
   - loss: Scalar giving the loss
-  - dx: Gradient of the loss with respect to x
+  - cache: (x, y)
   """
 
     N = x.shape[0]
@@ -291,14 +453,44 @@ def svm_loss(x, y):
     #margins = np.maximum(0, x - correct_class_scores + 1.0)
     margins = np.transpose(np.maximum(0, np.transpose(x) - np.transpose(
         correct_class_scores) + 1.0))
+    cache = (x, y)
 
     loss = (np.sum(margins) - np.sum(margins[np.arange(N), y])) / N
+    return loss, cache
 
-    return loss
+@wraps('lazy')
+def svm_loss_backward(cache):
+    """
+  Computes the backward pass for a svm loss function.
+
+  Inputs:
+  - cache:
+    - x: Input data, of shape (N, C) where x[i, j] is the score for the jth class
+    for the ith input.
+    - y: Vector of labels, of shape (N,) where y[i] is the label for x[i] and
+    0 <= y[i] < C
+
+  Returns a tuple of:
+  - dx: Gradient with respect to x, of shape (N, C)
+  """
+    x, y = cache
+
+    N = x.shape[0]
+    correct_class_scores = x[np.arange(N), y]
+    margins = np.transpose(np.maximum(0, np.transpose(x) - np.transpose(
+        correct_class_scores) + 1.0))
+    margins[np.arange(N), y] = 0
+    num_pos = np.sum(margins > 0, axis=1)
+    dx = np.zeros_like(x)
+    dx[margins > 0] = 1
+    dx[np.arange(N), y] -= num_pos
+    dx /= N
+
+    return dx
 
 
 @wraps('lazy')
-def softmax_loss(x, y):
+def softmax_loss_forward(x, y):
     """
   Computes the loss and gradient for softmax classification.
 
@@ -310,11 +502,35 @@ def softmax_loss(x, y):
 
   Returns a tuple of:
   - loss: Scalar giving the loss
+  - cache: (x, y)
   """
-    #TODO: Missing Max Operator
-    probs = np.exp(x - np.expand_dims(np.max(x, axis=1), axis=1))
-    probs = probs / np.expand_dims(np.sum(probs, axis=1), axis=1)
+    probs = np.exp(x - np.max(x, axis=1, keepdims=True))
+    probs = probs / np.sum(probs, axis=1, keepdims=True)
     N = x.shape[0]
     loss = -np.sum(np.log(probs[np.arange(N), y])) / N
+    cache = (x, y)
+    return loss, cache
 
-    return loss
+@wraps('lazy')
+def softmax_loss_backward(cache):
+    """
+  Computes the backward pass for a softmax loss function.
+
+  Inputs:
+  - cache:
+    - x: Input data, of shape (N, C) where x[i, j] is the score for the jth class
+    for the ith input.
+    - y: Vector of labels, of shape (N,) where y[i] is the label for x[i] and
+    0 <= y[i] < C
+
+  Returns a tuple of:
+  - dx: Gradient with respect to x, of shape (N, C)
+  """
+    x, y = cache
+    N = x.shape[0]
+
+    probs = np.exp(x - np.expand_dims(np.max(x, axis=1), axis=1))
+    dx = probs / np.expand_dims(np.sum(probs, axis=1), axis=1)
+    dx[np.arange(N), y] -= 1
+    dx /= N
+    return dx

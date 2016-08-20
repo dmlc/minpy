@@ -5,7 +5,7 @@ from minpy.array_variants import ArrayType
 import minpy.numpy.random as random
 import minpy.dispatch.policy as policy
 
-#np.set_policy(policy.OnlyNumpyPolicy())
+#np.set_policy(policy.OnlyNumPyPolicy())
 
 def sigmoid(x):
     return 0.5 * (np.tanh(x / 2) + 1)
@@ -38,12 +38,6 @@ targets[np.arange(256), truth] = 1
 weights = random.rand(*wshape) - 0.5
 
 training_gradient_fun = grad(training_loss)
-
-def NumpyVarToMinpy(var):
-  return minpy.array.Value.wrap(var)
-
-def MinpyVarToNumpy(var):
-  return minpy.array.Value.wrap(var).get_data(ArrayType.NUMPY)
 
 for i in range(20):
     print('Trained loss accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))

@@ -17,7 +17,7 @@ def RunTwoLayerNet():
     model = TwoLayerNet()
     solver = Solver(model,
                     data,
-                    optim_config={'learning_rate': 1e-3,},
+                    optim_config={'learning_rate': 1e-4,},
                     lr_decay=0.95,
                     print_every=100)
     solver.train()
@@ -39,7 +39,7 @@ def RunCnnNet():
 
     solver = Solver(model,
                     data,
-                    num_epochs=1,
+                    num_epochs=10,
                     update_rule='adam',
                     optim_config={
                         'learning_rate': 1e-3,
@@ -82,5 +82,5 @@ for k, v in data.iteritems():
 
 #RunTwoLayerNet()
 #RunFullyConnectedNet()
-#RunCnnNet()
-Debug()
+RunCnnNet()
+#Debug()

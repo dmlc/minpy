@@ -22,7 +22,7 @@ class Registry(object):
         self._reg = {}
 
     def register(self, name, prim):
-        """Register primitive.
+        """ Register primitive.
 
         :param name: Name of the primitive.
         :param prim: Primitive.
@@ -55,12 +55,12 @@ class Registry(object):
         return self._reg[name][ptype]
 
     def iter_available_types(self, name, bp_args, bp_kwargs):
-        """Find primitives of the given name that have gradients defined for the arguments.
+        """ Find primitives of the given name that have gradients defined for the arguments.
 
         :param str name: Primitive name.
         :param tuple bp_args: Positional arguments that need back propagation.
         :param tuple bp_kwargs: Keyword arguments that need back propagation.
-        :return: Primitives that satisfy above requirements.
+        :return: Primitives that satisfy the requirements above.
         """
         if name not in self._reg:
             return iter([])

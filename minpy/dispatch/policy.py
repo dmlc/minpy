@@ -27,28 +27,43 @@ class Policy(object):
         :param dict kwargs: The keyword arguments passed to the primitive.
         :return: Which implementation type will be used.
         """
-        raise PrimitivePolicyError('Unimplemented.')
+        raise NotImplementedError()
+
+    @property
+    def name(self):
+        return type(self).__name__
 
 
 class PreferMXNetPolicy(Policy):
-    """Perfer using MXNet functions."""
+    """ Prefer using MXNet functions. Return None if no required function. """
 
     def decide(self, candidates, args, kwargs):
-        if ArrayType.MXNET in [x.type for x in candidates]:
+        possible_impl = set(x.type for x in candidates)
+        if ArrayType.MXNET in possible_impl:
+            return ArrayType.MXNET
+        elif ArrayType.NUMPY in possible_impl:
+            return ArrayType.NUMPY
+        else:
+            return None
+
+class OnlyNumPyPolicy(Policy):
+    """ Only use NumPy functions. Return None if no required function. """
+
+    def decide(self, candidates, args, kwargs):
+        if ArrayType.NUMPY in tuple(x.type for x in candidates):
+            return ArrayType.NUMPY
+        else:
+            return None
+
+
+class OnlyMXNetPolicy(Policy):
+    """ Only use MXNet functions. Return None if no required function. """
+
+    def decide(self, candidates, args, kwargs):
+        if ArrayType.MXNET in tuple(x.type for x in candidates):
             return ArrayType.MXNET
         else:
-            return ArrayType.NUMPY
-
-
-class OnlyNumpyPolicy(Policy):
-    """Perfer using MXNet functions."""
-
-    def decide(self, candidates, args, kwargs):
-        if ArrayType.NUMPY in [x.type for x in candidates]:
-            return ArrayType.NUMPY
-        else:
-            raise ValueError(
-                "Cannot find proper functions among: {}.".format(candidates))
+            return None
 
 
 def resolve_name(name, reg, plc, args, kwargs):
@@ -70,4 +85,13 @@ def resolve_name(name, reg, plc, args, kwargs):
         x[1], array.Value) and x[1].marked_for_bp, kwargs.items())))
     available = reg.iter_available_types(name, bp_args, bp_kwargs)
     preference = plc.decide(available, args, kwargs)
+    if preference is None:
+        if len(bp_args) == len(bp_kwargs) == 0:
+            raise PrimitivePolicyError(
+                "Cannot find implementation for function: {}() under "
+                "policy: {}.".format(name, plc.name))
+        else:
+            raise PrimitivePolicyError(
+                "Cannot find function with proper gradient implementation for "
+                ": {}() under policy: {}.".format(name, plc.name))
     return reg.get(name, preference)

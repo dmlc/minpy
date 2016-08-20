@@ -7,9 +7,8 @@ import mxnet as mx
 import numpy as py_np
 
 from model import ModelBase
-from cs231n.layers import affine_forward, relu_forward, svm_loss, dropout_forward, batchnorm_forward
-
-#TODO(Haoran): write examples in python notebook
+from cs231n.layers import affine_forward, relu_forward, svm_loss_forward, \
+                          dropout_forward, batchnorm_forward
 
 
 class ModelInputDimInconsistencyError(ValueError):
@@ -147,8 +146,8 @@ class ThreeLayerConvNet(ModelBase):
         scores = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
         label_shape = (batch_num,)
 
-        self.symbol_func = core.function(
-            scores, [('x', X.shape), ('softmax_label', label_shape)])
+        self.symbol_func = core.Function(
+                scores, {'x': X.shape, 'softmax_label': label_shape})
 
     #TODO(Haoran): move this into parent structured model class
     def pack_params(self):

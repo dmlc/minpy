@@ -16,16 +16,19 @@ from .context import Context, cpu, gpu, current_context
 _logger = log.get_logger(__name__)
 
 
-def grad_and_loss(func, argnum=0):
+def grad_and_loss(func, argnum=0, method=False):
     """Return function that computes both gradient and loss value.
 
     :param func: The forward (loss) function.
     :param argnum: The index of argument to calculate gradient for.
+    :param method: Skip the first argument 'self' if func is a method.
     :return: A function that would compute both the gradient of the specified argument and loss value.
     """
     # pylint: disable= missing-docstring
     @functools.wraps(func)
     def wrapped(*args):
+        if method:
+            args = args[1:]
         arrays = tuple(array.Value.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
         for i in argnums:
@@ -45,14 +48,15 @@ def grad_and_loss(func, argnum=0):
     # pylint: enable= missing-docstring
 
 
-def grad(func, argnum=0):
+def grad(func, argnum=0, method=False):
     """Return function that contains gradient calculation.
 
     :param func: The forward (loss) function.
     :param argnum: The index of argument to calculate gradient for.
+    :param method: Skip the first argument 'self' if func is a method.
     :return: A function that would compute the gradient of the specified argument.
     """
-    grad_with_loss_func = grad_and_loss(func, argnum)
+    grad_with_loss_func = grad_and_loss(func, argnum, method)
     # pylint: disable= missing-docstring
 
     @functools.wraps(grad_with_loss_func)
@@ -67,84 +71,138 @@ class MXNetSymbolError(ValueError):
     """ Error class for creating mxnet symbols """
     pass
 
+class Function(object):
+    def __init__(self, symbol, input_shapes, name='mxnet_symbol'):
+        """Construct a differentiable function from MXNet symbol.
 
-def function(symbol, input_shapes, sym_name='mxnet_symbol'):
-    """Construct a differentiable function from MXNet symbol.
+        There is a known issue with current implementation. If SoftmaxLoss symbol is used, the
+        ground truth label will be passed in in the forward. Therefore, even if no ground truth
+        is provided during backward, the backward will "magically" run well since the required
+        information has already been provided.
 
-    :param symbol: Target symbol as function output.
-    :param input_shapes: A dictionary of input names to input shapes, used for shape inference.
-    :return: A function that could be called (and differentiated) as normal primitive.
-    """
-    # TODO: Policy Control
-    policy_cpu = False
-    #dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
-    dev = current_context().as_mxnet_ctx()
-    dshape = {name: shape for name, shape in input_shapes.items()}
-    executor = symbol.simple_bind(dev, 'write', **dshape)
-    arg_names = symbol.list_arguments()
-    """ In train model of mxnet example, there's no grad of input(data)
-    While it has grad of input in Minpy's calling example
-    Possible culprit: In model, training is complete, i.e. loss is computed in symbol. Not in Minpy.
-    ```python
-    input_names = dshape.keys()
-    raw_param_names = list(set(arg_names) - set(input_names))
-    raw_param_names = list(set(arg_names))
-    param_idx = [i for i in range(len(arg_names)) if arg_names[i] in raw_param_names]
-    param_names = [arg_names[i] for i in param_idx]
-    ```
-    """
-    # pylint: disable= missing-docstring
-    param_names = arg_names
+        :param symbol: Target symbol as function output.
+        :param input_shapes: A dictionary of input names to input shapes, used for shape inference.
+        :return: A function that could be called (and differentiated) as normal primitive.
+        """
+        self._symbol = symbol
+        self._input_shapes = input_shapes
+        self._sym_name = name
+        self._prim = self._create_prim()
+        # Infer shapes of parameters and outputs.
+        arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(**self._input_shapes)
+        # Get shapes of learnable parameters.
+        self._param_shapes = {}
+        for i, arg_name in enumerate(symbol.list_arguments()):
+            if arg_name not in input_shapes:
+                self._param_shapes[arg_name] = arg_shapes[i]
+        # Get shapes of output.
+        self._out_shapes = {}
+        for i, out_name in enumerate(symbol.list_outputs()):
+            self._out_shapes[out_name] = out_shapes[i]
+        # Get shapes of auxiliary tensors.
+        self._aux_shapes = {}
+        for i, aux_name in enumerate(symbol.list_auxiliary_states()):
+            self._aux_shapes[aux_name] = aux_shapes[i]
 
-    def func(*args, **kwargs):
-        if len(args) > 0:
-            raise MXNetSymbolError('find arg with no name specified')
-        # Set Data & Parameters
-        for name, value in kwargs.items():
-            if name in executor.arg_dict:
-                value.copyto(executor.arg_dict[name])
-            else:
-                raise MXNetSymbolError(
-                    'find arg name: %s not in executors arg_list' % name)
-        # forward
-        # TODO: is_train flag
-        executor.forward(is_train=True)
-        # TODO: Minpy currently doesn't support multiple outputs
-        return executor.outputs[0]
+    def _create_prim(self):
+        # TODO(haoran): Policy Control
+        policy_cpu = False
+        dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
+        executor = self._symbol.simple_bind(dev, 'write', **self._input_shapes)
+        arg_names = self._symbol.list_arguments()
+        # pylint: disable= missing-docstring
+        # Define raw forward function.
+        def func(**kwargs):
+            # Set Data & Parameters
+            for name, value in kwargs.items():
+                if name in executor.arg_dict:
+                    value.copyto(executor.arg_dict[name])
+                else:
+                    _logger.debug('Ignore unknown input (%s) to symbol (%s)' \
+                            % (name, self._sym_name))
+            # Forward computation.
+            # TODO(haoran): How to set `is_train` flag
+            executor.forward(is_train=True)
+            # TODO(haoran): Currently doesn't support multiple outputs.
+            return executor.outputs[0]
+        # Set function name to be the given symbol name.
+        func.__name__ = self._sym_name
+        # Define gradient function generator.
+        def gen_grad_kw(keyname):
+            def grad_wrapper(ans, **kwargs):
+                def grad_func(g):
+                    executor.backward(out_grads=g)
+                    ret = executor.grad_arrays[arg_names.index(keyname)]
+                    return ret
+                return grad_func
+            return grad_wrapper
+        # Create primitives.
+        prim = array.Primitive(func, ArrayType.MXNET)
+        for name in arg_names:
+            prim.def_grad_kw(gen_grad_kw(name), name)
+        return prim
+        # pylint: enable= missing-docstring
 
-    func.__name__ = sym_name
+    def __call__(self, **kwargs):
+        # Remove arguments that are not defined in symbol's argument
+        # list.
+        filtered_kwargs = {}
+        for name, val in kwargs.items():
+            if name in self._symbol.list_arguments():
+                filtered_kwargs[name] = val
+        return self._prim(**filtered_kwargs)
 
-    def def_grad_kw(keyname):
-        def grad_wrapper(ans, *arg_values, **kwargs_values):
-            def grad_func(g):
-                executor.backward(out_grads=g)
-                ret = executor.grad_arrays[param_names.index(keyname)]
-                return ret
+    def get_params(self):
+        param_configs = {}
+        for name, shape in self._param_shapes.items():
+            param_configs[name] = { 'shape': shape }
+        return param_configs
 
-            return grad_func
+    def get_output_shapes(self):
+        return self._out_shapes
 
-        return grad_wrapper
-
-    prim = array.Primitive(func, ArrayType.MXNET)
-    for name in param_names:
-        prim.def_grad_kw(def_grad_kw(name), name)
-    return prim
-    # pylint: enable= missing-docstring
-
+    def get_one_output_shape(self):
+        assert(len(self._out_shapes) == 1)
+        return list(self._out_shapes.values())[0]
 
 class MinpyWrapperError(TypeError):
     """ Error when wrapping function return values """
     pass
 
 
-def numpy_to_minpy(var):
+def _numpy_to_minpy(var):
     """ Convert a numpy array to minpy array """
     return array.Value.wrap(var)
 
 
-def minpy_to_numpy(var):
+def _minpy_to_numpy(var):
     """ Convert a minpy array to numpy array """
     return array.Value.wrap(var).get_data(ArrayType.NUMPY)
+
+
+def numpy_to_minpy(var):
+    """ Convert numpy array(s) to minpy array(s)
+
+    :param var: singular, list, or tuple of numpy array(s)
+    :return: singular, list, or tuple of minpy array(s)
+    """
+    if isinstance(var, (tuple, list)):
+        return type(var)(array.Value.wrap(x) for x in var)
+    else:
+        return array.Value.wrap(var)
+
+
+def minpy_to_numpy(var):
+    """ Convert a minpy array to numpy array
+
+    :param var: singular, list, or tuple of minpy array(s)
+    :return: singular, list, or tuple of numpy array(s)
+    """
+    if isinstance(var, (tuple, list)):
+        return type(var)(array.Value.wrap(x).get_data(ArrayType.NUMPY)
+                         for x in var)
+    else:
+        return array.Value.wrap(var).get_data(ArrayType.NUMPY)
 
 
 def convert(val, converter, basic_types):
@@ -167,12 +225,14 @@ def convert(val, converter, basic_types):
     elif isinstance(val, dict):
         ret = {k: convert(v, converter, basic_types) for k, v in val.items()}
     else:
-        raise MinpyWrapperError('Unexpected %s type found in core.convert' %
-                                type(val))
+        ret = val  # no conversion
+    # else:
+        # raise MinpyWrapperError('Unexpected %s type found in core.convert' %
+                                # type(val))
     return ret
 
 
-def wraps(mode='lazy'):
+def wraps(mode='lazy', method=False):
     """Convenient wrapper function separate MinPy and NumPy data structure.
 
     The wrapper will convert all array types in the input arguments as MinPy arrays.
@@ -181,6 +241,8 @@ def wraps(mode='lazy'):
     * In ``lazy`` mode, no conversion will be performed for the return values. So users need to
       handle the return value type themselves.
     * In ``numpy`` mode, all MinPy arrays will be converted to NumPy arrays.
+    :param mode:
+    :param method:
     """
 
     #pylint: disable= missing-docstring
@@ -192,8 +254,15 @@ def wraps(mode='lazy'):
                 basic_types += num_type_lists
             basic_types += [array.Number, array.Array, array.Value]
             # convert input arguments into minpy structure
-            mpy_args = convert(args, numpy_to_minpy, basic_types)
-            mpy_kwargs = convert(kwargs, numpy_to_minpy, basic_types)
+            if method:
+                self = args[0]
+                args = args[1:]
+
+            mpy_args = convert(args, _numpy_to_minpy, basic_types)
+            mpy_kwargs = convert(kwargs, _numpy_to_minpy, basic_types)
+
+            if method:
+                mpy_args = (self, ) + mpy_args
             # call func
             mpy_res = func(*mpy_args, **mpy_kwargs)
             # convert return value
@@ -202,7 +271,7 @@ def wraps(mode='lazy'):
                 return mpy_res
             elif mode == 'numpy':
                 # convert every returned array to numpy.ndarray
-                return convert(mpy_res, minpy_to_numpy, basic_types)
+                return convert(mpy_res, _minpy_to_numpy, basic_types)
             else:
                 raise MinpyWrapperError('Unknown wrapper mode: %s' % mode)
 

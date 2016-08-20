@@ -18,6 +18,18 @@ class ModelBase(object):
         self.params = {}
         self.param_configs = {}
 
+    def add_param(self, name, shape, **kwargs):
+        assert(name not in self.param_configs), 'Duplicate parameter name %s' % name
+        self.param_configs[name] = { 'shape': shape }
+        self.param_configs[name].update(kwargs)
+        return self
+
+    def add_params(self, param_dict):
+        for name, pconfig in param_dict.items():
+            assert(name not in self.param_configs), 'Duplicate parameter name %s' % name
+            self.param_configs[name] = pconfig
+        return self
+
     @abc.abstractmethod
     def forward(self, X):
         """ do forward and output the loss """
