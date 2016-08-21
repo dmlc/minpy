@@ -9,6 +9,7 @@ implementation on GPU, or pure NumPy CPU implementation, or both. NumPy has thre
 3. ``OnlyMXNetPolicy``: Only use MXNet implementation.
 
 To change policy, use ``np.set_policy``. For example:
+::
 
     import minpy.numpy as np
     import minpy.dispatch.policy as policy
