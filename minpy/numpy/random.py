@@ -5,7 +5,7 @@
 from __future__ import absolute_import
 
 import sys
-from .mocking import Module
+from minpy.numpy.mocking import Module
 
 _old = {
     '__name__' : __name__,

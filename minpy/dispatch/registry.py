@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Registry for functions under the same symbol."""
-from ..utils import log
+from minpy.utils import log
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__)

@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 # pylint: disable= no-self-use
 """Policy for selecting appropriate function to call."""
-from .. import array
-from ..utils import log
-from ..array_variants import ArrayType
+from __future__ import absolute_import
+from __future__ import print_function
+
+from minpy.array import Value
+from minpy.array_variants import ArrayType
+from minpy.utils import log
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
@@ -80,9 +83,9 @@ def resolve_name(name, reg, plc, args, kwargs):
         x, _ = t
         return x
     bp_args = tuple(map(fst, filter(lambda x: isinstance(
-        x[1], array.Value) and x[1].marked_for_bp, enumerate(args))))
+        x[1], Value) and x[1].marked_for_bp, enumerate(args))))
     bp_kwargs = tuple(map(fst, filter(lambda x: isinstance(
-        x[1], array.Value) and x[1].marked_for_bp, kwargs.items())))
+        x[1], Value) and x[1].marked_for_bp, kwargs.items())))
     available = reg.iter_available_types(name, bp_args, bp_kwargs)
     preference = plc.decide(available, args, kwargs)
     if preference is None:

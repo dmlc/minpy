@@ -9,12 +9,12 @@ from __future__ import absolute_import
 
 import importlib
 
-from ..utils import log
-from ..dispatch import registry
-from ..dispatch import policy
-from ..dispatch import primitive_selector
-from ..array_variants import variants
-from .. import array
+from minpy.array_variants import variants
+from minpy.dispatch.registry import Registry
+from minpy.dispatch.policy import Policy, PreferMXNetPolicy
+from minpy.dispatch.primitive_selector import PrimitiveSelector
+from minpy.primitive import Primitive
+from minpy.utils import log
 
 
 class Module(object):
@@ -24,8 +24,8 @@ class Module(object):
     """
 
     def __init__(self, old, name=None):
-        self._registry = registry.Registry()
-        self._policy = policy.PreferMXNetPolicy()
+        self._registry = Registry()
+        self._policy = PreferMXNetPolicy()
         self._logger = log.get_logger(old['__name__'])
         self._logger.info('Initialize module: {}.'.format(old['__name__']))
         self._old = old
@@ -37,7 +37,7 @@ class Module(object):
             mod = importlib.import_module(modname)
             self._logger.info('Importing from {}.'.format(modname))
             primitive_wrapper = lambda func, *args, **kwargs:\
-                    array.Primitive(func, variants[vname], *args, **kwargs)
+                    Primitive(func, variants[vname], *args, **kwargs)
             # Register all primitives of the module.
             before = len(self._registry._reg)
             mod.register_primitives(self._registry, primitive_wrapper)
@@ -55,7 +55,7 @@ class Module(object):
         :param plc: New policy.
         """
         assert isinstance(
-            plc, policy.Policy), 'Need an instance of `minpy.dispatch.Policy`.'
+            plc, Policy), 'Need an instance of `minpy.dispatch.Policy`.'
         self._policy = plc
 
     def __getattr__(self, name):
@@ -74,7 +74,7 @@ class Module(object):
         elif name == '__all__':
             return self._old.__all__
         elif self._registry.has_name(name):
-            return primitive_selector.PrimitiveSelector(name, self._registry,
+            return PrimitiveSelector(name, self._registry,
                                                         self._policy)
         elif name in self._old:
             self._logger.info(
