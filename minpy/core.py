@@ -240,6 +240,7 @@ def wraps(mode='lazy', method=False):
     * In ``lazy`` mode, no conversion will be performed for the return values. So users need to
       handle the return value type themselves.
     * In ``numpy`` mode, all MinPy arrays will be converted to NumPy arrays.
+
     :param mode:
     :param method:
     """
