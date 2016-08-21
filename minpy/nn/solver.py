@@ -9,48 +9,48 @@ import numpy as np
 
 class Solver(object):
     """
-  A Solver encapsulates all the logic necessary for training classification
-  models. The Solver performs stochastic gradient descent using different
-  update rules defined in optim.py.
-
-  The solver accepts both training and validataion data and labels so it can
-  periodically check classification accuracy on both training and validation
-  data to watch out for overfitting.
-
-  To train a model, you will first construct a Solver instance, passing the
-  model, dataset, and various optoins (learning rate, batch size, etc) to the
-  constructor. You will then call the train() method to run the optimization
-  procedure and train the model.
+    A Solver encapsulates all the logic necessary for training classification
+    models. The Solver performs stochastic gradient descent using different
+    update rules defined in optim.py.
   
-  After the train() method returns, model.params will contain the parameters
-  that performed best on the validation set over the course of training.
-  In addition, the instance variable solver.loss_history will contain a list
-  of all losses encountered during training and the instance variables
-  solver.train_acc_history and solver.val_acc_history will be lists containing
-  the accuracies of the model on the training and validation set at each epoch.
+    The solver accepts both training and validataion data and labels so it can
+    periodically check classification accuracy on both training and validation
+    data to watch out for overfitting.
   
-  Example usage might look something like this:
- 
-  train_dataiter = NDArrayIter(data['X_train'],
-                         data['y_train'],
-                         batch_size=100,
-                         shuffle=True)
-  test_dataiter = NDArrayIter(data['X_val'],
-                         data['y_val'],
-                         batch_size=100,
-                         shuffle=False)
-
-  model = MyAwesomeModel(hidden_size=100, reg=10)
-  solver = Solver(model, train_dataiter, test_dataiter,
-                  update_rule='sgd',
-                  optim_config={
-                    'learning_rate': 1e-3,
-                  },
-                  lr_decay=0.95,
-                  num_epochs=10,
-                  print_every=100)
-  solver.train()
-  """
+    To train a model, you will first construct a Solver instance, passing the
+    model, dataset, and various optoins (learning rate, batch size, etc) to the
+    constructor. You will then call the train() method to run the optimization
+    procedure and train the model.
+    
+    After the train() method returns, model.params will contain the parameters
+    that performed best on the validation set over the course of training.
+    In addition, the instance variable solver.loss_history will contain a list
+    of all losses encountered during training and the instance variables
+    solver.train_acc_history and solver.val_acc_history will be lists containing
+    the accuracies of the model on the training and validation set at each epoch.
+    
+    Example usage might look something like this:
+   
+    train_dataiter = NDArrayIter(data['X_train'],
+                           data['y_train'],
+                           batch_size=100,
+                           shuffle=True)
+    test_dataiter = NDArrayIter(data['X_val'],
+                           data['y_val'],
+                           batch_size=100,
+                           shuffle=False)
+  
+    model = MyAwesomeModel(hidden_size=100, reg=10)
+    solver = Solver(model, train_dataiter, test_dataiter,
+                    update_rule='sgd',
+                    optim_config={
+                      'learning_rate': 1e-3,
+                    },
+                    lr_decay=0.95,
+                    num_epochs=10,
+                    print_every=100)
+    solver.train()
+    """
 
     def __init__(self, model, train_dataiter, test_dataiter, **kwargs):
         """
@@ -221,7 +221,7 @@ class Solver(object):
         num_iterations = self.train_dataiter.getnumiterations() * self.num_epochs
         t = 0
         for epoch in range(self.num_epochs):
-            print('epoch %d ' % (epoch))
+            self.epoch = epoch + 1
             for each_batch in self.train_dataiter:
                 self._step(each_batch)
                  # Maybe print training loss

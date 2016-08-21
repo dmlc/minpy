@@ -4,19 +4,20 @@ This file implements fullyconnected network in minpy.
 All the array created in this file belongs to minpy.array Type.
 Types of input values to loss() function, i.e. training/testing data & targets, should also be minpy.array.
 """
-import numpy as py_np
-import functools
-
-from model import ModelBase
-from cs231n.layers import affine_forward, relu_forward, svm_loss, dropout_forward, batchnorm_forward
-from cs231n.layer_utils import affine_relu_forward
 
 import minpy
 import minpy.numpy as np
+import numpy as py_np
 import minpy.numpy.random as random
+import functools
+
 from minpy.core import grad_and_loss
 
-#import minpy.dispatch.policy as policy
+from cs231n.layers import affine_forward, relu_forward, svm_loss_forward,\
+                          softmax_loss_forward, dropout_forward, batchnorm_forward
+from cs231n.layer_utils import affine_relu_forward
+from model import ModelBase
+
 
 class TwoLayerNet(ModelBase):
     """
@@ -85,15 +86,13 @@ class TwoLayerNet(ModelBase):
 
         # Note: types of X, y are mxnet.ndarray
         def train_loss(X, y, W1, W2, b1, b2):
-            l1 = affine_relu_forward(X, W1, b1)
-            scores= affine_forward(l1, W2, b2)
+            l1, _ = affine_relu_forward(X, W1, b1)
+            scores, _= affine_forward(l1, W2, b2)
             if y is None:
                 return scores
-            #[TODO]: softmax is not supported yet
-            # loss, d_scores = softmax_loss(scores, y)
-            loss = svm_loss(scores, y) + \
-                   np.sum(W1**2) * 0.5 * self.reg + \
-                   np.sum(W2**2) * 0.5 * self.reg
+            loss, _ = softmax_loss_forward(scores, y)
+            loss += np.sum(W1**2) * 0.5 * self.reg + \
+                    np.sum(W2**2) * 0.5 * self.reg
             return loss
 
         self.params_array = []
@@ -206,8 +205,11 @@ class FullyConnectedNet(ModelBase):
         # variances, so we need to pass a special bn_param object to each batch
         # normalization layer.
         self.bn_params = []
+        self.bn_stats = []
         if self.use_batchnorm:
             self.bn_params = [{'mode': 'train'}
+                              for i in xrange(self.num_layers - 1)]
+            self.bn_stats = [{'mean': None, 'std': None}
                               for i in xrange(self.num_layers - 1)]
 
         # Build key's index in loss func's arglist
@@ -262,22 +264,25 @@ class FullyConnectedNet(ModelBase):
             res = X
             for l in xrange(self.num_layers):
                 prev_res = res
-                res = affine_forward(prev_res,
+                res, _ = affine_forward(prev_res,
                                      args[self.w_idx(l)],
                                      args[self.b_idx(l)])
                 if l == (self.num_layers - 1):
                     continue
                 if self.use_batchnorm:
-                    res = batchnorm_forward(res, args[self.bn_ga_idx(l)],
+                    res, self.bn_stats[l]['mean'], self.bn_stats[l]['std'], _\
+                        = batchnorm_forward(res,
+                                            args[self.bn_ga_idx(l)],
                                             args[self.bn_bt_idx(l)],
+                                            self.bn_stats[l]['mean'],
+                                            self.bn_stats[l]['std'],
                                             self.bn_params[l])
-                res = relu_forward(res)
+                res, _ = relu_forward(res)
                 if self.use_dropout:
-                        res = dropout_forward(res, self.dropout_param)
+                        res, _ = dropout_forward(res, self.dropout_param)
             if y is None:
                 return res
-            #loss, _ = softmax_loss(scores, y)
-            loss = svm_loss(res, y)
+            loss, _ = softmax_loss_forward(res, y)
             return loss
 
         if y is None:

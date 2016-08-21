@@ -7,9 +7,8 @@ import mxnet as mx
 import numpy as py_np
 
 from model import ModelBase
-from cs231n.layers import affine_forward, relu_forward, svm_loss, dropout_forward, batchnorm_forward
-
-#TODO(Haoran): write examples in python notebook
+from cs231n.layers import affine_forward, relu_forward, svm_loss_forward, \
+                          dropout_forward, batchnorm_forward
 
 
 class ModelInputDimInconsistencyError(ValueError):
@@ -54,6 +53,7 @@ class ThreeLayerConvNet(ModelBase):
         #TODO(haoran): Add another parent class
         #This should be moved into super() __init__
         self.symbol_func = None
+        self.params = {}
 
         self.input_dim = input_dim
         self.num_filters = num_filters
@@ -63,42 +63,12 @@ class ThreeLayerConvNet(ModelBase):
         self.num_classes = num_classes
         self.weight_scale = weight_scale
 
-        self.set_param()
-
     def set_param(self):
         self.params = {}
-
-        c_cnt, height, width = self.input_dim
-        f_cnt = self.num_filters
-        f_h, f_w = self.filter_size, self.filter_size
-
-        self.params['conv1_weight'] = random.randn(f_cnt, c_cnt, f_h,
-                                                   f_w) * self.weight_scale
-        self.params['conv1_bias'] = np.zeros(f_cnt)
-
-        #TODO(Haoran): whole stuff about all dimension calculations
-        #should be substituted by quering symbol.arg_list
-        conv_stride = 1
-        conv_pad = (f_h - 1) / 2
-
-        Hc, Wc = 1 + (height + 2 * conv_pad - f_h) / conv_stride, 1 + (
-            width + 2 * conv_pad - f_w) / conv_stride
-
-        pool_height, pool_width = 2, 2
-        pool_stride = 2
-
-        Hp, Wp = (Hc - pool_height) / pool_stride + 1, (Wc - pool_width
-                                                       ) / pool_stride + 1
-
-        # weight has to be tranposed to fit mxnet's symbol
-        self.params['fc1_weight'] = np.transpose(random.randn(
-            5408, self.hidden_dim) * self.weight_scale)
-        self.params['fc1_bias'] = np.zeros((self.hidden_dim))
-
-        # weight has to be tranposed to fit mxnet's symbol
-        self.params['fc2_weight'] = np.transpose(random.randn(
-            self.hidden_dim, self.num_classes) * self.weight_scale)
-        self.params['fc2_bias'] = np.zeros((self.num_classes))
+        executor = self.symbol_func._executor
+        for k, v in executor.arg_dict.items():
+            if (k != "x") and (k != 'softmax_label'):
+                self.params[k] = random.rand(*v.shape) * self.weight_scale
 
         #TODO(Haoran): move following into parent structured model class
         self.param_keys = self.params.keys()
@@ -177,6 +147,7 @@ class ThreeLayerConvNet(ModelBase):
         # symbol's init func takes input size.
         if self.symbol_func == None:
             self.set_mxnet_symbol(X)
+            self.set_param()
 
         params_array = self.pack_params()
 

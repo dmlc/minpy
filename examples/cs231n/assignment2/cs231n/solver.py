@@ -109,6 +109,7 @@ class Solver(object):
         # Unpack keyword arguments
         self.update_rule = kwargs.pop('update_rule', 'sgd')
         self.optim_config = kwargs.pop('optim_config', {})
+        self.optim_configs = None
         self.lr_decay = kwargs.pop('lr_decay', 1.0)
         self.batch_size = kwargs.pop('batch_size', 100)
         self.num_epochs = kwargs.pop('num_epochs', 10)
@@ -126,8 +127,6 @@ class Solver(object):
         if not hasattr(optim, self.update_rule):
             raise ValueError('Invalid update_rule "%s"' % self.update_rule)
         self.update_rule = getattr(optim, self.update_rule)
-
-        self._reset()
 
     def _reset(self):
         """
@@ -161,6 +160,8 @@ class Solver(object):
 
         # Compute loss and gradient
         loss, grads = self.model.loss(X_batch, y_batch)
+        if self.optim_configs is None:
+            self._reset()
 
         self.loss_history.append(loss)
 
@@ -243,8 +244,8 @@ class Solver(object):
             if first_it or last_it or epoch_end:
                 train_acc = self.check_accuracy(self.X_train,
                                                 self.y_train,
-                                                num_samples=1000)
-                val_acc = self.check_accuracy(self.X_val, self.y_val)
+                                                num_samples=1000, batch_size=self.batch_size)
+                val_acc = self.check_accuracy(self.X_val, self.y_val, batch_size=self.batch_size)
                 self.train_acc_history.append(train_acc)
                 self.val_acc_history.append(val_acc)
 
