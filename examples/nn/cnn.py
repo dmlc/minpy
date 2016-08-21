@@ -24,22 +24,20 @@ class ConvolutionNet(ModelBase):
         # Define symbols that using convolution and max pooling to extract better features
         # from input image.
         net = mx.sym.Variable(name='X')
-        net = mx.sym.Reshape(data=net,
-                             shape=(batch_size, 3, 32, 32))
-        net = mx.sym.Convolution(data=net,
-                                 name='conv',
-                                 kernel=(7, 7),
-                                 num_filter=32)
-        net = mx.sym.Activation(data=net, act_type='relu')
-        net = mx.sym.Pooling(data=net,
-                             name='pool',
-                             pool_type='max',
-                             kernel=(2, 2),
-                             stride=(2, 2))
+        net = mx.sym.Reshape(
+                data=net, shape=(batch_size, 3, 32, 32))
+        net = mx.sym.Convolution(
+                data=net, name='conv', kernel=(7, 7), num_filter=32)
+        net = mx.sym.Activation(
+                data=net, act_type='relu')
+        net = mx.sym.Pooling(
+                data=net, name='pool', pool_type='max', kernel=(2, 2),
+                stride=(2, 2))
         net = mx.sym.Flatten(data=net)
         # Create forward function and add parameters to this model.
-        self.conv = Function(net, input_shapes={'X': (batch_size, input_size)},
-                             name='conv')
+        self.conv = Function(
+                net, input_shapes={'X': (batch_size, input_size)},
+                name='conv')
         self.add_params(self.conv.get_params())
         # Define ndarray parameters used for classification part.
         output_shape = self.conv.get_one_output_shape()
@@ -81,7 +79,10 @@ def main(args):
                     train_dataiter,
                     test_dataiter,
                     num_epochs=10,
-                    init_rule='xavier',
+                    init_rule='gaussian',
+                    init_config={
+                        'stdvar': 0.001,
+                    },
                     update_rule='sgd_momentum',
                     optim_config={
                         'learning_rate': 1e-3,
