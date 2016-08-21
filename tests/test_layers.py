@@ -65,16 +65,17 @@ def test_mxnet_affine():
     xshape = (10, 40)
     fake_y = np.zeros([10, 20])
     fake_y[:,0] = 1
-    weights = rng.randn(20, 40) - 0.5
+    x = rng.randn(*xshape)
+
     inputs = mx.sym.Variable(name='x')
     fc = mx.sym.FullyConnected(name='fc', data=inputs, num_hidden=20)
-    f = core.function(fc, {'x': xshape})
+    f = core.Function(fc, {'x': xshape})
 
-    def check_fn(x):
+    def check_fn(weights):
         return layers.softmax_loss(f(x=x, fc_weight=weights), fake_y)
+    weights = rng.randn(20, 40) * 0.01
 
-    x = rng.randn(*xshape) - 0.5
-    gradient_checker.quick_grad_check(check_fn, x, rs=rng)
+    gradient_checker.quick_grad_check(check_fn, weights, rs=rng)
 
 
 def test_caffe_concat():

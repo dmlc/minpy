@@ -208,7 +208,7 @@ def l2_loss(x, y):
 
 @wraps('lazy')
 def sigmoid(x):
-  return 1/(1+np.exp(-x)) 
+  return 1/(1+np.exp(-x))
 
 
 @wraps('lazy')
@@ -241,14 +241,14 @@ def rnn_forward(x, h0, Wx, Wh, b):
   sequence composed of T vectors, each of dimension D. The RNN uses a hidden
   size of H, and we work over a minibatch containing N sequences. After running
   the RNN forward, we return the hidden states for all timesteps.
-  
+
   Inputs:
   - x: Input data for the entire timeseries, of shape (N, T, D).
   - h0: Initial hidden state, of shape (N, H)
   - Wx: Weight matrix for input-to-hidden connections, of shape (D, H)
   - Wh: Weight matrix for hidden-to-hidden connections, of shape (H, H)
   - b: Biases of shape (H,)
-  
+
   Returns a tuple of:
   - h: Hidden states for the entire timeseries, of shape (N, T, H).
   """
@@ -265,10 +265,10 @@ def rnn_forward(x, h0, Wx, Wh, b):
 def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
   """
   Forward pass for a single timestep of an LSTM.
-  
+
   The input data has dimension D, the hidden state has dimension H, and we use
   a minibatch size of N.
-  
+
   Inputs:
   - x: Input data, of shape (N, D)
   - prev_h: Previous hidden state, of shape (N, H)
@@ -276,7 +276,7 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
   - Wx: Input-to-hidden weights, of shape (D, 4H)
   - Wh: Hidden-to-hidden weights, of shape (H, 4H)
   - b: Biases, of shape (4H,)
-  
+
   Returns a tuple of:
   - next_h: Next hidden state, of shape (N, H)
   - next_c: Next cell state, of shape (N, H)
@@ -302,18 +302,18 @@ def lstm_forward(x, h0, Wx, Wh, b):
   sequence composed of T vectors, each of dimension D. The LSTM uses a hidden
   size of H, and we work over a minibatch containing N sequences. After running
   the LSTM forward, we return the hidden states for all timesteps.
-  
+
   Note that the initial cell state is passed as input, but the initial cell
   state is set to zero. Also note that the cell state is not returned; it is
   an internal variable to the LSTM and is not accessed from outside.
-  
+
   Inputs:
   - x: Input data of shape (N, T, D)
   - h0: Initial hidden state of shape (N, H)
   - Wx: Weights for input-to-hidden connections, of shape (D, 4H)
   - Wh: Weights for hidden-to-hidden connections, of shape (H, 4H)
   - b: Biases of shape (4H,)
-  
+
   Returns a tuple of:
   - h: Hidden states for all timesteps of all sequences, of shape (N, T, H)
   """
@@ -343,7 +343,7 @@ def temporal_affine_forward(x, w, b):
   - x: Input data of shape (N, T, D)
   - w: Weights of shape (D, M)
   - b: Biases of shape (M,)
-  
+
   Returns a tuple of:
   - out: Output data of shape (N, T, M)
   """
@@ -383,13 +383,13 @@ def temporal_softmax_loss(x, y, mask, verbose=False):
   - dx: Gradient of loss with respect to scores x.
   """
   N, T, V = x.shape
-  
+
   x_flat = x.reshape(N * T, V)
   y_flat = y.reshape(N * T)
   mask_flat = mask.reshape(N * T)
-  
+
   probs = np.exp(x_flat - np.max(x_flat, axis=1, keepdims=True))
   probs = probs / np.sum(probs, axis=1, keepdims=True)
   loss = -np.sum(mask_flat * np.log(probs[np.arange(N * T), y_flat])) / N
-  
+
   return loss

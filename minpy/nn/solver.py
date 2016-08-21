@@ -228,7 +228,6 @@ class Solver(object):
                 if self.verbose and t % self.print_every == 0:
                     print('(Iteration %d / %d) loss: %f' % (t + 1, num_iterations, self.loss_history[-1]))
                 t += 1
-           
 
             # evaluate after each epoch
             train_acc = self.check_accuracy(self.train_dataiter,
