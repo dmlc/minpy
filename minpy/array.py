@@ -18,6 +18,7 @@ from .utils import log
 from .array_variants import ArrayType
 from .array_variants import array_types
 from .array_variants import number_types
+from .context import Context, cpu, gpu, current_context
 
 import mxnet
 import numpy
@@ -87,8 +88,7 @@ class Node(object):
             _logger.debug('Call derivative func of "{}".'.format(rec.primitive))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
-                # Currently all MXNet function calls are performed on GPU 0.
-                with mxnet.gpu(0) as ctx:
+                with result_grad.context.as_mxnet_ctx() as ctx:
                     grad = rec.grad_func(result_grad_value)
             else:
                 grad = rec.grad_func(result_grad_value)
@@ -145,13 +145,21 @@ class Value(object):
     """
     _ns = None
 
-    def __init__(self, marked):
+    def __init__(self, marked, context):
         self._marked_for_bp = marked
+        if context is None:
+            self._context = current_context()
+        else:
+            self._context = context
 
     @property
     def marked_for_bp(self):
         """Return whether the current Value will be used for autograd."""
         return self._marked_for_bp
+
+    @property
+    def context(self):
+        return self._context
 
     @staticmethod
     def wrap(data, *args, **kwargs):
@@ -349,8 +357,8 @@ class Number(Value, float):
     def __new__(cls, val, marked=False):
         return float.__new__(cls, val)
 
-    def __init__(self, val, marked=False):
-        super(Number, self).__init__(marked=marked)
+    def __init__(self, val, marked=False, context=None):
+        super(Number, self).__init__(marked=marked, context=context)
         self._node = Node(self)
         self._val = val
 
@@ -391,8 +399,8 @@ class Array(Value):
     __slots__ = ['_node', '_data', '_latest_version', '_marked_for_bp']
     __array_priority__ = 100.0  # highest priority when compute with numpy.ndarray
 
-    def __init__(self, data, marked=False):
-        super(Array, self).__init__(marked)
+    def __init__(self, data, marked=False, context=None):
+        super(Array, self).__init__(marked, context)
         self._data = {}
         self._node = Node(self)
         atype = Array.to_array_type(data)
@@ -421,6 +429,10 @@ class Array(Value):
     def node(self):
         """ get node which contains derivative information from this array """
         return self._node
+
+    @property
+    def context(self):
+        return self._context
 
     @property
     def ndim(self):
@@ -495,10 +507,9 @@ class Array(Value):
                 id(self)))
             nparray = self._data[ArrayType.NUMPY]
             # pylint: disable= fixme
-            # TODO currently, we only use one gpu
             # pylint: enable= fixme
             self._data[ArrayType.MXNET] = mxnet.ndarray.array(
-                nparray, ctx=mxnet.gpu(0))
+                nparray, ctx=self._context.as_mxnet_ctx())
         self._latest_version = None
 
     def enforce_data(self, dtype):
@@ -666,8 +677,7 @@ class Primitive(object):
         }
         # Call the real function with raw value.
         if self.type == ArrayType.MXNET:
-            # Currently all MXNet function call will be performed on GPU 0.
-            with mxnet.gpu(0) as ctx:
+            with current_context().as_mxnet_context() as ctx:
                 result_value = self._func(*arg_values, **kwargs_values)
         else:
             result_value = self._func(*arg_values, **kwargs_values)
