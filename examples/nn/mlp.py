@@ -9,6 +9,7 @@ from minpy.nn.solver import Solver
 from minpy.nn.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
+batch_size=128
 
 class TwoLayerNet(ModelBase):
     def __init__(self,
@@ -40,12 +41,12 @@ def main(args):
 
     train_dataiter = NDArrayIter(data['X_train'],
                          data['y_train'],
-                         batch_size=100,
+                         batch_size=batch_size,
                          shuffle=True)
 
     test_dataiter = NDArrayIter(data['X_test'],
                          data['y_test'],
-                         batch_size=100,
+                         batch_size=batch_size,
                          shuffle=False)
 
     solver = Solver(model,
@@ -55,7 +56,7 @@ def main(args):
                     init_rule='xavier',
                     update_rule='sgd_momentum',
                     optim_config={
-                        'learning_rate': 1e-4,
+                        'learning_rate': 1e-3,
                         'momentum': 0.9
                     },
                     verbose=True,

@@ -1,4 +1,4 @@
-"""Convolution Neural Network example with both MinPy ndarray and MXNet symbol."""
+"""Convolution Neural Network example using only MXNet symbol."""
 import sys
 import argparse
 
@@ -14,6 +14,7 @@ from examples.utils.data_utils import get_CIFAR10_data
 import mxnet as mx
 
 batch_size=128
+weight_decay = 0.001
 
 class ConvolutionNet(ModelBase):
     def __init__(self,
@@ -37,27 +38,25 @@ class ConvolutionNet(ModelBase):
                              kernel=(2, 2),
                              stride=(2, 2))
         net = mx.sym.Flatten(data=net)
+        net = mx.sym.FullyConnected(name='fc1', data=net, num_hidden=hidden_size)
+        net = mx.sym.Activation(data=net, act_type='relu')
+        net = mx.sym.FullyConnected(name='fc2', data=net, num_hidden=num_classes)
         # Create forward function and add parameters to this model.
-        self.conv = Function(net, input_shapes={'X': (batch_size, input_size)},
-                             name='conv')
-        self.add_params(self.conv.get_params())
-        # Define ndarray parameters used for classification part.
-        output_shape = self.conv.get_one_output_shape()
-        conv_out_size = output_shape[1]
-        self.add_param(name='w1', shape=(conv_out_size, hidden_size)) \
-            .add_param(name='b1', shape=(hidden_size,)) \
-            .add_param(name='w2', shape=(hidden_size, num_classes)) \
-            .add_param(name='b2', shape=(num_classes,))
+        self.cnn = Function(net, input_shapes={'X': (batch_size, input_size)},
+                             name='cnn')
+        self.add_params(self.cnn.get_params())
 
     def forward(self, X):
-        out = self.conv(X=X, **self.params)
-        out = layers.affine(out, self.params['w1'], self.params['b1'])
-        out = layers.relu(out)
-        out = layers.affine(out, self.params['w2'], self.params['b2'])
+        out = self.cnn(X=X, **self.params)
         return out
 
     def loss(self, predict, y):
-        return layers.softmax_loss(predict, y)
+        # Add L2 regularization for all the weights.
+        reg_loss = 0.0
+        for name, weight in self.params.items():
+            reg_loss += np.sum(weight ** 2) * 0.5
+        # Compute total loss.
+        return layers.softmax_loss(predict, y) + weight_decay * reg_loss
 
 def main(args):
     model = ConvolutionNet()
