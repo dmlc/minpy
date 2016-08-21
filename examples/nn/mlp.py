@@ -53,10 +53,13 @@ def main(args):
                     train_dataiter,
                     test_dataiter,
                     num_epochs=10,
-                    init_rule='xavier',
+                    init_rule='gaussian',
+                    init_config={
+                        'stdvar': 0.001
+                    },
                     update_rule='sgd_momentum',
                     optim_config={
-                        'learning_rate': 1e-3,
+                        'learning_rate': 1e-4,
                         'momentum': 0.9
                     },
                     verbose=True,

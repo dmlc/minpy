@@ -196,6 +196,20 @@ def softmax_loss(x, y):
     loss = -np.sum(np.log(probs) * onehot_y) / N
     return loss
 
+
+@wraps('lazy')
+def softmax_cross_entropy(prob, label):
+    N = prob.shape[0]
+    C = prob.shape[1]
+    if len(label.shape) == 1:
+        #convert it to one hot encoding
+        onehot_label = np.zeros([N, C])
+        np.onehot_encode(label, onehot_label)
+    else:
+        onehot_label = label
+    return -np.sum(np.log(prob) * onehot_label) / N
+
+
 @wraps('lazy')
 def l2_loss(x, y):
     N = x.shape[0]

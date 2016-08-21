@@ -21,9 +21,9 @@ class TwoLayerNet(ModelBase):
         super(TwoLayerNet, self).__init__()
         # Define the symbols.
         data = mx.sym.Variable(name='X')
-        out = mx.sym.FullyConnected(name='fc1', data=data, num_hidden=hidden_size)
+        out = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=hidden_size)
         out = mx.sym.Activation(data=out, act_type='relu')
-        out = mx.sym.FullyConnected(name='fc2', data=out, num_hidden=num_classes)
+        out = mx.sym.FullyConnected(data=out, name='fc2', num_hidden=num_classes)
         # Wrap the final symbol into a function.
         # ATTENTION: when using mxnet symbols, input shape (including batch size) should be fixed
         self.fwd_fn = core.Function(out, input_shapes={'X': (batch_size, input_size)})
@@ -59,11 +59,14 @@ def main(args):
                     train_dataiter,
                     test_dataiter,
                     num_epochs=10,
-                    init_rule='xavier',
+                    init_rule='gaussian',
+                    init_config={
+                        'stdvar': 0.001,
+                    },
                     update_rule='sgd_momentum',
                     optim_config={
-                        'learning_rate': 1e-3,
-                        'momentum': 0.9
+                        'learning_rate': 1e-4,
+                        'momentum': 0.9,
                     },
                     verbose=True,
                     print_every=20)
