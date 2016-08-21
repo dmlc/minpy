@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 """Wrapper for NumPy random functions."""
 from __future__ import absolute_import
+from __future__ import print_function
 
-from . import numpy_wrapper
+from minpy.array_variants.numpy import numpy_wrapper
+
 import numpy
 
 def register_primitives(reg, prim_wrapper):

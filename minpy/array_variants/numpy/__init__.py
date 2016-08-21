@@ -5,7 +5,7 @@
 from __future__ import absolute_import
 
 import numpy
-from . import numpy_core
+from minpy.array_variants.numpy import numpy_core
 
 array_type = numpy.ndarray
 number_type = [

@@ -2,9 +2,13 @@
 """Context management API of minpy."""
 from __future__ import absolute_import
 
-from .utils import log
+from minpy.utils import log
 
+import mxnet
+
+# pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
+# pylint: enable= invalid-name
 
 
 class Context(object):
@@ -67,8 +71,7 @@ class Context(object):
             return True
         return False
 
-    def as_mxnet_ctx(self):
-        import mxnet
+    def as_mxnet_context(self):
         _logger.debug("typeid:{}, id:{}".format(self.device_typeid, self.device_id))
         return mxnet.Context(self.devtype2str[self.device_typeid], self.device_id)
 
@@ -88,7 +91,6 @@ class Context(object):
 
 # initialize the default context in Context
 Context.default_ctx = Context('cpu', 0)
-
 
 def cpu(device_id=0):
     """Return a CPU context.

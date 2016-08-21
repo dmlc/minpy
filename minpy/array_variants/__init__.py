@@ -3,10 +3,11 @@
 #pylint: disable= invalid-name
 """ Package for different implementations of array computations """
 from __future__ import absolute_import
+from __future__ import print_function
 
-from ..utils import common
-from . import numpy
-from . import mxnet
+from minpy.array_variants import numpy
+from minpy.array_variants import mxnet
+from minpy.utils import common
 
 class ArrayType:
     """Enumeration of types of arrays."""
