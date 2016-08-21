@@ -1,18 +1,18 @@
 """ Code from cs231n course """
-import pickle
+import cPickle
 import numpy as np
-import os, sys
+import os, sys, random
 from scipy.misc import imread
 
 
 def load_CIFAR_batch(filename):
     """ load single batch of cifar """
     with open(filename, 'rb') as f:
-        #datadict = pickle.load(f, encoding='latin1')
+        # datadict = cPickle.load(f, encoding='latin1')
         if sys.version_info > (3, 0):
-            datadict = pickle.load(f, encoding='latin1')
+            datadict = cPickle.load(f, encoding='latin1')
         else:
-            datadict = pickle.load(f)
+            datadict = cPickle.load(f)
         X = datadict['data']
         Y = datadict['labels']
         X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
@@ -25,7 +25,7 @@ def load_CIFAR10(ROOT):
     xs = []
     ys = []
     for b in range(1, 6):
-        f = os.path.join(ROOT, 'data_batch_%d' % (b, ))
+        f = os.path.join(ROOT, 'data_batch_%d' % (b,))
         X, Y = load_CIFAR_batch(f)
         xs.append(X)
         ys.append(Y)
@@ -190,6 +190,38 @@ def load_tiny_imagenet(path, dtype=np.float32):
     return class_names, X_train, y_train, X_val, y_val, X_test, y_test
 
 
+def adding_problem_generator(N, seq_len=6, p=0.5, maxint=50):
+    """ A data generator for adding problem.
+
+    The single datum entry is a 2D vector with two rows with same length.
+    The first row a list of random data. The second row is a list of binary
+    mask. The corresponding label entry is the sum of the masked data. For
+    example:
+
+    1 4 5 3  -->  9 (4 + 5)
+    0 1 1 0
+
+    :param N: the number of the entries.
+    :param seq_len: the length of a single sequence.
+    :param p: the probability of 1 in generated mask
+    :param maxint: the maximum integer in random generation.
+    :return: (X, Y), X the data, Y the label.
+    """
+    import numpy as np
+    X_num = np.random.randint(0, high=maxint, size=(N, seq_len, 1))
+    X_mask = np.ones((N, seq_len, 1))
+    Y = np.ones((N, 1))
+    for i in xrange(N):
+        for j in xrange(seq_len):
+            if random.random() > p:
+                X_mask[i, j, 0] = 1
+            else:
+                X_mask[i, j, 0] = 0
+        Y[i, 0] = np.sum(X_mask[i, :, :] * X_num[i, :, :])
+    X = np.append(X_num, X_mask, axis=2)
+    return X, Y
+
+
 def load_models(models_dir):
     """Load saved models from disk. This will attempt to unpickle all files in a
     directory; any files that give errors on unpickling (such as README.txt) will
@@ -206,7 +238,7 @@ def load_models(models_dir):
     for model_file in os.listdir(models_dir):
         with open(os.path.join(models_dir, model_file), 'rb') as f:
             try:
-                models[model_file] = pickle.load(f, encoding='latin1')['model']
-            except pickle.UnpicklingError:
+                models[model_file] = cPickle.load(f, encoding='latin1')['model']
+            except cPickle.UnpicklingError:
                 continue
     return models
