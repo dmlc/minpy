@@ -1,3 +1,5 @@
+from __future__ import division
+
 import minpy.numpy as np
 import minpy.numpy.random as random
 from minpy.core import wraps
@@ -203,7 +205,7 @@ def softmax_loss(x, y):
 @wraps('lazy')
 def l2_loss(x, y):
     N = x.shape[0]
-    return np.sum((x - y) ** 2) / N
+    return np.sum((x - y) ** 2) / (N * 2)
 
 
 @wraps('lazy')
