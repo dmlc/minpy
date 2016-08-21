@@ -29,7 +29,7 @@ class RNNNet(ModelBase):
         return y
 
     def loss(self, predict, y):
-        return layers.softmax_loss(predict, y)
+        return layers.l2_loss(predict, y)
 
 
 def main():
