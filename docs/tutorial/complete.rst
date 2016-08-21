@@ -133,51 +133,50 @@ Following is code using both MinPy arrays and MXNet symbols. Import statements a
 
 Fully connected layers are calculated with MinPy. We can also go ahead and replace them with MXNet symbols. The difference is highlighted below. You can get the full file `with only MXNet symbols <https://github.com/dmlc/minpy/blob/master/examples/nn/cnn_sym.py>`_.
 
-Here ``layers.affine`` computes :math:`y=W\times x+b`. We can replace it with ``mx.sym.FullyConnected`` and it does the same math but entirely in MXNet.
+Here ``layers.affine`` computes :math:`y=W\times x+b`. We can replace it with ``mx.sym.FullyConnected`` and it does the same math but entirely in MXNet. We no longer have to retrieve weights in the forward function. Fully connected layers are stacked directly upon output of convolution layer and fed as a whole into ``Function`` to turn it into a MinPy gradable function.
 
 ::
 
-    @@ -39,19 +39,12 @@
-             net = mx.sym.Flatten(data=net)
-    +        net = mx.sym.FullyConnected(name='fc1', data=net, num_hidden=hidden_size)
-    +        net = mx.sym.Activation(data=net, act_type='relu')
-             # Create forward function and add parameters to this model.
-    -        self.conv = Function(net, input_shapes={'X': (batch_size, input_size)},
-    -                             name='conv')
-    -        self.add_params(self.conv.get_params())
-    -        # Define ndarray parameters used for classification part.
-    -        output_shape = self.conv.get_one_output_shape()
-    -        conv_out_size = output_shape[1]
-    -        self.add_param(name='w1', shape=(conv_out_size, hidden_size)) \
-    -            .add_param(name='b1', shape=(hidden_size,)) \
-    -            .add_param(name='w2', shape=(hidden_size, num_classes)) \
-    -            .add_param(name='b2', shape=(num_classes,))
-    +        net = mx.sym.FullyConnected(name='fc2', data=net, num_hidden=num_classes)
-    +        self.cnn = Function(net, input_shapes={'X': (batch_size, input_size)},
-    +                            name='cnn')
-    +        self.add_params(self.cnn.get_params())
+        net = mx.sym.Flatten(data=net)
+        # self.conv = Function(net, input_shapes={'X': (batch_size, input_size)},
+        #                      name='conv')
+        # self.add_params(self.conv.get_params())
+        # # Define ndarray parameters used for classification part.
+        # output_shape = self.conv.get_one_output_shape()
+        # conv_out_size = output_shape[1]
+        # self.add_param(name='w1', shape=(conv_out_size, hidden_size)) \
+        #     .add_param(name='b1', shape=(hidden_size,)) \
+        #     .add_param(name='w2', shape=(hidden_size, num_classes)) \
+        #     .add_param(name='b2', shape=(num_classes,))
+        net = mx.sym.FullyConnected(name='fc1', data=net, num_hidden=hidden_size)
+        net = mx.sym.Activation(data=net, act_type='relu')
+        net = mx.sym.FullyConnected(name='fc2', data=net, num_hidden=num_classes)
+        self.cnn = Function(net, input_shapes={'X': (batch_size, input_size)},
+                            name='cnn')
+        self.add_params(self.cnn.get_params())
 
-         def forward(self, X):
-    -        out = self.conv(X=X, **self.params)
-    -        out = layers.affine(out, self.params['w1'], self.params['b1'])
-    -        out = layers.relu(out)
-    -        out = layers.affine(out, self.params['w2'], self.params['b2'])
-    +        out = self.cnn(X=X, **self.params)
-             return out
+    def forward(self, X):
+        # out = self.conv(X=X, **self.params)
+        # out = layers.affine(out, self.params['w1'], self.params['b1'])
+        # out = layers.relu(out)
+        # out = layers.affine(out, self.params['w2'], self.params['b2'])
+        out = self.cnn(X=X, **self.params)
+        return out
 
 We can also add regularization to the loss. Full code is available `with regularization <https://github.com/dmlc/minpy/blob/master/examples/nn/cnn_reg.py>`_. Modification is highlighted below.
 
+We calculated an L-2 regularization entry to the loss function and added it to the return value of the loss function.
+
 ::
 
-    @@ -52,2 +53,7 @@
-         def loss(self, predict, y):
-    -        return layers.softmax_loss(predict, y)
-    +        # Add L2 regularization for all the weights.
-    +        reg_loss = 0.0
-    +        for name, weight in self.params.items():
-    +            reg_loss += np.sum(weight ** 2) * 0.5
-    +        # Compute total loss.
-    +        return layers.softmax_loss(predict, y) + weight_decay * reg_loss
+    def loss(self, predict, y):
+        # return layers.softmax_loss(predict, y)
+        # Add L2 regularization for all the weights.
+        reg_loss = 0.0
+        for name, weight in self.params.items():
+            reg_loss += np.sum(weight ** 2) * 0.5
+        # Compute total loss.
+        return layers.softmax_loss(predict, y) + weight_decay * reg_loss
 
 Reinforcement learning with policy gradient
 -------------------------------------------
