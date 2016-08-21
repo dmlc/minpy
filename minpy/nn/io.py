@@ -5,6 +5,8 @@ from collections import OrderedDict
 
 import sys
 import numpy as np
+import cPickle
+
 
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
@@ -13,6 +15,7 @@ class DataBatch(object):
         self.label = label
         self.pad = pad
         self.index = index
+
 
 class DataIter(object):
     """DataIter object in mxnet. """
@@ -96,6 +99,7 @@ class DataIter(object):
         """
         pass
 
+
 def _init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
     assert (data is not None) or allow_empty
@@ -120,6 +124,7 @@ def _init_data(data, allow_empty, default_name):
                     "should be NDArray or numpy.ndarray")
 
     return list(data.items())
+
 
 class NDArrayIter(DataIter):
     """NDArrayIter object in minpy. Taking numpy array to get dataiter.
@@ -188,7 +193,6 @@ class NDArrayIter(DataIter):
         """The name and shape of label provided by this iterator"""
         return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.label]
 
-
     def hard_reset(self):
         """Igore roll over data and set to start"""
         self.cursor = -self.batch_size
@@ -247,3 +251,31 @@ class NDArrayIter(DataIter):
 
     def getnumiterations(self):
         return self.num_iterations_per_batch
+
+
+def save_data_labels(X, Y, file_name):
+    """ Handy utility to save data
+
+    :param X: data vector
+    :param Y: corresponding label vector
+    :param file_name: file saved to
+    """
+    with open(file_name, 'wb') as f:
+        data = {}
+        data['data'] = X
+        data['labels'] = Y
+        cPickle.dump(data, f, protocol=cPickle.HIGHEST_PROTOCOL)
+
+
+def load_data_labels(file_name):
+    """ Handy utility to unpack data
+
+    :param file_name: file to unpack
+    :return: (X, Y), (data vector, label vector)
+    """
+    with open(file_name, 'rb') as f:
+        data = cPickle.load(f)
+        X = data['data']
+        Y = data['labels']
+        return X, Y
+

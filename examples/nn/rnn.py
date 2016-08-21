@@ -1,10 +1,8 @@
-import argparse
-import random
-import minpy.numpy as np
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
 from minpy.nn.io import NDArrayIter
+from examples.utils.data_utils import adding_problem_generator as data_gen
 
 
 class RNNNet(ModelBase):
@@ -22,46 +20,32 @@ class RNNNet(ModelBase):
             .add_param(name='ba', shape=(num_classes,))
 
     def forward(self, X):
-        y1 = layers.rnn_forward(X, self.params['h0'], self.params['Wx'],
+        seq_len = X.shape[1]
+        h = self.params['h0']
+        for t in xrange(seq_len):
+            h = layers.rnn_step(X[:, t, :], h, self.params['Wx'],
                                 self.params['Wh'], self.params['b'])
-        y2 = layers.affine(y1[:, -1, :], self.params['Wa'], self.params['ba'])
-        return y2
+        y = layers.affine(h, self.params['Wa'], self.params['ba'])
+        return y
 
     def loss(self, predict, y):
-        assert predict is not None
-        return layers.softmax_loss(predict, y)
+        return layers.l2_loss(predict, y)
 
 
-def data_gen(N, seq_len=6, p=0.5, maxint=50):
-    import numpy as np
-    X_num = np.random.randint(0, high=maxint, size=(N, seq_len, 1))
-    X_mask = np.ones((N, seq_len, 1))
-    Y = np.ones((N, 1))
-    for i in xrange(N):
-        for j in xrange(seq_len):
-            if random.random() > p:
-                X_mask[i, j, 0] = 1
-            else:
-                X_mask[i, j, 0] = 0
-        Y[i, 0] = np.sum(X_mask[i, :, :] * X_num[i, :, :])
-    X = np.append(X_num, X_mask, axis=2) 
-    return X, Y
-
-
-def main(args=None):
+def main():
     model = RNNNet()
-    X_train, Y_train = data_gen(10000)       
-    X_test, Y_test = data_gen(1000)
+    x_train, y_train = data_gen(10000)
+    x_test, y_test = data_gen(1000)
 
-    train_dataiter = NDArrayIter(X_train,
-                         Y_train,
-                         batch_size=100,
-                         shuffle=True)
+    train_dataiter = NDArrayIter(x_train,
+                                 y_train,
+                                 batch_size=100,
+                                 shuffle=True)
 
-    test_dataiter = NDArrayIter(X_test,
-                         Y_test,
-                         batch_size=100,
-                         shuffle=False)
+    test_dataiter = NDArrayIter(x_test,
+                                y_test,
+                                batch_size=100,
+                                shuffle=False)
 
     solver = Solver(model,
                     train_dataiter,

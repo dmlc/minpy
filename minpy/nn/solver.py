@@ -221,7 +221,7 @@ class Solver(object):
         num_iterations = self.train_dataiter.getnumiterations() * self.num_epochs
         t = 0
         for epoch in range(self.num_epochs):
-            print('epoch %d ' % (epoch))
+            self.epoch = epoch + 1
             for each_batch in self.train_dataiter:
                 self._step(each_batch)
                  # Maybe print training loss
