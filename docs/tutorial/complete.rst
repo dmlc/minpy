@@ -137,11 +137,15 @@ Here ``layers.affine`` computes :math:`y=W\times x+b`. We can replace it with ``
 
 ::
 
+    def __init__(self,
+                 input_size=3 * 32 * 32,
+                 hidden_size=512,
+                 num_classes=10):
+        # Same code omitted...
         net = mx.sym.Flatten(data=net)
         # self.conv = Function(net, input_shapes={'X': (batch_size, input_size)},
         #                      name='conv')
         # self.add_params(self.conv.get_params())
-        # # Define ndarray parameters used for classification part.
         # output_shape = self.conv.get_one_output_shape()
         # conv_out_size = output_shape[1]
         # self.add_param(name='w1', shape=(conv_out_size, hidden_size)) \
