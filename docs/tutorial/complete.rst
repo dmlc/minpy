@@ -38,19 +38,21 @@ This simple network takes several common layers from `layers file <https://githu
 
 .. literalinclude:: mlp_bn_dropout.py
   :language: python
+  :emphasize-lines: 14-17, 27-29, 33
   :linenos:
 
 Note that ``running_mean`` and ``running_var`` are defined as auxiliary parameters (``aux_param``). These parameters will not be updated by backpropagation.
-
-Stage 2: MinPy + MXNet
------------------------
 
 The above code looks like *fully NumPy*, and yet it can run on GPU, and without explicit backprop needs. At this point, you might feel a little mysterious of what's happening under the hood. For advanced readers, here are the essential bits:
 
 * The `solver file <https://github.com/dmlc/minpy/blob/master/minpy/nn/solver.py>`_ takes the training and test dataset, and fits the model.
 * At the end of the ``_step`` function, the ``loss`` function is auto-differentiated, deriving gradients to update the parameters.
 
-While these features are great, it is by no means complete. For example, it is possible to write nested loops to perform convolution in NumPy, and the code will not break. But the convolution will be ran on CPU only, resulting in horrible runtime performance.
+
+Stage 2: MinPy + MXNet
+-----------------------
+
+While these features are great, it is by no means complete. For example, it is possible to write nested loops to perform convolution in NumPy, and the code will not break. However, much better implementations exist, especially when running on GPU.
 
 MinPy leverages and integrates seemlessly with MXNet's symbolic programming (see `MXNet Python Symbolic API <https://mxnet.readthedocs.io/en/latest/packages/python/symbol.html>`_). In a nutshell, MXNet's symbolic programming interface allows one to write a sub-DAG with symbolic expression. MXNet's convolutional kernel runs on both CPU and GPU, and its GPU version is highly optimized. 
 
@@ -80,12 +82,10 @@ However, the advantage of MinPy is that it brings in additional flexibility when
   :language: python
   :linenos:
 
-It seems that we are back to the beginning. But in fact, we have made progresses through all these improvements have we now have a both more accurate and more efficient model than the original one.
-
 Recurrent networks
 ------------------
 
-The flexibility of MinPy makes it easy to implement complex neural network routine. The recurrent network is easy in MinPy: just follow your intuition by writing a loop in ``forward`` method. MinPy's autograd system will handle the backpropagation automatically.
+The flexibility of MinPy makes it easy to implement other models. Here is one that implements a the so-called vanilla RNN.
 
 .. literalinclude:: ../../examples/nn/rnn.py
   :language: python
