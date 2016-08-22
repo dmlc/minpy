@@ -85,7 +85,7 @@ However, the advantage of MinPy is that it brings in additional flexibility when
 Recurrent networks
 ------------------
 
-The flexibility of MinPy makes it easy to implement other models. Here is one that implements a the so-called vanilla RNN.
+The flexibility of MinPy makes it easy to implement other models. Here is one that implements the so-called vanilla RNN.
 
 .. literalinclude:: ../../examples/nn/rnn.py
   :language: python
