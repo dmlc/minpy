@@ -34,5 +34,4 @@ class TwoLayerNet(ModelBase):
         return y5
 
     def loss(self, predict, y):
-        # Compute softmax loss between the output and the label.
-        return layers.softmax_loss(predict, y)
+        # ... Same as above
