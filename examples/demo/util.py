@@ -34,12 +34,3 @@ def plot_data(x, y, num_classes=5):
         cls_x = x[t == i]
         plt.scatter(cls_x[:,0], cls_x[:,1], color=colors[i], s=1)
     plt.show()
-
-if __name__ == '__main__':
-    #x, y = make_data()
-    #print x, y
-    #np.save('x', x)
-    #np.save('y', y)
-    #np.save('w', make_weight())
-    x, y = get_data()
-    plot_data(x, y)
