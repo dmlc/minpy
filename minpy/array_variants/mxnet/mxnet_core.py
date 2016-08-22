@@ -117,4 +117,7 @@ def def_grads(reg, prims):
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: g * mxnet.nd.log(x) * ans),
         argnum=1)
     prims('reshape').def_grad(
-        lambda _0, x, _1: lambda g: mxnet.nd.NDArray.reshape(g, x.shape))
+        lambda _0, x, _1: lambda g: NDArray.reshape(g, x.shape))
+    prims('expand_dims').def_grad(
+        lambda ans, x, axis: lambda g: NDArray.reshape(g, x.shape)
+    )
