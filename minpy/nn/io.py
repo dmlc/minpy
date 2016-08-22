@@ -6,6 +6,7 @@ from collections import OrderedDict
 import sys
 import numpy as np
 import six.moves.cPickle as pickle
+import minpy
 
 
 class DataBatch(object):
