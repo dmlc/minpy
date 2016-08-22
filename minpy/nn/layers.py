@@ -87,8 +87,10 @@ def batchnorm(x,
     - out: of shape (N, D)
     - running_mean: updated running_mean
     - running_var: updated running_var
-  """
+    """
+    # TODO: fix NDArray type system
     N, D = x.shape
+    N, D = int(N), int(D)
     if running_mean is None:
         running_mean = np.zeros(D)
     if running_var is None:
@@ -143,7 +145,7 @@ def dropout(x, prob, mode='train', seed=None):
         mask = random.rand(*x.shape) > prob
         out = x * mask  #drop!
     else:
-        out = x
+        out = x * (1 - prob)
     return out
 
 
