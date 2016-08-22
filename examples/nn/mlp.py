@@ -28,7 +28,7 @@ class TwoLayerNet(ModelBase):
             .add_param(name='w2', shape=(hidden_size, num_classes)) \
             .add_param(name='b2', shape=(num_classes,))
 
-    def forward(self, X):
+    def forward(self, X, mode):
         # Flatten the input data to matrix.
         X = np.reshape(X, (batch_size, 3 * 32 * 32))
         # First affine layer (fully-connected layer).

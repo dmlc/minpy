@@ -38,7 +38,7 @@ class ModelBase(object):
         return self
 
     @abc.abstractmethod
-    def forward(self, X):
+    def forward(self, X, mode):
         """ do forward and output the loss """
         return
 

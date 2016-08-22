@@ -4,7 +4,7 @@ class ConvolutionNet(ModelBase):
     def __init__(self):
         # ... Same as above.
 
-    def forward(self, X):
+    def forward(self, X, mode):
         # ... Same as above.
 
     def loss(self, predict, y):

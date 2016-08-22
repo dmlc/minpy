@@ -33,7 +33,7 @@ class ConvolutionNet(ModelBase):
             .add_param(name='w2', shape=(hidden_size, num_classes)) \
             .add_param(name='b2', shape=(num_classes,))
 
-    def forward(self, X):
+    def forward(self, X, mode):
         out = self.conv(X=X, **self.params)
         out = layers.affine(out, self.params['w1'], self.params['b1'])
         out = layers.relu(out)
