@@ -1,15 +1,21 @@
 Complete solver and optimizer guide
 ===================================
 
-This tutorial explains the whole "pipeline" a deep learning developer may encounter when developing and improving their new models. The idea is to start from the most flexible but most inefficient way (NumPy), then gradually take a more efficient approach (MXNet). This process can be iterative such that one can try out his/her idea quickly and after proof-of-concept, could easily convert it to a more efficient implementation. Therefore, in this tutorial, we will first talk about a simple neural network example using MinPy and its ``Solver`` architecture. Then we will show how to convert the model to its MXNet equivalence. Finally, we will again rely on MinPy to try some improvements on the model quickly.
+This tutorial explains the "pipeline" of a typical research project. The idea is to get a quick prototype with the most flexible and familiar package (NumPy), then move the codebase to a more efficient paradigm (MXNet). Typically, one might need to go back and forth iteratively to refine the model. The choise of performance and flexibility depends on the project stage, and is best left to user to decide. Importantly, we have made it as straightforward as possible. For example:
 
-Before reading this tutorial, we suggest you first finish the one covers the basic ideas of MinPy using a much simpler logistic regression example `here <https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb>`_.
+* There is only one codebase to work with. Numpy and MXNet programming idioms mingle together rather easily.
+* Neither style, however, requires the user to explicitly write tedious and (often) error-prone backprop path.
+* Switching between GPU and CPU is straightforward, same code runs in either environment with only one line of change.
+
+We will begin with a simple neural network using MinPy/NumPy and its ``Solver`` architecture. Then we will morph it gradually into a fully MXNet implementation, and then add NumPy statements as we see fit. 
+
+We do suggest you start with the simpler logistic regression example `here <https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb>`_.
 
 Stage 0: Setup
 ---------------
-All the codes covered in this tutorial could be found in this `folder <https://github.com/dmlc/minpy/blob/master/examples/nn/>`_. All the codes in this folder are self-contained and ready-to-run. Before running, please make sure:
+All the codes covered in this tutorial could be found in this `folder <https://github.com/dmlc/minpy/blob/master/examples/nn/>`_. All the codes in this folder are self-contained and ready-to-run. Before running, please make sure that you:
 
-* Your MXNet and MinPy have been correctly installed. If not, please read the `installation guide <https://minpy.readthedocs.io/en/latest/get-started/install.html>`_.
+* Correctly install MXNet and MinPy. For guidance, refer to `installation guide <https://minpy.readthedocs.io/en/latest/get-started/install.html>`_.
 * Follow the instruction in the `README.md` to download the data.
 * Run the example you want.
 
