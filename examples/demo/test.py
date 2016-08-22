@@ -1,56 +1,113 @@
-import logging
-import minpy.numpy as np
-import minpy.dispatch.policy as ply
-from minpy.core import grad_and_loss, function
-import util
-import mxnet as mx
+# coding: utf-8
+# A bit of setup, just ignore this cell.
+from __future__ import absolute_import
+from __future__ import print_function
+import matplotlib.pyplot as plt
 
-logging.getLogger('minpy.array').setLevel(logging.DEBUG)
-logging.getLogger('minpy.core').setLevel(logging.DEBUG)
+import numpy as np
+import numpy.random as random
+import time
+from util import get_data, plot_data
 
-x = mx.symbol.Variable('x')
-sm = mx.symbol.SoftmaxOutput(data=x, name='softmax', grad_scale=1/10000.0)
+# Initialize training data.
+data, label = get_data()
+num_samples = data.shape[0]
+num_features = data.shape[1]
+num_classes = label.shape[1]
 
-softmax = function(sm, {'x': (10000, 5), 'softmax_label': (10000,)})
+print('Shapes: data {}, label {}'.format(data.shape, label.shape))
+print('#samples: {}'.format(num_samples))
+print('#features: {}'.format(num_features))
+print('#classes: {}'.format(num_classes))
 
-x, t = util.get_data()
-#w = np.random.randn(500, 5)
-w = util.get_weight()
-softmax_label = np.argmax(t, axis=1)
 
+print('Data matrix:')
+print(data)
+
+print('Label matrix:')
+print(label)
+
+# Predict the class using logistic regression.
 def predict(w, x):
-    '''
-    a = np.exp(np.dot(x, w))
-    a_sum = np.sum(a, axis=1, keepdims=True)
-    prob = a / a_sum
-    '''
-    y = np.dot(x, w)
-    prob = softmax(x=y, softmax_label=softmax_label)
-    return prob
+    return np.dot(x, w)
 
-#util.plot_data(x, t)
-#util.plot_data(x, predict(w, x))
+# Initialize training weight.
+weight = random.randn(num_features, num_classes)
+
+# Using gradient descent to fit the correct classes.
+def train(w, x, loops):
+    for i in range(loops):
+        prob = predict(w, x)
+
+# Now training it for 100 iterations.
+start_time = time.time()
+train(weight, data, 100)
+print('Training time: {}s'.format(time.time() - start_time))
+
+# ## Multinomial Logistic Regression using MinPy (MXNet NumPy)
+# 
+# ### Utilize GPU computation with little (or no) NumPy syntax change
+# 
+# You could see even with such a tiny example, 100 iterations take around 9 seconds. In real world, there are billions of samples and much more features and classes. How to efficiently train such a model? One solution is to use GPU. Our tool, MinPy allows you to use GPU to speed up the algorithm and in the meantime, keep the neat NumPy syntax you just went through.
+
+# In[10]:
+
+# All you need to do is replace the NumPy namespace with MinPy's.
+import minpy.numpy as np
+import minpy.numpy.random as random
+
+import minpy.dispatch.policy as ply
+np.set_policy(ply.OnlyNumPyPolicy())
+
+# In[11]:
+
+# Initialize weight matrix (again).
+weight = random.randn(num_features, num_classes)
+
+# Now call the same training function.
+# Since the namespace is redefined, it will automatically run on GPU.
+start_time = time.time()
+train(weight, data, 100)
+ # You should observe a significant speed up (around 3x) to the previous training time.
+print('Training time: {}s'.format(time.time() - start_time))
+
+
+# ### Automatic gradient calculation
+# 
+# Compute gradient is tedious especially for complex neural networks you will encounter in the following tutorials. Minpy is able to compute the gradient automatically given arbitrary loss function. Please implement the following loss function (or paste it from your previous codes). The `grad_and_loss` function takes your defined `train_loss` function and then returns a function which will calculate both the loss value and the gradient of weight. The gradient could then be directly used to update the model weight.
+
+# **Quiz:** Try modify the loss function by adding an L2-regularization. The new loss function is as follows:
+# $$J'(w)=J(w)+\sum_{i}w_i^2.$$
+
+# In[12]:
 
 '''
-for i in range(1):
+from minpy.core import grad_and_loss
+
+# Initialize weight matrix (again).
+weight = random.randn(num_features, num_classes)
+
+# Using gradient descent to fit the correct classes.
+def train_loss(w, x):
+    #===========================================================#
+    #                    Your code starts here                  #
+    #===========================================================#
     prob = predict(w, x)
-    #print prob
-    dy = t - prob
-    dw = np.dot(x.T, dy) / 10000
-    w -= 0.1 * dw
+    loss = -np.sum(label * np.log(prob)) / num_samples
+    #===========================================================#
+    #                    Your code ends here                    #
+    #===========================================================#
+    return loss
 
-print w
+# Calculate gradient function automatically.
+grad_function = grad_and_loss(train_loss)
 
-#util.plot_data(x, predict(w, x))
-
+# Now training it for 100 iterations.
+start_time = time.time()
+for i in range(100):
+    dw, loss = grad_function(weight, data)
+    if i % 10 == 0:
+        print('Iter {}, training loss {}'.format(i, loss))
+    weight -= 0.1 * dw
+print('Training time: {}s'.format(time.time() - start_time))
 '''
-def loss(w, x):
-    prob = predict(w, x)
-    return np.reshape(-np.sum(np.log(prob) * t) / 10000, (1, 1))  + 0.5 * w * w
-
-gl = grad_and_loss(loss)
-
-for i in range(10):
-    dw, loss = gl(w, x)
-    print(loss)
-    w -= 0.1 * dw.asnumpy()
