@@ -18,18 +18,17 @@ from examples.utils.data_utils import get_CIFAR10_data
 import mxnet as mx
 
 batch_size=128
+input_size=(3, 32, 32)
+flattened_input_size=3 * 32 * 32
+hidden_size=512
+num_classes=10
 
 class ConvolutionNet(ModelBase):
-    def __init__(self,
-                 input_size=3 * 32 * 32,
-                 hidden_size=512,
-                 num_classes=10):
+    def __init__(self):
         super(ConvolutionNet, self).__init__()
         # Define symbols that using convolution and max pooling to extract better features
         # from input image.
         net = mx.sym.Variable(name='X')
-        net = mx.sym.Reshape(
-                data=net, shape=(batch_size, 3, 32, 32))
         net = mx.sym.Convolution(
                 data=net, name='conv', kernel=(7, 7), num_filter=32)
         net = mx.sym.Activation(
@@ -48,7 +47,7 @@ class ConvolutionNet(ModelBase):
                 data=net, name='output')
         # Create forward function and add parameters to this model.
         self.cnn = Function(
-                net, input_shapes={'X': (batch_size, input_size)},
+                net, input_shapes={'X': (batch_size,) + input_size},
                 name='cnn')
         self.add_params(self.cnn.get_params())
 
@@ -60,30 +59,26 @@ class ConvolutionNet(ModelBase):
         return layers.softmax_cross_entropy(predict, y)
 
 def main(args):
+    # Create model.
     model = ConvolutionNet()
+    # Create data iterators for training and testing sets.
     data = get_CIFAR10_data(args.data_dir)
-    # reshape all data to matrix
-    data['X_train'] = data['X_train'].reshape([data['X_train'].shape[0], 3 * 32 * 32])
-    data['X_val'] = data['X_val'].reshape([data['X_val'].shape[0], 3 * 32 * 32])
-    data['X_test'] = data['X_test'].reshape([data['X_test'].shape[0], 3 * 32 * 32])
-
-    train_dataiter = NDArrayIter(data['X_train'],
-                         data['y_train'],
-                         batch_size=batch_size,
-                         shuffle=False)
-
-    test_dataiter = NDArrayIter(data['X_test'],
-                         data['y_test'],
-                         batch_size=batch_size,
-                         shuffle=False)
-
+    train_dataiter = NDArrayIter(data=data['X_train'],
+                                 label=data['y_train'],
+                                 batch_size=batch_size,
+                                 shuffle=True)
+    test_dataiter = NDArrayIter(data=data['X_test'],
+                                label=data['y_test'],
+                                batch_size=batch_size,
+                                shuffle=False)
+    # Create solver.
     solver = Solver(model,
                     train_dataiter,
                     test_dataiter,
                     num_epochs=10,
                     init_rule='gaussian',
                     init_config={
-                        'stdvar': 0.001,
+                        'stdvar': 0.001
                     },
                     update_rule='sgd_momentum',
                     optim_config={
@@ -91,9 +86,12 @@ def main(args):
                         'momentum': 0.9
                     },
                     verbose=True,
-                    print_every=1)
+                    print_every=20)
+    # Initialize model parameters.
     solver.init()
+    # Train!
     solver.train()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Multi-layer perceptron example using minpy operators")
