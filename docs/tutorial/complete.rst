@@ -30,7 +30,9 @@ The following MinPy code should be self-explainable; it is a simple two-layer fe
 
 This simple network takes several common layers from `layers file <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_. The same file contains a few other useful layers, such as batch normalization and dropout. Here is how a new model incorporates them.
 
-(code with BN and dropout, dropout only at the very last layer, BN can be anywhere)
+.. literalinclude:: mlp_bn_dropout.py
+  :language: python
+  :linenos:
 
 Stage 2: MinPy + MXNet
 -----------------------
