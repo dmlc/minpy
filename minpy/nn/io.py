@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 import sys
 import numpy as np
+import minpy
 import cPickle
 
 
@@ -106,7 +107,7 @@ def _init_data(data, allow_empty, default_name):
     if data is None:
         data = []
 
-    if isinstance(data, np.ndarray):
+    if isinstance(data, (np.ndarray, minpy.array.Array)):
         data = [data]
     if isinstance(data, list):
         if not allow_empty:
@@ -116,12 +117,12 @@ def _init_data(data, allow_empty, default_name):
         else:
             data = OrderedDict([('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
     if not isinstance(data, dict):
-        raise TypeError("Input must be NDArray, numpy.ndarray, " + \
-                "a list of them or dict with them as values")
+        raise TypeError("Input must be NDArray, numpy.ndarray, MinPy Array, or "
+                        "a list of them or dict with them as values.")
     for k, v in data.items():
-        if not isinstance(v, np.ndarray):
-            raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
-                    "should be NDArray or numpy.ndarray")
+        if not isinstance(v, (np.ndarray, minpy.array.Array)):
+            raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) +
+                            "should be NDArray, numpy.ndarray, or MinPy Array.")
 
     return list(data.items())
 

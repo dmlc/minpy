@@ -207,7 +207,6 @@ def adding_problem_generator(N, seq_len=6, p=0.5, maxint=50):
     :param maxint: the maximum integer in random generation.
     :return: (X, Y), X the data, Y the label.
     """
-    import numpy as np
     X_num = np.random.randint(0, high=maxint, size=(N, seq_len, 1))
     X_mask = np.ones((N, seq_len, 1))
     Y = np.ones((N, 1))
