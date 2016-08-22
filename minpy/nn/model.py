@@ -17,6 +17,8 @@ class ModelBase(object):
     def __init__(self):
         self.params = {}
         self.param_configs = {}
+        self.aux_params = {}
+        self.aux_param_configs = {}
 
     def add_param(self, name, shape, **kwargs):
         assert(name not in self.param_configs), 'Duplicate parameter name %s' % name
@@ -28,6 +30,11 @@ class ModelBase(object):
         for name, pconfig in param_dict.items():
             assert(name not in self.param_configs), 'Duplicate parameter name %s' % name
             self.param_configs[name] = pconfig
+        return self
+
+    def add_aux_param(self, name, value):
+        assert(name not in self.aux_param_configs), 'Duplicate auxiliary parameter name %s' % name
+        self.aux_param_configs[name] = value
         return self
 
     @abc.abstractmethod
