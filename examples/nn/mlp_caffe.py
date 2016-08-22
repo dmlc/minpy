@@ -37,7 +37,7 @@ class TwoLayerCaffeNet(ModelBase):
         # ATTENTION: when using mxnet symbols, input shape (including batch size) should be fixed
         self.fwd_fn = core.function(fc2, {'X': (100, input_size)})
 
-    def forward(self, X):
+    def forward(self, X, mode):
         return self.fwd_fn(X=X,
                            fc1_0_weight=self.params['w1'],
                            fc1_1_bias=self.params['b1'],

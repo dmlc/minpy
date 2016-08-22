@@ -251,3 +251,6 @@ def def_grads(reg, prims):
     prims('append').def_grad(
         lambda ans, arr, values, axis=None: lambda g: np.split(g, [arr.shape[axis]], axis)[1],
         argnum=1)
+    prims('expand_dims').def_grad(
+        lambda ans, x, axis: lambda g: np.reshape(g, x.shape)
+    )

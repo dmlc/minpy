@@ -26,7 +26,7 @@ class ConvolutionNet(ModelBase):
                 name='cnn')
         self.add_params(self.cnn.get_params())
 
-    def forward(self, X):
+    def forward(self, X, mode):
         out = self.cnn(X=X, **self.params)
         return out
 

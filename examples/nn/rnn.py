@@ -19,7 +19,7 @@ class RNNNet(ModelBase):
             .add_param(name='Wa', shape=(hidden_size, num_classes))\
             .add_param(name='ba', shape=(num_classes,))
 
-    def forward(self, X):
+    def forward(self, X, mode):
         seq_len = X.shape[1]
         h = self.params['h0']
         for t in xrange(seq_len):

@@ -38,7 +38,7 @@ class TwoLayerNet(ModelBase):
         # Add parameters.
         self.add_params(self.fwd_fn.get_params())
 
-    def forward(self, X):
+    def forward(self, X, mode):
         return self.fwd_fn(X=X, **self.params)
 
     def loss(self, predict, y):

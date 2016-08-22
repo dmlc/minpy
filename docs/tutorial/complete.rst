@@ -1,9 +1,9 @@
 Complete solver and optimizer guide
 ===================================
 
-This tutorial explains the "pipeline" of a typical research project. The idea is to get a quick prototype with the most flexible and familiar package (NumPy), then move the codebase to a more efficient paradigm (MXNet). Typically, one might need to go back and forth iteratively to refine the model. The choise of performance and flexibility depends on the project stage, and is best left to user to decide. Importantly, we have made it as straightforward as possible. For example:
+This tutorial explains the "pipeline" of a typical research project. The idea is to get a quick prototype with the most flexible and familiar package (NumPy), then move the codebase to a more efficient paradigm (MXNet). Typically, one might need to go back and forth iteratively to refine the model. The choice of performance and flexibility depends on the project stage, and is best left to user to decide. Importantly, we have made it as straightforward as possible. For example:
 
-* There is only one codebase to work with. Numpy and MXNet programming idioms mingle together rather easily.
+* There is only one codebase to work with. NumPy and MXNet programming idioms mingle together rather easily.
 * Neither style, however, requires the user to explicitly write tedious and (often) error-prone backprop path.
 * Switching between GPU and CPU is straightforward, same code runs in either environment with only one line of change.
 
@@ -30,13 +30,17 @@ In general, we advocate following the common coding style with the following mod
 
 The following MinPy code should be self-explainable; it is a simple two-layer feed-forward network. The model is defined in the ``TwoLayerNet`` class, where the ``init``, ``forward`` and ``loss`` functions specify the parameters to be learnt, how the network computes all the way till the loss, and the computation of the loss itself, respectively. The crucial thing to note is the **absense of back-prop**, MinPy did it automatically for you.
 
-.. literalinclude:: mlp.py
+.. literalinclude:: ../../examples/nn/mlp.py
   :language: python
   :linenos:
 
 This simple network takes several common layers from `layers file <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_. The same file contains a few other useful layers, such as batch normalization and dropout. Here is how a new model incorporates them.
 
-(code with BN and dropout, dropout only at the very last layer, BN can be anywhere)
+.. literalinclude:: mlp_bn_dropout.py
+  :language: python
+  :linenos:
+
+Note that ``running_mean`` and ``running_var`` are defined as auxiliary parameters (``aux_param``). These parameters will not be updated by backpropagation.
 
 Stage 2: MinPy + MXNet
 -----------------------
@@ -81,7 +85,11 @@ It seems that we are back to the beginning. But in fact, we have made progresses
 Recurrent networks
 ------------------
 
-Coming soon (Larry)
+The flexibility of MinPy makes it easy to implement complex neural network routine. The recurrent network is easy in MinPy: just follow your intuition by writing loop in ``forward`` method. MinPy's autograd system will handle the backpropagation automatically
+
+.. literalinclude:: ../../examples/nn/rnn.py
+  :language: python
+  :linenos:
 
 Put it together: feedforward + recurrent networks
 -------------------------------------------------
