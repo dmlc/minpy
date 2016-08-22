@@ -85,7 +85,7 @@ It seems that we are back to the beginning. But in fact, we have made progresses
 Recurrent networks
 ------------------
 
-The flexibility of MinPy makes it easy to implement complex neural network routine. The recurrent network is easy in MinPy: just follow your intuition by writing loop in ``forward`` method. MinPy's autograd system will handle the backpropagation automatically
+The flexibility of MinPy makes it easy to implement complex neural network routine. The recurrent network is easy in MinPy: just follow your intuition by writing a loop in ``forward`` method. MinPy's autograd system will handle the backpropagation automatically.
 
 .. literalinclude:: ../../examples/nn/rnn.py
   :language: python
