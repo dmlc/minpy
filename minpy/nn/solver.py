@@ -107,11 +107,6 @@ class Solver(object):
             raise ValueError('Invalid update_rule "%s"' % self.update_rule)
         self.update_rule = getattr(optim, self.update_rule)
 
-        # Likewise, create init_rule
-        if not hasattr(init, self.init_rule):
-            raise ValueError('Invalid init_rule "%s"' % self.init_rule)
-        self.init_rule = getattr(init, self.init_rule)
-
         self._reset()
 
     def _reset(self):
@@ -137,10 +132,22 @@ class Solver(object):
         # Overwrite it if the model specify the rules
 
         # Make a deep copy of the init_config for each parameter
+        # and set each param to their own init_rule and init_config
+        self.init_rules = {}
         self.init_configs = {}
         for p in self.model.param_configs:
-            d = {k: v for k, v in self.init_config.items()}
-            self.init_configs[p] = d
+            if 'init_rule' in self.model.param_configs:
+                init_rule = self.model.param_configs['init_rule']
+                init_config = self.model.param_configs.get('init_config', {})
+            else:
+                init_rule = self.init_rule
+                init_config = {k: v for k, v in self.init_config.items()}
+            # replace string name with actual function
+            if not hasattr(init, init_rule):
+                raise ValueError('Invalid init_rule "%s"' % init_rule)
+            init_rule = getattr(init, init_rule)
+            self.init_rules[p] = init_rule
+            self.init_configs[p] = init_config
 
     def _step(self, batch):
         """
@@ -155,7 +162,7 @@ class Solver(object):
         def loss_func(*params):
             # It seems that params are not used in forward function. But since we will pass
             # model.params as arguments, we are ok here.
-            predict = self.model.forward(X_batch)
+            predict = self.model.forward(X_batch, mode='train')
             return self.model.loss(predict, y_batch)
 
         param_arrays = list(self.model.params.values())
@@ -201,7 +208,7 @@ class Solver(object):
         acc_count = 0
         num_samples = 0
         for each_batch in check_dataiter:
-            predict = self.model.forward(each_batch.data[0]).asnumpy()
+            predict = self.model.forward(each_batch.data[0], mode='test').asnumpy()
             acc_count += np.sum(np.argmax(predict, axis=1) == each_batch.label[0])
             num_samples += check_dataiter.batch_size
         return float(acc_count) / num_samples
@@ -211,8 +218,10 @@ class Solver(object):
         Init model parameters based on the param_configs in model
         """
         for name, config in self.model.param_configs.items():
-            self.model.params[name] = self.init_rule(config['shape'],
-                                               self.init_configs[name])
+            self.model.params[name] = self.init_rules[name](config['shape'],
+                                                            self.init_configs[name])
+        for name, value in self.model.aux_param_configs.items():
+            self.model.aux_params[name] = value
 
     def train(self):
         """
