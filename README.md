@@ -27,7 +27,7 @@ The project is still a work-in-progress. You could look at this [tutorial](https
 pip install minpy
 ```
 
-## What we really want
+## What we could achieve
 
 In one word, if you have NumPy code, you could replace the `import` by:
 
@@ -38,6 +38,5 @@ import minpy.numpy as np
 Other numpy code remain the same. And you could have:
 * Auto differentiation support.
 * Speed up with some operations executed on GPUs.
-* Missing operations will fail back to NumPy automatically.
-* Directly call Caffe's layer abstraction without any code change.
-* Switch between NumPy's operators and Caffe's operator as you wish.
+* Missing operations will fall back to NumPy version automatically.
+* Hybrid programming with efficient MXNet's symbol and flexible MinPy arrays.
