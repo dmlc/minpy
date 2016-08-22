@@ -7,7 +7,9 @@ MinPy Tutorial Code Folder
   - Call `./get_dtasets.sh`.
   - You should be able to see a `cifar-10-batches-py` folder.
 * Run example like this:
+
   ```bash
   python mlp.py --data_dir=/path/to/minpy/examples/dataset/cifar10/cifar-10-batches-py/
   ```
+  
 * You could try different examples by replacing the python script you call.
