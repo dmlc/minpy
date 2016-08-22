@@ -23,138 +23,18 @@ MinPy leverages and integrates seemlessly with MXNet's symbolic programming (see
 
 The following code shows how we replace the first layer with two layers of convolutional kernels, using MXNet. Only the model is shown. You can get ready-to-run code for `convolutional network <https://github.com/dmlc/minpy/blob/master/examples/nn/cnn.py>`_.
 
-::
-
-    class ConvolutionNet(ModelBase):
-        def __init__(self,
-                     input_size=3 * 32 * 32,
-                     hidden_size=512,
-                     num_classes=10):
-            super(ConvolutionNet, self).__init__()
-            # Define symbols that using convolution and max pooling to extract better features
-            # from input image.
-            net = mx.sym.Variable(name='X')
-            net = mx.sym.Reshape(data=net,
-                                 shape=(batch_size, 3, 32, 32))
-            net = mx.sym.Convolution(data=net,
-                                     name='conv',
-                                     kernel=(7, 7),
-                                     num_filter=32)
-            net = mx.sym.Activation(data=net, act_type='relu')
-            net = mx.sym.Pooling(data=net,
-                                 name='pool',
-                                 pool_type='max',
-                                 kernel=(2, 2),
-                                 stride=(2, 2))
-            net = mx.sym.Flatten(data=net)
-            # Create forward function and add parameters to this model.
-            self.conv = Function(net, input_shapes={'X': (batch_size, input_size)},
-                                 name='conv')
-            self.add_params(self.conv.get_params())
-            # Define ndarray parameters used for classification part.
-            output_shape = self.conv.get_one_output_shape()
-            conv_out_size = output_shape[1]
-            self.add_param(name='w1', shape=(conv_out_size, hidden_size)) \
-                .add_param(name='b1', shape=(hidden_size,)) \
-                .add_param(name='w2', shape=(hidden_size, num_classes)) \
-                .add_param(name='b2', shape=(num_classes,))
-
-        def forward(self, X):
-            out = self.conv(X=X, **self.params)
-            out = layers.affine(out, self.params['w1'], self.params['b1'])
-            out = layers.relu(out)
-            out = layers.affine(out, self.params['w2'], self.params['b2'])
-            return out
-
-        def loss(self, predict, y):
-            return layers.softmax_loss(predict, y)
+.. literalinclude:: cnn.py
+  :linenos:
 
 Of course, in this example, we can program it completely, in fully MXNet symbolic way. You can get the full file `with only MXNet symbols <https://github.com/dmlc/minpy/blob/master/examples/nn/cnn_sym.py>`_. Model is as the followings.
 
-::
-
-    class ConvolutionNet(ModelBase):
-        def __init__(self,
-                    input_size=3 * 32 * 32,
-                    hidden_size=512,
-                    num_classes=10):
-            super(ConvolutionNet, self).__init__()
-            # Define symbols that using convolution and max pooling to extract better features
-            # from input image.
-            net = mx.sym.Variable(name='X')
-            net = mx.sym.Reshape(data=net,
-                                shape=(batch_size, 3, 32, 32))
-            net = mx.sym.Convolution(data=net,
-                                    name='conv',
-                                    kernel=(7, 7),
-                                    num_filter=32)
-            net = mx.sym.Activation(data=net, act_type='relu')
-            net = mx.sym.Pooling(data=net,
-                                name='pool',
-                                pool_type='max',
-                                kernel=(2, 2),
-                                stride=(2, 2))
-            net = mx.sym.Flatten(data=net)
-            net = mx.sym.FullyConnected(name='fc1', data=net, num_hidden=hidden_size)
-            net = mx.sym.Activation(data=net, act_type='relu')
-            # Create forward function and add parameters to this model.
-            net = mx.sym.FullyConnected(name='fc2', data=net, num_hidden=num_classes)
-            self.cnn = Function(net, input_shapes={'X': (batch_size, input_size)},
-                                name='cnn')
-            self.add_params(self.cnn.get_params())
-
-        def forward(self, X):
-            out = self.cnn(X=X, **self.params)
-            return out
-
-        def loss(self, predict, y):
-            return layers.softmax_loss(predict, y)
+.. literalinclude:: cnn_sym.py
+  :linenos:
 
 However, the advantage of MinPy is that it brings in additional flexibility when needed, this is especially useful for quick prototyping to validate new ideas. Say we want to add a regularization in the loss term, this is done as the followings. Note that we only changed the ``loss`` function. Full code is available `with regularization <https://github.com/dmlc/minpy/blob/master/examples/nn/cnn_reg.py>`_.
 
-::
-
-    class ConvolutionNet(ModelBase):
-        def __init__(self,
-                    input_size=3 * 32 * 32,
-                    hidden_size=512,
-                    num_classes=10):
-            super(ConvolutionNet, self).__init__()
-            # Define symbols that using convolution and max pooling to extract better features
-            # from input image.
-            net = mx.sym.Variable(name='X')
-            net = mx.sym.Reshape(data=net,
-                                shape=(batch_size, 3, 32, 32))
-            net = mx.sym.Convolution(data=net,
-                                    name='conv',
-                                    kernel=(7, 7),
-                                    num_filter=32)
-            net = mx.sym.Activation(data=net, act_type='relu')
-            net = mx.sym.Pooling(data=net,
-                                name='pool',
-                                pool_type='max',
-                                kernel=(2, 2),
-                                stride=(2, 2))
-            net = mx.sym.Flatten(data=net)
-            net = mx.sym.FullyConnected(name='fc1', data=net, num_hidden=hidden_size)
-            net = mx.sym.Activation(data=net, act_type='relu')
-            net = mx.sym.FullyConnected(name='fc2', data=net, num_hidden=num_classes)
-            # Create forward function and add parameters to this model.
-            self.cnn = Function(net, input_shapes={'X': (batch_size, input_size)},
-                                name='cnn')
-            self.add_params(self.cnn.get_params())
-
-        def forward(self, X):
-            out = self.cnn(X=X, **self.params)
-            return out
-
-        def loss(self, predict, y):
-            # Add L2 regularization for all the weights.
-            reg_loss = 0.0
-            for name, weight in self.params.items():
-                reg_loss += np.sum(weight ** 2) * 0.5
-            # Compute total loss.
-            return layers.softmax_loss(predict, y) + weight_decay * reg_loss
+.. literalinclude:: cnn_reg.py
+  :linenos:
 
 Recurrent networks
 ------------------
