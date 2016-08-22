@@ -1,5 +1,5 @@
 """ Code from cs231n course """
-import pickle
+import six.moves.cPickle as pickle
 import numpy as np
 import os, sys, random
 from scipy.misc import imread

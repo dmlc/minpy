@@ -11,10 +11,7 @@
 
 MINPROF_FLAG = True
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import six.moves.cPickle as pickle
 
 import functools
 import optparse

@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import sys
 import numpy as np
-import pickle
+import six.moves.cPickle as pickle
 
 
 class DataBatch(object):
