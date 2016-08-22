@@ -8,12 +8,13 @@ from __future__ import print_function
 import mxnet as mx
 import functools
 
-from .utils import log
-from . import array
-from .array_variants import ArrayType, array_types, number_types
+from minpy.array import Value
+from minpy.array_variants import ArrayType, array_types, number_types
+from minpy.context import current_context
+from minpy.primitive import Primitive
+from minpy.utils import log
 
 _logger = log.get_logger(__name__)
-
 
 def grad_and_loss(func, argnum=0, method=False):
     """Return function that computes both gradient and loss value.
@@ -28,7 +29,7 @@ def grad_and_loss(func, argnum=0, method=False):
     def wrapped(*args):
         if method:
             args = args[1:]
-        arrays = tuple(array.Value.wrap(a) for a in args)
+        arrays = tuple(Value.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
         for i in argnums:
             arrays[i]._marked_for_bp = True
@@ -104,9 +105,7 @@ class Function(object):
             self._aux_shapes[aux_name] = aux_shapes[i]
 
     def _create_prim(self):
-        # TODO(haoran): Policy Control
-        policy_cpu = False
-        dev = mx.cpu() if policy_cpu else mx.gpu(int(0))
+        dev = current_context().as_mxnet_context()
         executor = self._symbol.simple_bind(dev, 'write', **self._input_shapes)
         arg_names = self._symbol.list_arguments()
         # pylint: disable= missing-docstring
@@ -136,7 +135,7 @@ class Function(object):
                 return grad_func
             return grad_wrapper
         # Create primitives.
-        prim = array.Primitive(func, ArrayType.MXNET)
+        prim = Primitive(func, ArrayType.MXNET)
         for name in arg_names:
             prim.def_grad_kw(gen_grad_kw(name), name)
         return executor, prim
@@ -171,12 +170,12 @@ class MinpyWrapperError(TypeError):
 
 def _numpy_to_minpy(var):
     """ Convert a numpy array to minpy array """
-    return array.Value.wrap(var)
+    return Value.wrap(var)
 
 
 def _minpy_to_numpy(var):
     """ Convert a minpy array to numpy array """
-    return array.Value.wrap(var).get_data(ArrayType.NUMPY)
+    return Value.wrap(var).get_data(ArrayType.NUMPY)
 
 
 def numpy_to_minpy(var):
@@ -186,9 +185,9 @@ def numpy_to_minpy(var):
     :return: singular, list, or tuple of minpy array(s)
     """
     if isinstance(var, (tuple, list)):
-        return type(var)(array.Value.wrap(x) for x in var)
+        return type(var)(Value.wrap(x) for x in var)
     else:
-        return array.Value.wrap(var)
+        return Value.wrap(var)
 
 
 def minpy_to_numpy(var):
@@ -198,10 +197,10 @@ def minpy_to_numpy(var):
     :return: singular, list, or tuple of numpy array(s)
     """
     if isinstance(var, (tuple, list)):
-        return type(var)(array.Value.wrap(x).get_data(ArrayType.NUMPY)
+        return type(var)(Value.wrap(x).get_data(ArrayType.NUMPY)
                          for x in var)
     else:
-        return array.Value.wrap(var).get_data(ArrayType.NUMPY)
+        return Value.wrap(var).get_data(ArrayType.NUMPY)
 
 
 def convert(val, converter, basic_types):
@@ -214,21 +213,17 @@ def convert(val, converter, basic_types):
     """
     if val is None:
         return None
-    ret = None
-    if type(val) in basic_types:
-        ret = converter(val)
-    elif isinstance(val, tuple):
-        ret = tuple(convert(v, converter, basic_types) for v in val)
+    for ty in basic_types:
+        if isinstance(val, ty):
+            return converter(val)
+    if isinstance(val, tuple):
+        return tuple(convert(v, converter, basic_types) for v in val)
     elif isinstance(val, list):
-        ret = list(convert(v, converter, basic_types) for v in val)
+        return list(convert(v, converter, basic_types) for v in val)
     elif isinstance(val, dict):
-        ret = {k: convert(v, converter, basic_types) for k, v in val.items()}
+        return {k: convert(v, converter, basic_types) for k, v in val.items()}
     else:
-        ret = val  # no conversion
-    # else:
-        # raise MinpyWrapperError('Unexpected %s type found in core.convert' %
-                                # type(val))
-    return ret
+        return val  # no conversion
 
 
 def wraps(mode='lazy', method=False):
@@ -252,7 +247,7 @@ def wraps(mode='lazy', method=False):
             basic_types = list(array_types.values())
             for num_type_lists in number_types.values():
                 basic_types += num_type_lists
-            basic_types += [array.Number, array.Array, array.Value]
+            basic_types += [Value]
             # convert input arguments into minpy structure
             if method:
                 self = args[0]

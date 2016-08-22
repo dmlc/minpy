@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 # pylint: disable= invalid-name
 """Definition of grads of core functions for numpy implementation"""
-from . import numpy_wrapper
+from __future__ import absolute_import
+from __future__ import print_function
+
+from minpy.array_variants.numpy import numpy_wrapper
 
 import operator
 import numpy as np
-
 
 def _identity(x):
     """ identity function lambda x: x """

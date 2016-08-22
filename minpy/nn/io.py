@@ -5,8 +5,7 @@ from collections import OrderedDict
 
 import sys
 import numpy as np
-import minpy
-import cPickle
+import pickle
 
 
 class DataBatch(object):
@@ -265,7 +264,7 @@ def save_data_labels(X, Y, file_name):
         data = {}
         data['data'] = X
         data['labels'] = Y
-        cPickle.dump(data, f, protocol=cPickle.HIGHEST_PROTOCOL)
+        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_data_labels(file_name):
@@ -275,8 +274,7 @@ def load_data_labels(file_name):
     :return: (X, Y), (data vector, label vector)
     """
     with open(file_name, 'rb') as f:
-        data = cPickle.load(f)
+        data = pickle.load(f)
         X = data['data']
         Y = data['labels']
         return X, Y
-

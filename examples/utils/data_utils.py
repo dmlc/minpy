@@ -1,18 +1,16 @@
 """ Code from cs231n course """
-import cPickle
+import pickle
 import numpy as np
 import os, sys, random
 from scipy.misc import imread
 
-
 def load_CIFAR_batch(filename):
     """ load single batch of cifar """
     with open(filename, 'rb') as f:
-        # datadict = cPickle.load(f, encoding='latin1')
         if sys.version_info > (3, 0):
-            datadict = cPickle.load(f, encoding='latin1')
+            datadict = pickle.load(f, encoding='latin1')
         else:
-            datadict = cPickle.load(f)
+            datadict = pickle.load(f)
         X = datadict['data']
         Y = datadict['labels']
         X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype("float")
@@ -237,7 +235,7 @@ def load_models(models_dir):
     for model_file in os.listdir(models_dir):
         with open(os.path.join(models_dir, model_file), 'rb') as f:
             try:
-                models[model_file] = cPickle.load(f, encoding='latin1')['model']
-            except cPickle.UnpicklingError:
+                models[model_file] = pickle.load(f, encoding='latin1')['model']
+            except pickle.UnpicklingError:
                 continue
     return models

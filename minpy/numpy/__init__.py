@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 """ Mock numpy package """
 #pylint: disable= invalid-name
-from __future__ import absolute_import
-
 import sys
-from .mocking import Module
-from .. import array
+
+from minpy.array import Value
+from minpy.numpy.mocking import Module
 
 from . import random
 
@@ -17,5 +16,5 @@ _old = {
 }
 
 _mod = Module(_old)
-array.Value._ns = _mod
+Value._ns = _mod
 sys.modules[__name__] = _mod

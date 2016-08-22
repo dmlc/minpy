@@ -11,22 +11,30 @@ from minpy import core
 from minpy.nn.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
+# Please uncomment following if you have GPU-enabled MXNet installed.
+#from minpy.context import set_context, gpu
+#set_context(gpu(0)) # set the global context as gpu(0)
+
 batch_size=128
+input_size=(3, 32, 32)
+flattened_input_size=3 * 32 * 32
+hidden_size=512
+num_classes=10
 
 class TwoLayerNet(ModelBase):
-    def __init__(self,
-                 input_size=3 * 32 * 32,
-                 hidden_size=512,
-                 num_classes=10):
+    def __init__(self):
         super(TwoLayerNet, self).__init__()
-        # Define the symbols.
-        data = mx.sym.Variable(name='X')
-        out = mx.sym.FullyConnected(name='fc1', data=data, num_hidden=hidden_size)
-        out = mx.sym.Activation(data=out, act_type='relu')
-        out = mx.sym.FullyConnected(name='fc2', data=out, num_hidden=num_classes)
+        # Use MXNet symbol to define the whole network.
+        net = mx.sym.Variable(name='X')
+        # Flatten the input data to matrix.
+        net = mx.sym.Flatten(net)
+        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=hidden_size)
+        net = mx.sym.Activation(data=net, act_type='relu')
+        net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=num_classes)
         # Wrap the final symbol into a function.
         # ATTENTION: when using mxnet symbols, input shape (including batch size) should be fixed
-        self.fwd_fn = core.Function(out, input_shapes={'X': (batch_size, input_size)})
+        self.fwd_fn = core.Function(
+                net, input_shapes={'X': (batch_size,) + input_size})
         # Add parameters.
         self.add_params(self.fwd_fn.get_params())
 
@@ -37,37 +45,37 @@ class TwoLayerNet(ModelBase):
         return layers.softmax_loss(predict, y)
 
 def main(args):
+    # Create model.
     model = TwoLayerNet()
+    # Create data iterators for training and testing sets.
     data = get_CIFAR10_data(args.data_dir)
-    # reshape all data to matrix
-    data['X_train'] = data['X_train'].reshape([data['X_train'].shape[0], 3 * 32 * 32])
-    data['X_val'] = data['X_val'].reshape([data['X_val'].shape[0], 3 * 32 * 32])
-    data['X_test'] = data['X_test'].reshape([data['X_test'].shape[0], 3 * 32 * 32])
-    # ATTENTION: the batch size should be the same as the input shape declared above.
-    
-    train_dataiter = NDArrayIter(data['X_train'],
-                         data['y_train'],
-                         batch_size=batch_size,
-                         shuffle=True)
-
-    test_dataiter = NDArrayIter(data['X_test'],
-                         data['y_test'],
-                         batch_size=batch_size,
-                         shuffle=False)
-
+    train_dataiter = NDArrayIter(data=data['X_train'],
+                                 label=data['y_train'],
+                                 batch_size=batch_size,
+                                 shuffle=True)
+    test_dataiter = NDArrayIter(data=data['X_test'],
+                                label=data['y_test'],
+                                batch_size=batch_size,
+                                shuffle=False)
+    # Create solver.
     solver = Solver(model,
                     train_dataiter,
                     test_dataiter,
                     num_epochs=10,
-                    init_rule='xavier',
+                    init_rule='gaussian',
+                    init_config={
+                        'stdvar': 0.001
+                    },
                     update_rule='sgd_momentum',
                     optim_config={
-                        'learning_rate': 1e-3,
+                        'learning_rate': 1e-4,
                         'momentum': 0.9
                     },
                     verbose=True,
                     print_every=20)
+    # Initialize model parameters.
     solver.init()
+    # Train!
     solver.train()
 
 if __name__ == '__main__':
