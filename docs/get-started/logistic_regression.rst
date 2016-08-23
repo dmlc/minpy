@@ -39,5 +39,5 @@ The minpy version is very similar, except a few lines that are highlighted:
   :emphasize-lines: 9, 24, 29
   :linenos:
   
-Now, with one line change, the same code runs on GPU as well! For more functionality of Minpy/MXNet, we invite you
+Now, with one line change (``set_context(gpu(0))``), the same code runs on GPU as well! For more functionality of Minpy/MXNet, we invite you
 to read later sections of this tutorial.
