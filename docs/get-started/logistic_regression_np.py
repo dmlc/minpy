@@ -28,6 +28,6 @@ num_features = 500
 num_classes = 5
 data, label = make_data(num_samples, num_features, num_classes)
 
-# Initialize training weight and trian
+# Initialize training weight and train
 weight = random.randn(num_features, num_classes)
 train(weight, data, 100)

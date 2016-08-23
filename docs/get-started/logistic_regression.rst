@@ -36,6 +36,7 @@ The minpy version is very similar, except a few lines that are highlighted:
 
 .. literalinclude:: logistic_regression_mp.py
   :language: python
+  :emphasize-lines: 9, 24, 29
   :linenos:
   
 Now, with one line change, the same code runs on GPU as well! For more functionality of Minpy/MXNet, we invite you
