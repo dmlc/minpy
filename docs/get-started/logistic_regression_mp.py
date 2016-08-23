@@ -2,6 +2,11 @@ import minpy.numpy as np
 import minpy.numpy.random as random
 from minpy.core import grad_and_loss
 from examples.utils.data_utils import gaussian_cluster_generator as make_data
+from minpy.context import set_context, gpu
+
+# Please uncomment following if you have GPU-enabled MXNet installed.
+# This single line of code will run MXNet operations on GPU 0.
+# set_context(gpu(0)) # set the global context as gpu(0)
 
 # Predict the class using multinomial logistic regression (softmax regression).
 def predict(w, x):

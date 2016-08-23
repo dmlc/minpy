@@ -12,9 +12,11 @@ is the largest.
 
 The data is generated with the following code.
 
-.. literalinclude:: make_data.py
+.. literalinclude:: make_data_gist.py
+  :language: python
+  :linenos
 
-.. imag:: multi_rl.png
+.. imag:: multi_lr.png
 
 This is the numpy version. The function ``predict`` outputs the probability, the ``train`` function iterates
 over the data, computes the loss, the gradients, and updates the parameters ``w`` with a fixed learning rate.
