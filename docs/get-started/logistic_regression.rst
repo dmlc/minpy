@@ -36,7 +36,7 @@ The minpy version is very similar, except a few lines that are highlighted:
 
 .. literalinclude:: logistic_regression_mp.py
   :language: python
-  :emphasize-lines: 1-3, 5 9, 24, 29
+  :emphasize-lines: 1, 2, 3, 5, 9, 24, 29
   :linenos:
   
 Now, if you uncomment line 9 to set MXNet context on GPU 0, this one line change (``set_context(gpu(0))``) will enable the same code to run on GPU! 
