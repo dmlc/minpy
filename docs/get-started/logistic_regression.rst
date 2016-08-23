@@ -14,7 +14,7 @@ The data is generated with the following code.
 
 .. literalinclude:: make_data_gist.py
   :language: python
-  :linenos
+  :linenos:
 
 The visualization of the data:
 
