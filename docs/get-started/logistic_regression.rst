@@ -11,6 +11,7 @@ a weight matrix ``weight``, such that for a data point ``x`` the probability tha
 is the largest.
 
 The data is generated with the following code.
+
 .. literalinclude:: make_data.py
 
 .. imag:: multi_rl.png
