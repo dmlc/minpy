@@ -30,7 +30,7 @@ In general, we advocate following the common coding style with the following mod
 
 The following MinPy code should be self-explainable; it is a simple two-layer feed-forward network. The model is defined in the ``TwoLayerNet`` class, where the ``init``, ``forward`` and ``loss`` functions specify the parameters to be learnt, how the network computes all the way till the loss, and the computation of the loss itself, respectively. The crucial thing to note is the **absense of back-prop**, MinPy did it automatically for you.
 
-.. literalinclude:: ../../examples/nn/mlp.py
+.. literalinclude:: mlp.py
   :language: python
   :linenos:
 
@@ -85,11 +85,7 @@ However, the advantage of MinPy is that it brings in additional flexibility when
 Recurrent networks
 ------------------
 
-The flexibility of MinPy makes it easy to implement other models. Here is one that implements the so-called vanilla RNN.
-
-.. literalinclude:: ../../examples/nn/rnn.py
-  :language: python
-  :linenos:
+The flexibility of MinPy makes it easy to implement other models. The full code is `here <https://github.com/dmlc/minpy/blob/master/examples/nn/rnn.py>`_.
 
 Put it together: feedforward + recurrent networks
 -------------------------------------------------
