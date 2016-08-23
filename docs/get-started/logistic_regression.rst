@@ -20,7 +20,7 @@ The visualization of the data:
 
 .. image:: multi_lr.png
 
-This is the numpy version. The function ``predict`` outputs the probability, the ``train`` function iterates
+The following is the numpy version. The function ``predict`` outputs the probability, the ``train`` function iterates
 over the data, computes the loss, the gradients, and updates the parameters ``w`` with a fixed learning rate.
 
 .. literalinclude:: logistic_regression_np.py
@@ -29,17 +29,17 @@ over the data, computes the loss, the gradients, and updates the parameters ``w`
   
 The minpy version is very similar, except a few lines that are highlighted:
 
-* Imports ``minpy.numpy`` instead of ``numpy``. This lightweight library is fully numpy compatible, but it allows us
+* Among some new imported libraries, ``minpy.numpy`` replaces ``numpy``. This lightweight library is fully numpy compatible, but it allows us
   to add small instrumentations in the style of `autograd <https://github.com/HIPS/autograd>`_ 
-* Defines *loss* explicitly with the function ``loss``
-* MinPy derives a function to compute gradients automatically
+* Defines *loss* explicitly with the function ``train_loss``
+* MinPy then derives a function to compute gradients automatically (line 24)
 
 .. literalinclude:: logistic_regression_mp.py
   :language: python
-  :emphasize-lines: 9, 24, 29
+  :emphasize-lines: 1-3, 5 9, 24, 29
   :linenos:
   
-Uncomment line 9 to set MXNet context on GPU 0.
+Now, if you uncomment line 9 to set MXNet context on GPU 0, this one line change (``set_context(gpu(0))``) will enable the same code to run on GPU! 
 
-Now, with one line change (``set_context(gpu(0))``), the same code runs on GPU as well! For more functionality of MinPy/MXNet, we invite you
+For more functionality of MinPy/MXNet, we invite you
 to read later sections of this tutorial.
