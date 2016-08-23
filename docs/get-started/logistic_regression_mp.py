@@ -1,21 +1,9 @@
 import minpy.numpy as np
-import minpynumpy.random as random
+import minpy.numpy.random as random
 from minpy.core import grad_and_loss
+from examples.utils.data_utils import gaussian_cluster_generator as make_data
 
-""" Generates several clusters of Gaussian points """
-def make_data(num_samples=10000, num_features=500, num_classes=5):
-    mu = random.rand(num_classes, num_features)
-    sigma = np.ones((num_classes, num_features)) * 0.1
-    num_cls_samples = num_samples / num_classes
-    x = np.zeros((num_samples, num_features))
-    y = np.zeros((num_samples, num_classes))
-    for i in range(num_classes):
-        cls_samples = random.normal(mu[i,:], sigma[i,:], (num_cls_samples, num_features))
-        x[i*num_cls_samples:(i+1)*num_cls_samples] = cls_samples
-        y[i*num_cls_samples:(i+1)*num_cls_samples,i] = 1
-    return x, y
-
-# Predict the class using logistic regression.
+# Predict the class using multinomial logistic regression (softmax regression).
 def predict(w, x):
     a = np.exp(np.dot(x, w))
     a_sum = np.sum(a, axis=1, keepdims=True)
@@ -33,7 +21,7 @@ grad_function = grad_and_loss(train_loss)
 # Using gradient descent to fit the correct classes.
 def train(w, x, loops):
     for i in range(loops):
-        dw, loss = grad_function(train_loss)
+        dw, loss = grad_function(w, x)
         if i % 10 == 0:
             print('Iter {}, training loss {}'.format(i, loss))
         # gradient descent
