@@ -32,12 +32,14 @@ The minpy version is very similar, except a few lines that are highlighted:
 * Imports ``minpy.numpy`` instead of ``numpy``. This lightweight library is fully numpy compatible, but it allows us
   to add small instrumentations in the style of `autograd <https://github.com/HIPS/autograd>`_ 
 * Defines *loss* explicitly with the function ``loss``
-* Minpy derives a function to compute gradients automatically
+* MinPy derives a function to compute gradients automatically
 
 .. literalinclude:: logistic_regression_mp.py
   :language: python
   :emphasize-lines: 9, 24, 29
   :linenos:
   
-Now, with one line change (``set_context(gpu(0))``), the same code runs on GPU as well! For more functionality of Minpy/MXNet, we invite you
+Uncomment line 9 to set MXNet context on GPU 0.
+
+Now, with one line change (``set_context(gpu(0))``), the same code runs on GPU as well! For more functionality of MinPy/MXNet, we invite you
 to read later sections of this tutorial.
