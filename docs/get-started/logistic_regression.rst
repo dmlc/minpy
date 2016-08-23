@@ -16,6 +16,8 @@ The data is generated with the following code.
   :language: python
   :linenos
 
+The visualization of the data:
+
 .. imag:: multi_lr.png
 
 This is the numpy version. The function ``predict`` outputs the probability, the ``train`` function iterates
