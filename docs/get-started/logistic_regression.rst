@@ -18,7 +18,7 @@ The data is generated with the following code.
 
 The visualization of the data:
 
-.. imag:: multi_lr.png
+.. image:: multi_lr.png
 
 This is the numpy version. The function ``predict`` outputs the probability, the ``train`` function iterates
 over the data, computes the loss, the gradients, and updates the parameters ``w`` with a fixed learning rate.
