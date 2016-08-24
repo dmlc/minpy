@@ -4,7 +4,7 @@ import minpy.numpy as np
 import minpy.numpy.random as npr
 
 def xavier(shape, config=None):
-    var = len(shape) / sum(shape)
+    var = len(shape) / float(sum(shape))
     return npr.randn(*shape) * var
 
 def constant(shape, config=None):

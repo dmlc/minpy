@@ -22,7 +22,7 @@ import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # build a 2-layer perceptron
-import model_builder as builder
+import minpy.nn.model_builder as builder
 from model_gallery import *
 MLP = builder.Sequential(
   builder.Affine(512),
@@ -32,7 +32,7 @@ MLP = builder.Sequential(
 
 # train the perceptron on CIFAR-10 dataset
 def main(args):
-    model = builder.Model(residual_network(1), 'softmax', (3 * 32 * 32,))
+    model = builder.Model(MultiLayerPerceptron(512, 10), 'softmax', (3 * 32 * 32,))
     data = get_CIFAR10_data(args.data_dir)
     # reshape all data to matrix
     data['X_train'] = data['X_train'].reshape([data['X_train'].shape[0], 3 * 32 * 32])

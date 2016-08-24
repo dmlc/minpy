@@ -1,5 +1,5 @@
 '''
-Currently model builder only supports building one model each time.
+  Currently model builder only supports building one model each time.
 '''
 import minpy.numpy as np
 import minpy.core
@@ -76,8 +76,7 @@ class Affine(Module):
     return layers.affine(inputs, params[self.weight], params[self.bias])
 
   def parameter_shape(self, input_shape):
-    assert len(input_shape) == 1, 'The input tensor should be 2D.'
-    weight_shape = (input_shape[0], self.hidden_number)
+    weight_shape = (input_shape[-1], self.hidden_number)
     bias_shape   = (self.hidden_number,)
     return {
       self.weight : weight_shape, 
@@ -85,7 +84,7 @@ class Affine(Module):
     }
 
   def output_shape(self, input_shape):
-    return (input_shape[0], self.hidden_number)
+    return (self.hidden_number,)
 
 class BatchNormalization(Module):
   count = 0
@@ -252,7 +251,18 @@ class Identity(Module):
     return inputs
   def output_shape(self, input_shape):
     return input_shape
- 
+
+class Export(Identity):
+  def __init__(self, label, storage):
+    super(Export, self).__init__()
+    assert label not in storage, 'duplicated label'
+    self.label, self.storage = label, storage
+    self.storage.update({self.label : None})
+  def forward(self, inputs, params):
+    # TODO policy train_only test_only default
+    self.storage[self.label] = inputs
+    return inputs
+
 class ReLU(Module):
   def __init__(self):
     super(ReLU, self).__init__()
@@ -327,8 +337,10 @@ class Model(ModelBase):
     super(Model, self).__init__()
     self.__container = container
     
+    '''
     if len(input_shape) == 1 or len(input_shape) == 3:
       input_shape = tuple([1] + list(input_shape))
+    '''
     shapes = container.parameter_shape(input_shape)
     reduce(
       lambda arg, key : arg.add_param(name=key, shape=shapes[key]),
