@@ -18,7 +18,6 @@ from minpy.utils import log
 
 import mxnet
 import numpy
-import collections
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
@@ -71,7 +70,8 @@ class Node(object):
             # computed.
             result_grad = rec.result._partial_derivative_cache[target]
             result_grad_value = result_grad.get_data(rec.primitive._type)
-            _logger.debug('Call derivative func of "{}".'.format(rec.primitive))
+            _logger.debug('Call derivative func of "{}".'.format(
+                rec.primitive))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
                 with result_grad.context.as_mxnet_context() as ctx:
@@ -126,7 +126,7 @@ class Node(object):
 class Value(object):
     # pylint: disable= no-self-use
     """Class for all possible values in MinPy.
-    
+
     It contains the real underlying value and the gradient information for auto differentiation.
     It also defines common operators and redirects the call to the namespace dispatcher.
     """
