@@ -129,7 +129,7 @@ class Primitive(object):
                             self._func, i))
                     arg.node.add_partial_derivative(self._grad_func[i](
                         result_value, *arg_values, **kwargs_values),
-                                                    result.node, self)
+                                                    result, self)
             for k, arg in kwargs.items():
                 if isinstance(arg, Value) and arg.marked_for_bp:
                     if k not in self._grad_func_kw:
@@ -142,7 +142,7 @@ class Primitive(object):
                             self._func, k))
                     arg.node.add_partial_derivative(self._grad_func_kw[k](
                         result_value, *arg_values, **kwargs_values),
-                                                    result.node, self)
+                                                    result, self)
         return result
         # pylint: enable= missing-docstring, invalid-name
 

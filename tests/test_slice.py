@@ -43,5 +43,5 @@ for i in range(20):
     print('Trained loss accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))
     gr = training_gradient_fun(weights, inputs)
     print('Gradient Size', gr.shape)
-    print('Gradient example', MinpyVarToNumpy(gr[0,:10]))
+    print('Gradient example', gr[0,:10].asnumpy())
     weights -= gr * 0.01
