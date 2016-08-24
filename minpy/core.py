@@ -236,10 +236,10 @@ def wraps(mode='lazy', method=False):
       handle the return value type themselves.
     * In ``numpy`` mode, all MinPy arrays will be converted to NumPy arrays.
 
-    :param mode:
-    :param method:
+    :param mode: the mode how wrapper performs on the return values
+    :param method: set it to True only if the wrapper is applied on a method
     """
-
+    # TODO: Refactor to let this decorator work without method option
     #pylint: disable= missing-docstring
     def wrapper(func):
         @functools.wraps(func)
