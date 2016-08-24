@@ -136,9 +136,9 @@ class Solver(object):
         self.init_rules = {}
         self.init_configs = {}
         for p in self.model.param_configs:
-            if 'init_rule' in self.model.param_configs:
-                init_rule = self.model.param_configs['init_rule']
-                init_config = self.model.param_configs.get('init_config', {})
+            if 'init_rule' in self.model.param_configs[p]:
+                init_rule = self.model.param_configs[p]['init_rule']
+                init_config = self.model.param_configs[p].get('init_config', {})
             else:
                 init_rule = self.init_rule
                 init_config = {k: v for k, v in self.init_config.items()}

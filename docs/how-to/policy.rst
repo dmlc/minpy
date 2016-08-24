@@ -14,6 +14,8 @@ To change policy, use ``np.set_policy``. For example:
 
     import minpy.numpy as np
     import minpy.dispatch.policy as policy
-    np.set_policy(policy.OnlyNumPyPolicy)
+    np.set_policy(policy.OnlyNumPyPolicy())
+
+It is worth mentioning that ``np.set_policy`` only accepts instances of policy classes.
 
 The policy will be active in its scope.

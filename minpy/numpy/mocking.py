@@ -55,7 +55,7 @@ class Module(object):
         :param plc: New policy.
         """
         assert isinstance(
-            plc, Policy), 'Need an instance of `minpy.dispatch.Policy`.'
+            plc, Policy), 'Need an instance of `minpy.dispatch.policy.Policy`.'
         self._policy = plc
 
     def __getattr__(self, name):
