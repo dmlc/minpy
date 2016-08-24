@@ -7,12 +7,7 @@ import mxnet as mx
 import numpy as py_np
 
 from model import ModelBase
-from cs231n.layers import affine_forward, relu_forward, svm_loss_forward, \
-                          dropout_forward, batchnorm_forward
-
-
-class ModelInputDimInconsistencyError(ValueError):
-    pass
+from cs231n.layers import  softmax_loss_forward
 
 
 class ThreeLayerConvNet(ModelBase):
@@ -67,7 +62,7 @@ class ThreeLayerConvNet(ModelBase):
         self.params = {}
         executor = self.symbol_func._executor
         for k, v in executor.arg_dict.items():
-            if (k != "x") and (k != 'softmax_label'):
+            if (k != "X"):
                 self.params[k] = random.rand(*v.shape) * self.weight_scale
 
         #TODO(Haoran): move following into parent structured model class
@@ -81,7 +76,7 @@ class ThreeLayerConvNet(ModelBase):
 
     def set_mxnet_symbol(self, X):
 
-        data = mx.sym.Variable(name='x')
+        data = mx.sym.Variable(name='X')
         conv1 = mx.symbol.Convolution(name='conv1',
                                       data=data,
                                       kernel=(self.filter_size,
@@ -93,55 +88,19 @@ class ThreeLayerConvNet(ModelBase):
                                   kernel=(2, 2),
                                   stride=(2, 2))
 
-        flatten = mx.symbol.Flatten(data=pool1)
-        fc1 = mx.sym.FullyConnected(name='fc1',
-                                    data=flatten,
-                                    num_hidden=self.hidden_dim)
-
         fc1 = mx.sym.FullyConnected(name='fc1',
                                     data=pool1,
                                     num_hidden=self.hidden_dim)
+
         act1 = mx.sym.Activation(data=fc1, act_type='relu')
 
         fc2 = mx.sym.FullyConnected(name='fc2',
                                     data=fc1,
                                     num_hidden=self.num_classes)
 
-        batch_num, x_c, x_h, x_w = X.shape
-        c, h, w = self.input_dim
-        if not (c == x_c and h == x_h and w == x_w):
-            raise ModelInputDimInconsistencyError(
-                'Expected Dim: {}, Input Dim: {}'.format(self.input_dim,
-                                                         X.shape))
-
-        scores = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
-        label_shape = (batch_num,)
-
         self.symbol_func = core.Function(
-                scores, {'x': X.shape, 'softmax_label': label_shape})
+                fc2, {'X': X.shape})
 
-    #TODO(Haoran): move this into parent structured model class
-    def pack_params(self):
-        params_collect = []
-        for key in self.param_keys:
-            params_collect.append(self.params[key])
-        return params_collect
-
-    #TODO(Haoran): move this into parent structured model class
-    def get_index_reg_weight(self):
-        return [self.key_args_index[key]
-                for key in ['conv1_weight', 'fc1_weight', 'fc2_weight']]
-
-    #TODO(Haoran): move this into parent mxnet model class
-    def make_mxnet_weight_dict(self, inputs, targets, args):
-        wDict = {}
-        assert len(args) == len(self.param_keys)
-        for i, key in enumerate(self.param_keys):
-            wDict[key] = args[i]
-        wDict['x'] = inputs
-        if targets is not None:
-            wDict['softmax_label'] = targets
-        return wDict
 
     def loss_and_derivative(self, X, y=None):
         # symbol's init func takes input size.
@@ -149,36 +108,31 @@ class ThreeLayerConvNet(ModelBase):
             self.set_mxnet_symbol(X)
             self.set_param()
 
-        params_array = self.pack_params()
-
-        #TODO(Haoran): isolate this part out for user
-        #if so, loss_and_derivative function should be inherited from super mxnet model class
         def train_loss(*args):
-            inputs = args[0]
-            softmax_label = args[1]
-            probs = self.symbol_func(**self.make_mxnet_weight_dict(
-                inputs, softmax_label, args[self.data_target_cnt:len(args)]))
-            if softmax_label is None:
+            probs = self.symbol_func(X=X,
+                                     conv1_weight=self.params['conv1_weight'],
+                                     conv1_bias=self.params['conv1_bias'],
+                                     fc1_weight=self.params['fc1_weight'],
+                                     fc1_bias=self.params['fc1_bias'],
+                                     fc2_weight=self.params['fc2_weight'],
+                                     fc2_bias=self.params['fc2_bias'])
+            if y is None:
                 return probs
 
-            samples_num = X.shape[0]
-            targets = np.zeros((samples_num, self.num_classes))
-            targets[np.arange(samples_num), softmax_label] = 1
-            loss = -np.sum(targets * np.log(probs)) / samples_num
-            for i in self.get_index_reg_weight():
-                loss = loss + np.sum(0.5 * args[i]**2 * self.reg)
-
+            loss, _ = softmax_loss_forward(probs, y)
+            loss = loss + 0.5 * self.reg *\
+                    (np.sum(self.params['conv1_weight'])+
+                     np.sum(self.params['fc1_weight'])+
+                     np.sum(self.params['fc2_weight']))
             return loss
 
         if y is None:
-            return train_loss(X, y, *params_array)
+            return train_loss()
 
-        grad_function = core.grad_and_loss(train_loss, range(
-            self.data_target_cnt, self.data_target_cnt + len(params_array)))
-        grads_array, loss = grad_function(X, y, *params_array)
+        param_keys = list(self.params.keys())
+        param_arrays = list(self.params.values())
+        grad_function = core.grad_and_loss(train_loss, range(len(param_arrays)))
+        grad_arrays, loss = grad_function(*param_arrays)
 
-        grads = {}
-        for i, grad in enumerate(grads_array):
-            grads[self.param_keys[i]] = grad
-
+        grads = dict(zip(param_keys, grad_arrays))
         return loss, grads
