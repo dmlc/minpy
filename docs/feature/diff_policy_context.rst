@@ -3,7 +3,7 @@ Difference Between Policy and Context
 
 Policy dispatches operations between NumPy implementation and MXNet implementation. Context determines whether MXNet
 implementation runs on GPU or CPU. If the policy sets to ``OnlyNumPyPolicy()``, then MinPy will only use NumPy
-implementation. In this case, context setting will affect MinPy behavior.
+implementation. In this case, context setting will not affect MinPy behavior.
 
 If you have GPU-enabled MXNet installed, add the following settings immediately after MinPy related imports:
 ::

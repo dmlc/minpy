@@ -19,6 +19,7 @@ setuptools.setup(
         'pillow',
         'mxnet',
         'semantic-version',
+        'six',
     ],
     data_files=[('', ['VERSION'])],
     url='https://github.com/dmlc/minpy')

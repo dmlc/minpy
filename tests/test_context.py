@@ -43,7 +43,7 @@ with gpu(0):
     print("\nff and bp on {0}".format(weights.context))
 
 print("\nexecute on cpu")
-with cpu(0):
+with cpu():
     x_cpu = random.rand(32, 64) - 0.5
     y_cpu = random.rand(64, 32) - 0.5
     z_cpu = np.dot(x_cpu, y_cpu)
