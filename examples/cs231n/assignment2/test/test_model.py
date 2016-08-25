@@ -1,6 +1,8 @@
 """
   Pure python version of FullyConnectedNets_Minpy.ipynb
 """
+import os.path, sys
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 import time
 import numpy as np
@@ -10,7 +12,7 @@ from cs231n.classifiers.cnn_minpy import ThreeLayerConvNet
 from cs231n.data_utils import get_CIFAR10_data
 from cs231n.gradient_check import eval_numerical_gradient, eval_numerical_gradient_array
 from cs231n.solver import Solver
-from cs231n.layers import svm_loss
+from cs231n.layers import svm_loss_forward
 
 
 def RunTwoLayerNet():
@@ -25,10 +27,9 @@ def RunTwoLayerNet():
 
 def RunFullyConnectedNet():
     model = FullyConnectedNet([100, 50], dropout=0.5, use_batchnorm=True)
-    #model = FullyConnectedNet([100, 50])
     solver = Solver(model,
                     data,
-                    optim_config={'learning_rate': 1e-3,},
+                    optim_config={'learning_rate': 4e-3,},
                     lr_decay=0.95,
                     print_every=100)
     solver.train()
@@ -42,7 +43,8 @@ def RunCnnNet():
                     num_epochs=10,
                     update_rule='adam',
                     optim_config={
-                        'learning_rate': 1e-3,
+                        'learning_rate': 1e-4,
+                        'momemtum': 0.9,
                     },
                     verbose=True,
                     print_every=20)
@@ -76,11 +78,34 @@ def Debug():
                                                                grads[name]))
 
 
+
+def SMALL_CNN():
+    num_train = 100
+    small_data = {
+      'X_train': data['X_train'][:num_train],
+      'y_train': data['y_train'][:num_train],
+      'X_val': data['X_val'],
+      'y_val': data['y_val'],
+    }
+    
+    model = ThreeLayerConvNet(weight_scale=1e-3)
+    
+    solver = Solver(model, small_data,
+                    num_epochs=10,
+                    update_rule='adam',
+                    optim_config={
+                      'learning_rate': 1e-4,
+                    },
+                    verbose=True,
+                    print_every=20)
+
+    solver.train()
+
 data = get_CIFAR10_data()
 for k, v in data.iteritems():
     print '%s: ' % k, v.shape
 
-#RunTwoLayerNet()
-#RunFullyConnectedNet()
+RunTwoLayerNet()
+RunFullyConnectedNet()
 RunCnnNet()
-#Debug()
+SMALL_CNN()
