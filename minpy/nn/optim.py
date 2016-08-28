@@ -92,17 +92,9 @@ def rmsprop(x, dx, config=None):
     config.setdefault('cache', np.zeros_like(x))
 
     cache = config['cache']
-    #############################################################################
-    # TODO: Implement the RMSprop update formula, storing the next value of x   #
-    # in the next_x variable. Don't forget to update cache value stored in      #
-    # config['cache'].                                                          #
-    #############################################################################
     cache = cache * config['decay_rate'] + dx**2 * (1 - config['decay_rate'])
     next_x = x - config['learning_rate'] * dx / (np.sqrt(cache) +
                                                  config['epsilon'])
-    #############################################################################
-    #                             END OF YOUR CODE                              #
-    #############################################################################
 
     config['cache'] = cache
     return next_x, config
@@ -111,18 +103,18 @@ def rmsprop(x, dx, config=None):
 @wraps('lazy')
 def adam(x, dx, config=None):
     """
-  Uses the Adam update rule, which incorporates moving averages of both the
-  gradient and its square and a bias correction term.
+    Uses the Adam update rule, which incorporates moving averages of both the
+    gradient and its square and a bias correction term.
 
-  config format:
-  - learning_rate: Scalar learning rate.
-  - beta1: Decay rate for moving average of first moment of gradient.
-  - beta2: Decay rate for moving average of second moment of gradient.
-  - epsilon: Small scalar used for smoothing to avoid dividing by zero.
-  - m: Moving average of gradient.
-  - v: Moving average of squared gradient.
-  - t: Iteration number.
-  """
+    config format:
+    - learning_rate: Scalar learning rate.
+    - beta1: Decay rate for moving average of first moment of gradient.
+    - beta2: Decay rate for moving average of second moment of gradient.
+    - epsilon: Small scalar used for smoothing to avoid dividing by zero.
+    - m: Moving average of gradient.
+    - v: Moving average of squared gradient.
+    - t: Iteration number.
+    """
     if config is None: config = {}
     config.setdefault('learning_rate', 1e-3)
     config.setdefault('beta1', 0.9)
@@ -135,12 +127,6 @@ def adam(x, dx, config=None):
     v = config['v']
     m = config['m']
     t = config['t']
-
-    #############################################################################
-    # TODO: Implement the Adam update formula, storing the next value of x in   #
-    # the next_x variable. Don't forget to update the m, v, and t variables     #
-    # stored in config.                                                         #
-    #############################################################################
     t = t + 1
 
     m = config['beta1'] * m + (1 - config['beta1']) * dx
@@ -150,11 +136,6 @@ def adam(x, dx, config=None):
 
     next_x = x - config['learning_rate'] * m_ / (np.sqrt(v_) + config['epsilon']
                                                 )
-
-    #############################################################################
-    #                             END OF YOUR CODE                              #
-    #############################################################################
-
     config['v'] = v
     config['m'] = m
     config['t'] = t
