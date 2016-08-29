@@ -9,7 +9,9 @@ For regular users
 
 Docker installation guide is available at :doc:`/get-started/docker`.
 
-MinPy releases are uploaded to PyPI. Just use ``pip`` to install.
+First, please follow `this guide <http://mxnet.readthedocs.io/en/latest/how_to/build.html>` to build and install MXNet.
+
+MinPy releases are uploaded to PyPI. Just use ``pip`` to install after you install MXNet.
 
 ::
 
