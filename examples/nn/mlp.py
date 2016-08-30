@@ -10,6 +10,8 @@ from minpy.nn.solver import Solver
 from minpy.nn.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
+import mxnet as mx
+
 # Please uncomment following if you have GPU-enabled MXNet installed.
 #from minpy.context import set_context, gpu
 #set_context(gpu(0)) # set the global context as gpu(0)
@@ -48,6 +50,7 @@ def main(args):
     model = TwoLayerNet()
     # Create data iterators for training and testing sets.
     data = get_CIFAR10_data(args.data_dir)
+    '''
     train_dataiter = NDArrayIter(data=data['X_train'],
                                  label=data['y_train'],
                                  batch_size=batch_size,
@@ -56,6 +59,16 @@ def main(args):
                                 label=data['y_test'],
                                 batch_size=batch_size,
                                 shuffle=False)
+    '''
+    train_dataiter = mx.io.NDArrayIter(data=data['X_train'],
+                                 label=data['y_train'],
+                                 batch_size=batch_size,
+                                 shuffle=True)
+    test_dataiter = mx.io.NDArrayIter(data=data['X_test'],
+                                label=data['y_test'],
+                                batch_size=batch_size,
+                                shuffle=False)
+
     # Create solver.
     solver = Solver(model,
                     train_dataiter,

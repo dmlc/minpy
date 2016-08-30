@@ -227,7 +227,8 @@ class Solver(object):
         """
         Run optimization to train the model.
         """
-        num_iterations = self.train_dataiter.getnumiterations() * self.num_epochs
+        #num_iterations = self.train_dataiter.getnumiterations() * self.num_epochs
+        num_iterations = self.train_dataiter.num_data / self.train_dataiter.batch_size * self.num_epochs 
         t = 0
         for epoch in range(self.num_epochs):
             self.epoch = epoch + 1
