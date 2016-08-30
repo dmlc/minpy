@@ -28,7 +28,7 @@ class Module(object):
         # Add module itself into global config
         minpy.Config['modules'].append(self)
         self._registry = Registry()
-        self._policy = PreferMXNetPolicy()
+        self._policy = minpy.Config['default_policy']
         self._logger = log.get_logger(old['__name__'])
         self._logger.info('Initialize module: {}.'.format(old['__name__']))
         self._old = old
