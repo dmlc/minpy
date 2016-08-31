@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from minpy.nn import optim, init
+from minpy.nn import io_utils
 from minpy import core
 import numpy as np
 
@@ -200,7 +201,7 @@ class Solver(object):
         check_dataiter = dataiter
         if num_samples is not None and N > num_samples:
             # Sample a sub iter
-            check_dataiter = dataiter.getsubiter(num_samples)
+            check_dataiter = io_utils.getsubiter(dataiter, num_samples)
         else:
             # Use the entire dataiter otherwise.
             check_dataiter.reset()
@@ -209,7 +210,7 @@ class Solver(object):
         num_samples = 0
         for each_batch in check_dataiter:
             predict = self.model.forward(each_batch.data[0], mode='test').asnumpy()
-            acc_count += np.sum(np.argmax(predict, axis=1) == each_batch.label[0])
+            acc_count += np.sum(np.argmax(predict, axis=1) == each_batch.label[0].asnumpy())
             num_samples += check_dataiter.batch_size
         return float(acc_count) / num_samples
 

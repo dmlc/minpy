@@ -7,9 +7,9 @@ import mxnet as mx
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
-from minpy.utils.data_utils import get_CIFAR10_data
+from examples.utils.data_utils import get_CIFAR10_data
 from minpy import core
-from minpy.nn.io import NDArrayIter
+from mxnet.io import NDArrayIter
 
 class TwoLayerCaffeNet(ModelBase):
     def __init__(self,

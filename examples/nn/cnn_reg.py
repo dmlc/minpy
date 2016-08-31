@@ -4,11 +4,11 @@ import argparse
 
 import minpy
 import minpy.numpy as np
+import mxnet as mx
 from minpy.core import Function
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
-from minpy.nn.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
 # Please uncomment following if you have GPU-enabled MXNet installed.
@@ -68,11 +68,11 @@ def main(args):
     model = ConvolutionNet()
     # Create data iterators for training and testing sets.
     data = get_CIFAR10_data(args.data_dir)
-    train_dataiter = NDArrayIter(data=data['X_train'],
+    train_dataiter = mx.io.NDArrayIter(data=data['X_train'],
                                  label=data['y_train'],
                                  batch_size=batch_size,
                                  shuffle=True)
-    test_dataiter = NDArrayIter(data=data['X_test'],
+    test_dataiter = mx.io.NDArrayIter(data=data['X_test'],
                                 label=data['y_test'],
                                 batch_size=batch_size,
                                 shuffle=False)
