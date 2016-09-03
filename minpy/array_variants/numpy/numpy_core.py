@@ -4,6 +4,7 @@
 """Definition of grads of core functions for numpy implementation"""
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
 
 from minpy.array_variants.numpy import numpy_wrapper
 
@@ -208,11 +209,6 @@ def def_grads(reg, prims):
     prims('true_divide').def_grad(
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: -g * x / y**2),
         argnum=1)
-    prims('power').def_grad(
-        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y * x**(y - 1)))
-    prims('power').def_grad(
-        lambda ans, x, y: _unbroadcast(ans, y, lambda g: g * np.log(x) * x**y),
-        argnum=1)
     prims('mod').def_grad(lambda ans, x, y: _unbroadcast(ans, x, _identity))
     prims('mod').def_grad(
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: -g * np.floor(x / y)),
@@ -228,7 +224,7 @@ def def_grads(reg, prims):
     prims('sin').def_grad(lambda ans, x: lambda g: g * np.cos(x))
     prims('cos').def_grad(lambda ans, x: lambda g: -g * np.sin(x))
     prims('power').def_grad(
-        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y * np.power(x, y - 1)))
+        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y * ans / x))
     prims('power').def_grad(
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: g * np.log(x) * ans),
         argnum=1)
