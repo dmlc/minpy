@@ -119,7 +119,7 @@ class Primitive(object):
             # If no gradient function is defined, also omit it
             for i, arg in enumerate(args):
                 if isinstance(arg, Value) and arg.marked_for_bp:
-                    if i >= len(self._grad_func):
+                    if i not in self._grad_func:
                         _logger.warn('Partial derivative of func "{}" on #{} \
                             arg is not defined.'
                                      .format(self._func.__name__, i))
