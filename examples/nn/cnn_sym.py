@@ -4,11 +4,12 @@ import argparse
 
 import minpy
 import minpy.numpy as np
+import mxnet as mx
+from mxnet.io import NDArrayIter
 from minpy.core import Function
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
-from minpy.nn.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
 # Please uncomment following if you have GPU-enabled MXNet installed.
