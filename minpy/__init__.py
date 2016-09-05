@@ -9,21 +9,11 @@ Config['default_policy'] = PreferMXNetPolicy()
 
 
 def set_global_policy(policy):
-    """ Set global policy for all imported modules
-    
-    This function only affects imported modules.
+    """ Set global policy for all modules. This will also change default policy
+    in future imported modules.
 
     :param minpy.dispatch.policy.Policy policy: New policy.
     """
     for mod in Config['modules']:
         mod.set_policy(policy)
-
-
-def set_default_policy(policy):
-    """ Set default policy for future imported modules
-
-    This function only affects modules which haven't been imported.
-
-    :param minpy.dispatch.policy.Policy policy: New policy.
-    """
     Config['default_policy'] = policy
