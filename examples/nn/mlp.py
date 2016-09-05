@@ -2,7 +2,6 @@
 import sys
 import argparse
 
-import minpy
 import minpy.numpy as np
 from mxnet.io import NDArrayIter
 from minpy.nn import layers
