@@ -7,8 +7,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import itertools
-import logging
 import collections
+import weakref
 
 from minpy.array_variants import ArrayType
 from minpy.array_variants import array_types
@@ -18,7 +18,6 @@ from minpy.utils import log
 
 import mxnet
 import numpy
-import collections
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
@@ -34,18 +33,24 @@ class Node(object):
 
     def __init__(self, value):
         """Initialize."""
-        self._value = value
+        self._value = weakref.ref(value)
         self._partial_derivatives = []
         self._partial_derivative_cache = {}
+
+    def _get_value(self):
+        r = self._value()
+        if r is None:
+            raise RuntimeError('Reference lost.')
+        return r
 
     def add_partial_derivative(self, grad_func, res, prim):
         """Add partial derivative information.
 
         :param function grad_func: The function to calculate derivative with respect to result.
-        :param Node res: Variable that represent the result of original function.
+        :param Value res: Variable that represent the result of original function.
         :param Primitive prim: Primitive that the gradient function belongs to.
         """
-        assert isinstance(res, Node), 'Result is not of type `Node`.'
+        assert isinstance(res, Value), 'Result is not of type `Value`.'
         self._partial_derivatives.append(
             GradRecord(
                 grad_func=grad_func, result=res, primitive=prim))
@@ -69,9 +74,10 @@ class Node(object):
             """
             # The gradient of the target with respect to the result node should already be
             # computed.
-            result_grad = rec.result._partial_derivative_cache[target]
+            result_grad = rec.result.node._partial_derivative_cache[target]
             result_grad_value = result_grad.get_data(rec.primitive._type)
-            _logger.debug('Call derivative func of "{}".'.format(rec.primitive))
+            _logger.debug('Call derivative func of "{}".'.format(
+                rec.primitive))
             # Call gradient function to compute input gradient from result gradient
             if rec.primitive.type == ArrayType.MXNET:
                 with result_grad.context.as_mxnet_context() as ctx:
@@ -92,7 +98,7 @@ class Node(object):
             ready = True
             if target is not node:
                 for rec in node._partial_derivatives:
-                    n = rec.result
+                    n = rec.result.node
                     if target not in n._partial_derivative_cache:
                         dfs_queue.append(n)
                         ready = False
@@ -103,8 +109,8 @@ class Node(object):
                     pending_derivatives.append(node)
                     # Init gradient buffer for accumulation.
                     node._partial_derivative_cache[target] = Value.wrap(
-                        0.0 if isinstance(node._value, Number) else
-                        numpy.zeros(node._value.shape))
+                        0.0 if isinstance(node._get_value(), Number) else
+                        numpy.zeros(node._get_value().shape))
 
         # Compute gradient using chain rule.
         # The resolve order is the reversed order from target to input.
@@ -112,8 +118,8 @@ class Node(object):
             if node is target:
                 # Current gradient node is the target node, the gradient is one.
                 node._partial_derivative_cache[target] = Value.wrap(
-                    1.0 if isinstance(node._value, Number) else numpy.ones(
-                        node._value.shape))
+                    1.0 if isinstance(node._get_value(), Number) else numpy.ones(
+                        node._get_value().shape))
             else:
                 # Call saved gradient function to compute gradient of each input.
                 for rec in node._partial_derivatives:
@@ -126,7 +132,7 @@ class Node(object):
 class Value(object):
     # pylint: disable= no-self-use
     """Class for all possible values in MinPy.
-    
+
     It contains the real underlying value and the gradient information for auto differentiation.
     It also defines common operators and redirects the call to the namespace dispatcher.
     """
