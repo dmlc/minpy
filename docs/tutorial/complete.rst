@@ -21,6 +21,7 @@ All the codes covered in this tutorial could be found in this `folder <https://g
 
 Stage 1: Pure MinPy
 -----------------------
+*(This section is also available in iPython Notebook `here <https://github.com/dmlc/minpy/blob/master/examples/nn/tutorials/mlp_nn_basics.ipynb>`_)*
 
 In general, we advocate following the common coding style with the following modular partition:
 
