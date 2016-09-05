@@ -15,6 +15,7 @@ from minpy.dispatch.policy import Policy, PreferMXNetPolicy
 from minpy.dispatch.primitive_selector import PrimitiveSelector
 from minpy.primitive import Primitive
 from minpy.utils import log
+import minpy
 
 
 class Module(object):
@@ -24,8 +25,10 @@ class Module(object):
     """
 
     def __init__(self, old, name=None):
+        # Add module itself into global config
+        minpy.Config['modules'].append(self)
         self._registry = Registry()
-        self._policy = PreferMXNetPolicy()
+        self._policy = minpy.Config['default_policy']
         self._logger = log.get_logger(old['__name__'])
         self._logger.info('Initialize module: {}.'.format(old['__name__']))
         self._old = old
