@@ -20,7 +20,7 @@ in the module. For example, for ``minpy.numpy``, use ``minpy.numpy.set_policy`` 
     from minpy import OnlyNumPyPolicy
     np.set_policy(OnlyNumPyPolicy())
 
-To make life easier, MinPy can also change the policy of all imported MinPy mocking modules at the same time. Simply add the following two lines before computation. Note that ``minpy.set_global_policy`` only changes all **imported** MinPy mocking modules.
+To make life easier, MinPy can also change the policy of all MinPy mocking modules at the same time, including the modules already imported and modules imported in the future. Simply add the following two lines before computation. Note that ``minpy.set_global_policy`` changes **all** MinPy mocking modules and set a new default.
 
 ::
 
@@ -30,15 +30,4 @@ To make life easier, MinPy can also change the policy of all imported MinPy mock
     minpy.set_global_policy(minpy.OnlyNumPyPolicy())
     # np and random is now in OnlyNumPyPolicy policy
 
-Besides using ``minpy.set_global_policy``, MinPy also offers a function ``minpy.set_default_policy`` to set default policy for importing mocking modules in the future. For example:
-
-::
-
-    import minpy
-    minpy.set_default_policy(minpy.OnlyNumPyPolicy())
-    import minpy.numpy as np
-    import minpy.numpy.random as random
-    # np and random is now in OnlyNumPyPolicy policy
-
-It is worth mentioning that ``np.set_policy``, ``minpy.set_global_policy`` and ``minpy.set_default_policy``  only accept instances of policy classes.
-
+It is worth mentioning that ``np.set_policy`` and ``minpy.set_global_policy`` only accept instances of policy classes.
