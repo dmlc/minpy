@@ -92,8 +92,3 @@ Put it together: feedforward + recurrent networks
 -------------------------------------------------
 
 Coming soon (we may not use CS231n image captioning as it leaks homework solution?)
-
-Reinforcement learning with policy gradient
--------------------------------------------
-
-Coming soon.
