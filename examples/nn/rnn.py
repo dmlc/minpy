@@ -1,7 +1,7 @@
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
-from minpy.nn.io import NDArrayIter
+from mxnet.io import NDArrayIter
 from examples.utils.data_utils import adding_problem_generator as data_gen
 
 
@@ -52,11 +52,7 @@ def main():
                     test_dataiter,
                     num_epochs=10,
                     init_rule='xavier',
-                    update_rule='sgd_momentum',
-                    optim_config={
-                        'learning_rate': 1e-4,
-                        'momentum': 0.9
-                    },
+                    update_rule='adam',
                     verbose=True,
                     print_every=20)
     solver.init()

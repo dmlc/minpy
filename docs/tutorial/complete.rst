@@ -1,3 +1,5 @@
+.. _complete_solver_guide:
+
 Complete solver and optimizer guide
 ===================================
 
