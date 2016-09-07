@@ -26,8 +26,13 @@ sequence.
     Figure: An example of the adding problem. 0.7 and 0.5 are chosen from the input data
     on the left and sum up as 1.2, the label on the right [1].
 
-We prepared an adding problem generator at
-`here <https://github.com/dmlc/minpy/blob/master/examples/utils/data_utils.py>`_.
+We prepared an adding problem generator at ``examples.utils.data_utils.adding_problem_generator`` (
+`here <https://github.com/dmlc/minpy/blob/master/examples/utils/data_utils.py>`_). We append its
+implementation as follows:
+
+.. literalinclude:: adding_problem_generator.py
+  :language: python
+  :linenos:
 
 Vanilla RNN
 -----------
@@ -37,11 +42,19 @@ Implementing RNN in MinPy is very straightforward following the convention. The 
 difference is the model part. The following MinPy code defines the vanilla RNN in
 ``RNNNet`` class. We also include solver code for completeness.
 
-.. literalinclude:: ../../examples/nn/rnn.py
+.. literalinclude:: rnn.py
   :language: python
   :linenos:
 
-Layers are defined in `here <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_:
+Layers are defined in ``minpy.nn.layers`` (`here <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_).
+
+The key layer of vanilla RNN is also shown as follows:
+
+.. literalinclude:: rnn_step.py
+  :language: python
+  :linenos:
+
+We see building rnn through imperative programming is both convenient and intuitive.
 
 LSTM
 ----
@@ -53,7 +66,15 @@ process of forgetting and remembering. It is also quite easy to implement in Min
   :language: python
   :linenos:
 
-Layers are defined in `here <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_.
+Layers are defined in ``minpy.nn.layers`` (`here <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_).
+
+The key layer of LSTM is also shown as follows:
+
+.. literalinclude:: lstm_step.py
+  :language: python
+  :linenos:
+
+The implementation of ``lstm_step`` is quite straightforward in MinPy.
 
 GRU
 ---
@@ -65,7 +86,15 @@ MinPy can model GRU in a intuitive way:
   :language: python
   :linenos:
 
-Layers are defined in `here <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_.
+Layers are defined in ``minpy.nn.layers`` (`here <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_).
+
+The key layer of GRU is also shown as follows:
+
+.. literalinclude:: gru_step.py
+  :language: python
+  :linenos:
+
+``gru_step`` stays close with ``lstm_step`` as expected.
 
 Reference
 ---------

@@ -10,6 +10,7 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
 
     get-started/*
     tutorial/*
+    tutorial/rnn_tutorial/*
     rl_policy_gradient/*
 
 .. toctree::
