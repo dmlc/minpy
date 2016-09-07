@@ -1,10 +1,6 @@
-import layers
-from minpy.nn.model import ModelBase
-
-
 class GRUNet(ModelBase):
     def __init__(self,
-                 batch_size=200,
+                 batch_size=100,
                  input_size=2,  # input dimension
                  hidden_size=100,
                  num_classes=1):

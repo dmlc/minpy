@@ -188,7 +188,7 @@ def load_tiny_imagenet(path, dtype=np.float32):
     return class_names, X_train, y_train, X_val, y_val, X_test, y_test
 
 
-def adding_problem_generator(N, seq_len=6, high=1):
+def adding_problem_generator(N, seq_len=30, high=1):
     """ A data generator for adding problem.
 
     The data definition strictly follows Quoc V. Le, Navdeep Jaitly, Geoffrey E.

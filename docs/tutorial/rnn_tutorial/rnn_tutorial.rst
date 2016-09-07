@@ -3,7 +3,7 @@ RNN Tutorial
 
 This tutorial describes how to implement recurrent neural network (RNN) on
 MinPy. Since RNN has different architecture compared to traditional
-pipelines, it is hard to implement on many machine learning system. MinPy
+pipelines, it is hard to be implemented on many machine learning systems. MinPy
 simplifies RNN implementation by its focus on imperative programming.
 This tutorial will explain how RNN can be implemented easily on MinPy.
 
@@ -25,6 +25,9 @@ sequence.
 
     Figure: An example of the adding problem. 0.7 and 0.5 are chosen from the input data
     on the left and sum up as 1.2, the label on the right [1].
+
+The paper [1] indicates that a less than 0.1767 Mean Square Error (MSE) proves the effectiveness
+of the network compared to the random guess. We set 0.1767 as the MSE baseline of our experiment.
 
 We prepared an adding problem generator at ``examples.utils.data_utils.adding_problem_generator`` (
 `here <https://github.com/dmlc/minpy/blob/master/examples/utils/data_utils.py>`_). We append its
@@ -60,7 +63,8 @@ LSTM
 ----
 
 LSTM was introduced by Hochreiter and Schmidhuber. It adds more gates to control the
-process of forgetting and remembering. It is also quite easy to implement in MinPy:
+process of forgetting and remembering. LSTM is also quite easy to implement in MinPy
+like vanilla RNN:
 
 .. literalinclude:: lstm.py
   :language: python
@@ -80,7 +84,7 @@ GRU
 ---
 
 GRU was proposed by Cho et al. [3]. It simplifies LSTM by using less gates and states.
-MinPy can model GRU in a intuitive way:
+MinPy can also model GRU in an intuitive way:
 
 .. literalinclude:: gru.py
   :language: python
@@ -95,6 +99,20 @@ The key layer of GRU is also shown as follows:
   :linenos:
 
 ``gru_step`` stays close with ``lstm_step`` as expected.
+
+Training Result
+---------------
+
+We trained recurrent networks shown early in this tutorial and use ``solver.loss_history`` to retrieve the MSE
+history in the training process. The result is as follows.
+
+.. figure:: img/training_result.png
+
+    Figure: Result of training vanilla RNN, LSTM, GRU. A baseline of 0.1767 is also included.
+
+We observe that LSTM and GRU are more effective than vanilla RNN due to LSTM and GRU's memory gates.
+We also see that GRU converges much faster than LSTM because its fewer parameters.
+
 
 Reference
 ---------
