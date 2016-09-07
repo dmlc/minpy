@@ -219,8 +219,11 @@ def softmax_cross_entropy(prob, label):
 
 @wraps('lazy')
 def l2_loss(x, y):
+    """
+    The Mean Square Error loss for regression.
+    """
     N = x.shape[0]
-    return np.sum((x - y) ** 2) / (N * 2)
+    return np.sum((x - y) ** 2) / N
 
 
 @wraps('lazy')
