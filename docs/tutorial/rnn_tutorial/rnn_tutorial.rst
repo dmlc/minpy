@@ -43,7 +43,8 @@ Vanilla RNN
 In :ref:`complete_solver_guide`, we introduced a simple model/solver architecture.
 Implementing RNN in MinPy is very straightforward following the convention. The only
 difference is the model part. The following MinPy code defines the vanilla RNN in
-``RNNNet`` class. We also include solver code for completeness.
+``RNNNet`` class. We also include solver code for completeness. (You can find it in
+this `folder <https://github.com/dmlc/minpy/tree/master/examples/nn>`_.)
 
 .. literalinclude:: rnn.py
   :language: python
