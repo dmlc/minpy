@@ -1,8 +1,6 @@
 """Convolution Neural Network example using only MXNet symbol."""
-import sys
 import argparse
 
-import minpy
 import minpy.numpy as np
 from minpy.core import Function
 from minpy.nn import layers
@@ -15,7 +13,9 @@ from examples.utils.data_utils import get_CIFAR10_data
 #set_context(gpu(0)) # set the global context as gpu(0)
 
 import mxnet as mx
-from mxnet.io import NDArrayIter
+from minpy.nn.io import NDArrayIter
+# Can also use MXNet IO here
+# from mxnet.io import NDArrayIter
 
 batch_size=128
 input_size=(3, 32, 32)

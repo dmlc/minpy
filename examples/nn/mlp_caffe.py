@@ -1,15 +1,14 @@
 """ Simple multi-layer perception neural network using Caffe Op through minpy and MXNet symbols """
 import sys
-import minpy
-import numpy as np
-import numpy.random as npr
 import mxnet as mx
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
 from examples.utils.data_utils import get_CIFAR10_data
 from minpy import core
-from mxnet.io import NDArrayIter
+from minpy.nn.io import NDArrayIter
+# Can also use MXNet IO here
+# from mxnet.io import NDArrayIter
 
 class TwoLayerCaffeNet(ModelBase):
     def __init__(self,

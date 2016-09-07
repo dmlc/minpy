@@ -1,14 +1,14 @@
 """ Simple multi-layer perception neural network using Minpy and MXNet symbols """
-import sys
 import argparse
 
-import minpy
 import mxnet as mx
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
 from minpy import core
-from mxnet.io import NDArrayIter
+from minpy.nn.io import NDArrayIter
+# Can also use MXNet IO here
+# from mxnet.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
 # Please uncomment following if you have GPU-enabled MXNet installed.

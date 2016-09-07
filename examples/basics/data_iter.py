@@ -5,7 +5,9 @@ import sys
 import argparse
 import minpy
 from examples.utils.data_utils import get_CIFAR10_data
-from mxnet.io import NDArrayIter
+from minpy.nn.io import NDArrayIter
+# Can also use MXNet IO here
+# from mxnet.io import NDArrayIter
 
 def main(args):
   data = get_CIFAR10_data(args.data_dir)
