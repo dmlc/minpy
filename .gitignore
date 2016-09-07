@@ -95,6 +95,10 @@ ENV/
 # PyCharm
 .idea/
 
+# System Garbages
+# Mac
+.DS_Store
+
 # cs231n Assignment 3
 /examples/cs231n/assignment3/cs231n/datasets/coco_captioning/
 /examples/cs231n/assignment3/cs231n/datasets/pretrained_model.h5

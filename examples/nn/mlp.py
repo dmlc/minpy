@@ -1,9 +1,10 @@
 """ Simple multi-layer perception neural network using Minpy """
-import sys
 import argparse
 
 import minpy.numpy as np
-from mxnet.io import NDArrayIter
+from minpy.nn.io import NDArrayIter
+# Can also use MXNet IO here
+# from mxnet.io import NDArrayIter
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
