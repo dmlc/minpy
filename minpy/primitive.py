@@ -101,8 +101,9 @@ class Primitive(object):
         IndexError, KeyError
             No corresponding gradient function.
         """
-        # pylint: disable=invalid-name
-        _logger.debug('Calling "{}" type "{}".'.format(self._func, self.typestr))
+        # pylint: disable=invalid-name, too-many-locals
+        _logger.debug('Calling "{}" type "{}".'.format(self._func,
+                                                       self.typestr))
 
         def get_val(x, mutate):
             """Get value of array."""
@@ -164,9 +165,15 @@ class Primitive(object):
                     grad_func_rec = self._grad_func[i]
                     grad_func = grad_func_rec.f(result_value, *arg_values,
                                                 **kwargs_values)
-                    tape.global_tape().add_partial_derivative(grad_func, (
-                        arg if grad_func_rec.multi_grad_indices is None else
-                        grad_func_rec.multi_grad_indices), result, self.type)
+                    if grad_func_rec.multi_grad_indices is None:
+                        owner = arg
+                    else:
+                        owner = [
+                            args[grad_index]
+                            for grad_index in grad_func_rec.multi_grad_indices
+                        ]
+                    tape.global_tape().add_partial_derivative(
+                        grad_func, owner, result, self.type)
             for k, arg in kwargs.items():
                 if isinstance(arg, array.Value) and arg.marked_for_bp:
                     if k not in self._grad_func_kw:
@@ -183,14 +190,17 @@ class Primitive(object):
                     tape.global_tape().add_partial_derivative(
                         grad_func, arg, result, self.type)
         return result
-        # pylint: enable=invalid-name
+        # pylint: enable=invalid-name, too-many-locals
 
     def def_grad(self, func, argnum=0):
         """Define gradient function.
 
-        :param func: Gradient function.
-        :param argnum: Index of the argument.
-        :return: Self.
+        Parameters
+        ----------
+        func
+            Gradient function.
+        argnum
+            Index of the argument.
         """
         self._grad_func[argnum] = GradFunc(f=func, multi_grad_indices=None)
         return self
@@ -198,9 +208,12 @@ class Primitive(object):
     def def_grad_kw(self, func, key):
         """Define gradient function.
 
-        :param func: Gradient function.
-        :param key: Key name of the argument.
-        :return: Self.
+        Parameters
+        ----------
+        func
+            Gradient function.
+        key
+            Key name of the argument.
         """
         self._grad_func_kw[key] = GradFunc(f=func, multi_grad_indices=None)
         return self
@@ -230,16 +243,13 @@ class Primitive(object):
             Gradient function.
         argnums
             Indices of the arguments.
-
-        Returns
-        -------
-        Primitive
-            Self.
         """
         assert isinstance(argnums, tuple), 'Indexes must be of type tuple.'
         assert len(argnums) == len(set(argnums)), 'Duplicate entries.'
 
         for argnum in argnums:
+            assert isinstance(argnum,
+                              int), 'Indexes must be tuple of integers.'
             self._grad_func[argnum] = GradFunc(
                 f=func, multi_grad_indices=argnums)
         return self
@@ -247,9 +257,17 @@ class Primitive(object):
     def gradable(self, bp_args, bp_kwargs):
         """Return whether the primitive has gradient function defined.
 
-        :param tuple bp_args: Positional arguments that need back propagation.
-        :param tuple bp_kwargs: Keyword arguments that need back propagation.
-        :return: Whether all the arguments have gradients defined.
+        Parameters
+        ----------
+        bp_args
+            Positional arguments that need back propagation.
+        bp_kwargs
+            Keyword arguments that need back propagation.
+
+        Returns
+        -------
+        bool
+            Whether all the arguments have gradients defined.
         """
         for i in bp_args:
             if i not in self._grad_func:
