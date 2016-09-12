@@ -131,13 +131,13 @@ class Tape(object):
 
         Target gradients must be set prior to this function call.
         """
-        dfs_queue = [origin]
-        while len(dfs_queue) != 0:
-            current_array = dfs_queue[-1]
+        dfs_stack = [origin]
+        while len(dfs_stack) != 0:
+            current_array = dfs_stack[-1]
             assert isinstance(current_array,
                               array.Value), 'Type is not `array.Value`.'
             if self._is_gradable(current_array):
-                dfs_queue.pop()
+                dfs_stack.pop()
                 # Initialize if necessary.
                 self._get_cached_gradient(current_array)
                 grad_records = self._array_grad_records.get(current_array, [])
@@ -186,7 +186,7 @@ class Tape(object):
                 def push_grad_record(arr):
                     """Push gradient record for a result array."""
                     if isinstance(arr, array.Value):
-                        dfs_queue.append(arr)
+                        dfs_stack.append(arr)
                     else:
                         for sub_arr in arr:
                             push_grad_record(sub_arr)
