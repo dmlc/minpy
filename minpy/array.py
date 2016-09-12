@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable=unused-argument, protected-access, logging-format-interpolation
+# pylint: disable=unused-argument, protected-access, logging-format-interpolation, abstract-method
 """Base type for arrays."""
 from __future__ import absolute_import
 from __future__ import print_function
@@ -255,7 +255,6 @@ class Value(object):
     # pylint: enable= no-self-use
 
 
-#pylint: disable=abstract-method
 class Number(Value, float):
     """Class for numbers with derivative information"""
     __slots__ = ['_val']
@@ -297,7 +296,7 @@ class Array(Value):
     underlying array object.
     """
     __slots__ = ['_data', '_latest_version']
-    __array_priority__ = 100.0  # highest priority when compute with numpy.ndarray
+    __array_priority__ = 100.0  # Highest priority when compute with numpy.ndarray.
 
     def __init__(self, data, marked=False, context=None):
         super(Array, self).__init__(marked, context)
@@ -353,10 +352,18 @@ class Array(Value):
         See `here <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`_
         for further explanation.
 
-        :param args: A single iterable or a sequence of integers representing a new shape.
-            Although it being an iterable is not documented in official document, it is renowned and
-            widely used in practice.
-        :return: Reshaped array.
+        Parameters
+        ----------
+        args
+            A single iterable or a sequence of integers representing a
+            new shape.  Although it being an iterable is not
+            documented in official document, it is renowned and widely
+            used in practice.
+
+        Returns
+        -------
+        Array
+            Reshaped array.
         """
         if len(args) == 1 and isinstance(args[0], collections.Iterable):
             new_shape = args[0]
@@ -377,15 +384,23 @@ class Array(Value):
     def argmax(self, axis=None, out=None):
         """ Returns the indices of the maximum values along an axis
 
-        :param axis: int. By default, the index is into the flattened array,
+        Parameters
+        ----------
+        axis
+            By default, the index is into the flattened array,
             otherwise along the specified axis.
-        :param out: If provided, the result will be inserted into this array.
+        out
+            If provided, the result will be inserted into this array.
             It should be of the appropriate shape and dtype.
-        :return: Array of indices into the array.
+
+        Returns
+        -------
+        Array
+            Array of indices into the array.
         """
         if out is not None:
             # TODO: Support out argument
-            raise ValueError('out option is not supported.')
+            raise ValueError('Out option is not supported.')
         return Value._ns.argmax(self, axis)
 
     def _synchronize_data(self):
@@ -441,7 +456,7 @@ class Array(Value):
 
     @property
     def shape(self):
-        """ Get the shape of array """
+        """Get the shape of array."""
         return self._get_latest_data().shape
 
     def __getitem__(self, index):
@@ -491,5 +506,5 @@ class Array(Value):
 
     @property
     def size(self):
-        """ Get number of elements in the array """
+        """Get number of elements in the array."""
         return self._get_latest_data().size
