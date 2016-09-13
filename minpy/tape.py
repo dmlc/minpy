@@ -179,7 +179,7 @@ class Tape(object):
                         for sub_owner in owner:
                             remove_grad_record(sub_owner, grad_record)
 
-                for grad_record in grad_records.copy():
+                for grad_record in grad_records[:]:
                     remove_grad_record(grad_record.owner, grad_record)
             else:
 

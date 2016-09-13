@@ -66,8 +66,9 @@ class Value(object):
 
         def check_isinstance(data, iterable):
             """Check whether data type against an iterable."""
-            return next(filter(lambda i: isinstance(data, i), iterable),
-                        None) is not None
+            return next(
+                iter(filter(lambda i: isinstance(data, i), iterable)),
+                None) is not None
 
         if isinstance(data, Value):
             return data
