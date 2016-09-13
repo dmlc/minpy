@@ -123,14 +123,10 @@ class Function(object):
 
         # pylint: disable= missing-docstring
         # Define raw forward function.
-        def func(**kwargs):
+        def func(*args):
             # Set Data & Parameters
-            for name, value in kwargs.items():
-                if name in executor.arg_dict:
-                    value.copyto(executor.arg_dict[name])
-                else:
-                    _logger.debug('Ignore unknown input (%s) to symbol (%s)' \
-                            % (name, self._sym_name))
+            for arg, executor_arg in zip(args, executor.arg_arrays):
+                arg.copyto(executor_arg)
             # Forward computation.
             # TODO(haoran): How to set `is_train` flag
             executor.forward(is_train=True)
@@ -140,20 +136,17 @@ class Function(object):
         func.__name__ = self._sym_name
 
         # Define gradient function generator.
-        def gen_grad_kw(keyname):
-            def grad_wrapper(ans, **kwargs):
-                def grad_func(g):
-                    executor.backward(out_grads=g)
-                    ret = executor.grad_arrays[arg_names.index(keyname)]
-                    return ret
+        def grad_wrapper(ans, *args):
+            def grad_func(g):
+                executor.backward(out_grads=g)
+                ret = executor.grad_arrays
+                return ret
 
-                return grad_func
+            return grad_func
 
-            return grad_wrapper
         # Create primitives.
         prim = Primitive(func, ArrayType.MXNET)
-        for name in arg_names:
-            prim.def_grad_kw(gen_grad_kw(name), name)
+        prim.def_multiple_grad(grad_wrapper, tuple(range(len(arg_names))))
         return executor, prim
         # pylint: enable= missing-docstring
 
@@ -161,10 +154,8 @@ class Function(object):
         # Remove arguments that are not defined in symbol's argument
         # list.
         filtered_kwargs = {}
-        for name, val in kwargs.items():
-            if name in self._symbol.list_arguments():
-                filtered_kwargs[name] = val
-        return self._prim(**filtered_kwargs)
+        ordered_args = [kwargs[name] for name in self._symbol.list_arguments()]
+        return self._prim(*ordered_args)
 
     def get_params(self):
         param_configs = {}

@@ -152,7 +152,12 @@ class Primitive(object):
         if need_bp:
             # Record partial derivative paths, only for `array.Value` type values.
             # If no gradient function is defined, also omit it
+            visited_arg_indices = set()
             for i, arg in enumerate(args):
+                if i in visited_arg_indices:
+                    continue
+                else:
+                    visited_arg_indices.add(i)
                 if isinstance(arg, array.Value) and arg.marked_for_bp:
                     if i not in self._grad_func:
                         _logger.warning('Partial derivative of func "{}" on \
@@ -168,10 +173,15 @@ class Primitive(object):
                     if grad_func_rec.multi_grad_indices is None:
                         owner = arg
                     else:
-                        owner = [
-                            args[grad_index]
-                            for grad_index in grad_func_rec.multi_grad_indices
-                        ]
+                        owner = []
+                        for grad_index in grad_func_rec.multi_grad_indices:
+                            if isinstance(args[grad_index],
+                                          array.Value) and args[
+                                              grad_index].marked_for_bp:
+                                owner.append(args[grad_index])
+                            else:
+                                owner.append(None)
+                            visited_arg_indices.add(grad_index)
                     tape.global_tape().add_partial_derivative(
                         grad_func, owner, result, self.type)
             for k, arg in kwargs.items():

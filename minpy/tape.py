@@ -59,7 +59,8 @@ class Tape(object):
                         result=result,
                         primitive_type=primitive_type,
                         owner=owner))
-            else:
+            elif single_owner is not None:
+                # None means a placeholder for an array that needs no gradient.
                 for sub_owner in single_owner:
                     add_owner(sub_owner)
 
@@ -118,7 +119,7 @@ class Tape(object):
                 current_gradient = self._get_cached_gradient(arr)
                 current_gradient += array.Value.wrap(grad)
                 self._grads[arr] = current_gradient
-            else:
+            elif arr is not None:
                 if len(arr) != len(grad):
                     _logger.warning('Number of gradients does not match.')
                 for sub_arr, sub_grad in zip(arr, grad):
@@ -175,7 +176,7 @@ class Tape(object):
                     """Remove gradient record from owner."""
                     if isinstance(owner, array.Value):
                         self._array_grad_records[owner].remove(grad_record)
-                    else:
+                    elif owner is not None:
                         for sub_owner in owner:
                             remove_grad_record(sub_owner, grad_record)
 
