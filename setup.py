@@ -20,6 +20,7 @@ setuptools.setup(
         'mxnet',
         'semantic-version',
         'six',
+        'h5py',
     ],
     data_files=[('', ['VERSION'])],
     url='https://github.com/dmlc/minpy')
