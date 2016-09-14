@@ -2,6 +2,8 @@
 import abc
 import functools
 import minpy
+import numpy
+import h5py
 
 class ParamsNameNotFoundError(ValueError):
     """ Error of not existed name during accessing model params """
@@ -60,3 +62,28 @@ class ModelBase(object):
     @abc.abstractmethod
     def loss(self, predict, y):
         return
+
+    def save(self, prefix):
+        """Save model params into file.
+
+        :param prefix: prefix of model name.
+        """
+        param_name = '%s.params' % prefix
+        with h5py.File(param_name, 'w') as hf:
+            for k, v in self.params.items():
+                hf.create_dataset('param_%s' % k, data=v.asnumpy())
+            for k, v in self.aux_params.items():
+                hf.create_dataset('aux_param_%s' % k, data=v.asnumpy())
+
+    def load(self, prefix):
+        """Load model params from file.
+
+        :param prefix: prefix of model name.
+        """
+        param_name = '%s.params' % prefix
+        with h5py.File(param_name, 'r') as hf:
+            for k, v in self.params.items():
+                v[:] = numpy.array(hf.get('param_%s' % k))
+            for k, v in self.aux_params.items():
+                v[:] = numpy.array(hf.get('aux_param_%s' % k))
+

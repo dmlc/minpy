@@ -291,19 +291,29 @@ def gru_step(x, prev_h, Wx, Wh, b, Wxh, Whh, bh):
     
     Parameters
     ----------
-    x : Input data, of shape (N, D)
-    prev_h : Previous hidden state, of shape (N, H)
-    prev_c : Previous hidden state, of shape (N, H)
-    Wx : Input-to-hidden weights for r and z gates, of shape (D, 2H)
-    Wh : Hidden-to-hidden weights for r and z gates, of shape (H, 2H)
-    b : Biases for r an z gates, of shape (2H,)
-    Wxh : Input-to-hidden weights for h', of shape (D, H)
-    Whh : Hidden-to-hidden weights for h', of shape (H, H)
-    bh : Biases, of shape (H,)
+    x
+        Input data, of shape (N, D)
+    prev_h
+        Previous hidden state, of shape (N, H)
+    prev_c
+        Previous hidden state, of shape (N, H)
+    Wx
+        Input-to-hidden weights for r and z gates, of shape (D, 2H)
+    Wh
+        Hidden-to-hidden weights for r and z gates, of shape (H, 2H)
+    b
+        Biases for r an z gates, of shape (2H,)
+    Wxh
+        Input-to-hidden weights for h', of shape (D, H)
+    Whh
+        Hidden-to-hidden weights for h', of shape (H, H)
+    bh
+        Biases, of shape (H,)
 
     Returns
     -------
-    next_h : Next hidden state, of shape (N, H)
+    next_h
+        Next hidden state, of shape (N, H)
 
     Notes
     -----

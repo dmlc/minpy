@@ -43,8 +43,6 @@ class ConvolutionNet(ModelBase):
                 data=net, act_type='relu')
         net = mx.sym.FullyConnected(
                 data=net, name='fc2', num_hidden=num_classes)
-        net = mx.sym.SoftmaxOutput(
-                data=net, name='output')
         # Create forward function and add parameters to this model.
         self.cnn = Function(
                 net, input_shapes={'X': (batch_size,) + input_size},
@@ -56,7 +54,7 @@ class ConvolutionNet(ModelBase):
         return out
 
     def loss(self, predict, y):
-        return layers.softmax_cross_entropy(predict, y)
+        return layers.softmax_loss(predict, y)
 
 def main(args):
     # Create model.

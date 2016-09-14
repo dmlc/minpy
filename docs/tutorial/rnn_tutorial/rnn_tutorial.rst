@@ -2,10 +2,11 @@ RNN Tutorial
 ============
 
 This tutorial describes how to implement recurrent neural network (RNN) on
-MinPy. Since RNN has different architecture compared to traditional
-pipelines, it is hard to be implemented on many machine learning systems. MinPy
-simplifies RNN implementation by its focus on imperative programming.
-This tutorial will explain how RNN can be implemented easily on MinPy.
+MinPy. RNN has different architecture, the backprop-through-time (BPTT) coupled
+with various gating mechanisms can make implementation challenging.
+MinPy focuses on imperative programming and simplifies reasoning logics.
+This tutorial explains how, with a simple toy data set and three RNNs (vanilla 
+RNN, LSTM and GRU).
 
 We do suggest you start with :ref:`complete_solver_guide` for MinPy's
 conventional solver architecture.
@@ -51,6 +52,7 @@ this `folder <https://github.com/dmlc/minpy/tree/master/examples/nn>`_.)
   :linenos:
 
 Layers are defined in ``minpy.nn.layers`` (`here <https://github.com/dmlc/minpy/blob/master/minpy/nn/layers.py>`_).
+Note that ``data_gen`` is simply ``adding_problem_generator``.
 
 The key layer of vanilla RNN is also shown as follows:
 
@@ -84,7 +86,7 @@ The implementation of ``lstm_step`` is quite straightforward in MinPy.
 GRU
 ---
 
-GRU was proposed by Cho et al. [3]. It simplifies LSTM by using less gates and states.
+GRU was proposed by Cho et al. [3]. It simplifies LSTM by using fewer gates and states.
 MinPy can also model GRU in an intuitive way:
 
 .. literalinclude:: gru.py
@@ -111,9 +113,8 @@ history in the training process. The result is as follows.
 
     Figure: Result of training vanilla RNN, LSTM, GRU. A baseline of 0.1767 is also included.
 
-We observe that LSTM and GRU are more effective than vanilla RNN due to LSTM and GRU's memory gates.
-We also see that GRU converges much faster than LSTM because its fewer parameters.
-
+We observe that LSTM and GRU are more effective than vanilla RNN due to LSTM and GRU's memory gates. 
+In this particular case, GRU converges much faster than LSTM, probabuly due to fewer parameters.
 
 Reference
 ---------

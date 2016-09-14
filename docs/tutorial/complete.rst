@@ -85,12 +85,3 @@ However, the advantage of MinPy is that it brings in additional flexibility when
   :language: python
   :linenos:
 
-Recurrent networks
-------------------
-
-The flexibility of MinPy makes it easy to implement other models. The full code is `here <https://github.com/dmlc/minpy/blob/master/examples/nn/rnn.py>`_.
-
-Put it together: feedforward + recurrent networks
--------------------------------------------------
-
-Coming soon (we may not use CS231n image captioning as it leaks homework solution?)
