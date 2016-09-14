@@ -16,9 +16,14 @@ Minpy's model builder consists of classes describing various neural network arch
 * ``Sequence`` class enables users to create feedforward networks. 
 * Other classes representing layers of neural networks, such as ``Affine`` and ``Convolution``. 
 
-`This <https://github.com/dmlc/minpy/blob/master/examples/nn/model_builder_example.py>`_ demonstrates the declaration and training of a 2-layer fully connected network with classes in model builder. 
+The following code snippet demonstrates how a few lines of specification with model builder removes the need of defining a complete network from scratch. The full code is `here <https://github.com/dmlc/minpy/blob/master/examples/nn/model_builder_example.py>`_
 
-In fact, arbitrarily complex networks could be constructed by combining these classes in a nested way. Please refer to the `model gallery <https://github.com/dmlc/minpy/blob/master/examples/nn/model_gallery.py>`_ to discover how to easily declare giant networks such as ResNet with model builder.
+.. literalinclude:: tutorial_mbuilder.py
+  :language: python
+  :emphasize-lines: 39-43
+  :linenos:
+
+Arbitrarily complex networks could be constructed by combining these classes in a nested way. Please refer to the `model gallery <https://github.com/dmlc/minpy/blob/master/examples/nn/model_gallery.py>`_ to discover how to easily declare giant networks such as ResNet with model builder.
 
 Customize model builder layers
 ------------------------------
