@@ -20,7 +20,7 @@ The following code snippet demonstrates how a few lines of specification with mo
 
 .. literalinclude:: tutorial_mbuilder.py
   :language: python
-  :emphasize-lines: 39-43
+  :emphasize-lines: 11, 39-43
   :linenos:
 
 Arbitrarily complex networks could be constructed by combining these classes in a nested way. Please refer to the `model gallery <https://github.com/dmlc/minpy/blob/master/examples/nn/model_gallery.py>`_ to discover how to easily declare giant networks such as ResNet with model builder.
