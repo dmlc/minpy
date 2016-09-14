@@ -6,6 +6,7 @@ from minpy.dispatch import policy
 
 logging.getLogger('minpy.array').setLevel(logging.DEBUG)
 logging.getLogger('minpy.core').setLevel(logging.DEBUG)
+logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 np.set_policy(policy.OnlyNumPyPolicy())
 
 def f(x, y):

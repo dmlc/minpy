@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import minpy.numpy as mp
 import numpy as np
 import minpy.dispatch.policy as policy
@@ -56,10 +58,10 @@ dnext_h = np.random.randn(*out.shape)
 # test MinPy
 start = time.time()
 rnn_step_forward_loss = lambda x, h, Wx, Wh, b, dnext_h: minpy_rnn_step_forward(x, h, Wx, Wh, b) * nm(dnext_h)
-grad_loss_function = wraps('numpy')(grad_and_loss(rnn_step_forward_loss, xrange(5)))
+grad_loss_function = wraps('numpy')(grad_and_loss(rnn_step_forward_loss, range(5)))
 grad_arrays = grad_loss_function(x, h, Wx, Wh, b, dnext_h)[0]
 end = time.time()
-print "MinPy total time elapsed:", end - start
+print("MinPy total time elapsed:", end - start)
 
 # test NumPy
 start = time.time()
@@ -67,12 +69,12 @@ out, cache = rnn_step_forward(x, h, Wx, Wh, b)
 dx, dprev_h, dWx, dWh, db = rnn_step_backward(dnext_h, cache)
 out *= dnext_h # to agree with MinPy calculation
 end = time.time()
-print "NumPy total time elapsed:", end - start
+print("NumPy total time elapsed:", end - start)
 
-print
-print "Result Check:"
-print 'dx error: ', rel_error(dx, grad_arrays[0])
-print 'dprev_h error: ', rel_error(dprev_h, grad_arrays[1])
-print 'dWx error: ', rel_error(dWx, grad_arrays[2])
-print 'dWh error: ', rel_error(dWh, grad_arrays[3])
-print 'db error: ', rel_error(db, grad_arrays[4])
+print()
+print("Result Check:")
+print('dx error: ', rel_error(dx, grad_arrays[0]))
+print('dprev_h error: ', rel_error(dprev_h, grad_arrays[1]))
+print('dWx error: ', rel_error(dWx, grad_arrays[2]))
+print('dWh error: ', rel_error(dWh, grad_arrays[3]))
+print('db error: ', rel_error(db, grad_arrays[4]))

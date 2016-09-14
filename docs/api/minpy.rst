@@ -34,4 +34,11 @@ minpy.core module
     :undoc-members:
     :show-inheritance:
 
+minpy.tape module
+-----------------
+
+.. automodule:: minpy.tape
+    :members:
+    :undoc-members:
+    :show-inheritance:
 

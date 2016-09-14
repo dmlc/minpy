@@ -5,47 +5,57 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import mxnet as mx
 import functools
 
-from minpy.array import Value
-from minpy.array_variants import ArrayType, array_types, number_types
-from minpy.context import current_context
-from minpy.primitive import Primitive
-from minpy.utils import log
+from .array import Value
+from .array_variants import ArrayType, array_types, number_types
+from .context import current_context
+from .primitive import Primitive
+from .utils import log
+from . import tape
 
 _logger = log.get_logger(__name__)
+
 
 def grad_and_loss(func, argnum=0, method=False):
     """Return function that computes both gradient and loss value.
 
-    :param func: The forward (loss) function.
-    :param argnum: The index of argument to calculate gradient for.
-    :param method: Skip the first argument 'self' if func is a method.
-    :return: A function that would compute both the gradient of the specified argument and loss value.
+    Parameters
+    ----------
+    func
+        The forward (loss) function.
+    argnum
+        The index of argument to calculate gradient for.
+    method
+        Skip the first argument 'self' if func is a method.
+
+    Returns
+    -------
+    function
+        A function that would compute both the gradient of the specified argument and loss value.
     """
-    # pylint: disable= missing-docstring
+
     @functools.wraps(func)
     def wrapped(*args):
+        """Wrapped function."""
         if method:
             args = args[1:]
         arrays = tuple(Value.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
         for i in argnums:
             arrays[i]._marked_for_bp = True
-        result_array = func(*arrays)
-        _logger.debug('Forward pass finished. Start backward pass.')
-        grad_vals = []
+        with tape.tape() as current_tape:
+            result_array = func(*arrays)
+            _logger.debug('Forward pass finished. Start backward pass.')
+            current_tape.set_gradient_target(result_array)
+            grad_vals = [current_tape.get_gradient(arrays[i]) for i in argnums]
+            if len(grad_vals) == 1:
+                grad_vals = grad_vals[0]
         for i in argnums:
-            grad_vals.append(arrays[i].node.partial_derivative(
-                result_array.node))
             arrays[i]._marked_for_bp = False
-        if len(grad_vals) == 1:
-            grad_vals = grad_vals[0]
         return grad_vals, result_array
 
     return wrapped
-    # pylint: enable= missing-docstring
 
 
 def grad(func, argnum=0, method=False):
@@ -71,6 +81,7 @@ class MXNetSymbolError(ValueError):
     """ Error class for creating mxnet symbols """
     pass
 
+
 class Function(object):
     def __init__(self, symbol, input_shapes, name='mxnet_symbol'):
         """Construct a differentiable function from MXNet symbol.
@@ -89,7 +100,8 @@ class Function(object):
         self._sym_name = name
         self._executor, self._prim = self._create_prim()
         # Infer shapes of parameters and outputs.
-        arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(**self._input_shapes)
+        arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(
+            **self._input_shapes)
         # Get shapes of learnable parameters.
         self._param_shapes = {}
         for i, arg_name in enumerate(symbol.list_arguments()):
@@ -108,16 +120,14 @@ class Function(object):
         dev = current_context().as_mxnet_context()
         executor = self._symbol.simple_bind(dev, 'write', **self._input_shapes)
         arg_names = self._symbol.list_arguments()
+
         # pylint: disable= missing-docstring
         # Define raw forward function.
-        def func(**kwargs):
+        def func(*args):
             # Set Data & Parameters
-            for name, value in kwargs.items():
-                if name in executor.arg_dict:
-                    value.copyto(executor.arg_dict[name])
-                else:
-                    _logger.debug('Ignore unknown input (%s) to symbol (%s)' \
-                            % (name, self._sym_name))
+            for arg, executor_arg in zip(args, executor.arg_arrays):
+                if arg is not None:
+                    arg.copyto(executor_arg)
             # Forward computation.
             # TODO(haoran): How to set `is_train` flag
             executor.forward(is_train=True)
@@ -125,19 +135,19 @@ class Function(object):
             return executor.outputs[0]
         # Set function name to be the given symbol name.
         func.__name__ = self._sym_name
+
         # Define gradient function generator.
-        def gen_grad_kw(keyname):
-            def grad_wrapper(ans, **kwargs):
-                def grad_func(g):
-                    executor.backward(out_grads=g)
-                    ret = executor.grad_arrays[arg_names.index(keyname)]
-                    return ret
-                return grad_func
-            return grad_wrapper
+        def grad_wrapper(ans, *args):
+            def grad_func(g):
+                executor.backward(out_grads=g)
+                ret = executor.grad_arrays
+                return ret
+
+            return grad_func
+
         # Create primitives.
         prim = Primitive(func, ArrayType.MXNET)
-        for name in arg_names:
-            prim.def_grad_kw(gen_grad_kw(name), name)
+        prim.def_multiple_grad(grad_wrapper, tuple(range(len(arg_names))))
         return executor, prim
         # pylint: enable= missing-docstring
 
@@ -145,23 +155,23 @@ class Function(object):
         # Remove arguments that are not defined in symbol's argument
         # list.
         filtered_kwargs = {}
-        for name, val in kwargs.items():
-            if name in self._symbol.list_arguments():
-                filtered_kwargs[name] = val
-        return self._prim(**filtered_kwargs)
+        ordered_args = [(kwargs[name] if name in kwargs else None)
+                        for name in self._symbol.list_arguments()]
+        return self._prim(*ordered_args)
 
     def get_params(self):
         param_configs = {}
         for name, shape in self._param_shapes.items():
-            param_configs[name] = { 'shape': shape }
+            param_configs[name] = {'shape': shape}
         return param_configs
 
     def get_output_shapes(self):
         return self._out_shapes
 
     def get_one_output_shape(self):
-        assert(len(self._out_shapes) == 1)
+        assert (len(self._out_shapes) == 1)
         return list(self._out_shapes.values())[0]
+
 
 class MinpyWrapperError(TypeError):
     """ Error when wrapping function return values """
@@ -197,8 +207,7 @@ def minpy_to_numpy(var):
     :return: singular, list, or tuple of numpy array(s)
     """
     if isinstance(var, (tuple, list)):
-        return type(var)(Value.wrap(x).get_data(ArrayType.NUMPY)
-                         for x in var)
+        return type(var)(Value.wrap(x).get_data(ArrayType.NUMPY) for x in var)
     else:
         return Value.wrap(var).get_data(ArrayType.NUMPY)
 
@@ -239,6 +248,7 @@ def wraps(mode='lazy', method=False):
     :param mode: the mode how wrapper performs on the return values
     :param method: set it to True only if the wrapper is applied on a method
     """
+
     # TODO: Refactor to let this decorator work without method option
     #pylint: disable= missing-docstring
     def wrapper(func):

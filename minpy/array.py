@@ -1,132 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable= unused-argument, protected-access,
-# logging-format-interpolation
+# pylint: disable=unused-argument, protected-access, logging-format-interpolation, abstract-method
 """Base type for arrays."""
 from __future__ import absolute_import
 from __future__ import print_function
 
 import itertools
 import collections
-import weakref
-
-from minpy.array_variants import ArrayType
-from minpy.array_variants import array_types
-from minpy.array_variants import number_types
-from minpy.context import current_context
-from minpy.utils import log
 
 import mxnet
 import numpy
 
+from .array_variants import ArrayType
+from .array_variants import array_types
+from .array_variants import number_types
+from .context import current_context
+from .utils import log
+
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
+
 # pylint: enable= invalid-name
-
-GradRecord = collections.namedtuple('GradRecord',
-                                    ['grad_func', 'result', 'primitive'])
-
-
-class Node(object):
-    """Node representing data with gradient information."""
-    __slots__ = ['_value', '_partial_derivatives', '_partial_derivative_cache']
-
-    def __init__(self, value):
-        """Initialize."""
-        self._value = weakref.ref(value)
-        self._partial_derivatives = []
-        self._partial_derivative_cache = {}
-
-    def _get_value(self):
-        r = self._value()
-        if r is None:
-            raise RuntimeError('Reference lost.')
-        return r
-
-    def add_partial_derivative(self, grad_func, res, prim):
-        """Add partial derivative information.
-
-        :param function grad_func: The function to calculate derivative with respect to result.
-        :param Value res: Variable that represent the result of original function.
-        :param Primitive prim: Primitive that the gradient function belongs to.
-        """
-        assert isinstance(res, Value), 'Result is not of type `Value`.'
-        self._partial_derivatives.append(
-            GradRecord(
-                grad_func=grad_func, result=res, primitive=prim))
-
-    def partial_derivative(self, target):
-        """Get partial derivative. Mathematically, this function computes
-
-        .. math::
-
-           \\frac{\\partial target}{\\partial self}.
-
-        :param Node target: Target variable to compute partial derivative.
-        :return: Partial derivative.
-        """
-
-        def _call_partial_derivative(rec):
-            """Helper function for calling gradient function.
-
-            :param GradRecord rec: The gradient record to be called.
-            :return: Gradient result.
-            """
-            # The gradient of the target with respect to the result node should already be
-            # computed.
-            result_grad = rec.result.node._partial_derivative_cache[target]
-            result_grad_value = result_grad.get_data(rec.primitive._type)
-            _logger.debug('Call derivative func of "{}".'.format(
-                rec.primitive))
-            # Call gradient function to compute input gradient from result gradient
-            if rec.primitive.type == ArrayType.MXNET:
-                with result_grad.context.as_mxnet_context() as ctx:
-                    grad = rec.grad_func(result_grad_value)
-            else:
-                grad = rec.grad_func(result_grad_value)
-            return grad
-
-        # Array used to store intermediate gradients to be computed.
-        pending_derivatives = []
-
-        # Use DFS search to find all derivatives need to be computed in order to get the gradient
-        # of final target.
-        dfs_queue = [self]
-        while len(dfs_queue) != 0:
-            node = dfs_queue[-1]
-            assert isinstance(target, Node), 'Type is not `Node`.'
-            ready = True
-            if target is not node:
-                for rec in node._partial_derivatives:
-                    n = rec.result.node
-                    if target not in n._partial_derivative_cache:
-                        dfs_queue.append(n)
-                        ready = False
-            # Successors all enqueued.
-            if ready:
-                dfs_queue.pop()
-                if target not in node._partial_derivative_cache:
-                    pending_derivatives.append(node)
-                    # Init gradient buffer for accumulation.
-                    node._partial_derivative_cache[target] = Value.wrap(
-                        0.0 if isinstance(node._get_value(), Number) else
-                        numpy.zeros(node._get_value().shape))
-
-        # Compute gradient using chain rule.
-        # The resolve order is the reversed order from target to input.
-        for node in pending_derivatives:
-            if node is target:
-                # Current gradient node is the target node, the gradient is one.
-                node._partial_derivative_cache[target] = Value.wrap(
-                    1.0 if isinstance(node._get_value(), Number) else numpy.ones(
-                        node._get_value().shape))
-            else:
-                # Call saved gradient function to compute gradient of each input.
-                for rec in node._partial_derivatives:
-                    node._partial_derivative_cache[target] += Value.wrap(
-                        _call_partial_derivative(rec))
-
-        return self._partial_derivative_cache[target]
 
 
 class Value(object):
@@ -147,31 +41,50 @@ class Value(object):
 
     @property
     def marked_for_bp(self):
-        """Return whether the current Value will be used for autograd."""
+        """Return whether the current `Value` will be used for autograd."""
         return self._marked_for_bp
 
     @property
     def context(self):
+        """Return context of current `Value`."""
         return self._context
 
     @staticmethod
     def wrap(data, *args, **kwargs):
-        """ Wrap given data into its corresponding wrapper class. For example, `numpy.ndarray`
-        will be converted to `minpy.Array` while float number will become `minpy.Number`. The
-        allowed array types are defined in `minpy.array_variants.array_types`; the allowed number
-        types are defined in `minpy.array_variants.number_types`.
+        """Wrap given data into its corresponding wrapper class.
+
+        For example, :class:`numpy.ndarray` will be converted to
+        :class:`Array` while float number will become
+        :class:`Number`. The allowed array types are defined in
+        :class:`minpy.array_variants.array_types`; the allowed number
+        types are defined in
+        :class:`minpy.array_variants.number_types`.
         """
         if data is None:
             return None
         dtype = type(data)
+
+        def check_isinstance(data, iterable):
+            """Check whether data type against an iterable."""
+            return next(
+                iter(filter(lambda i: isinstance(data, i), iterable)),
+                None) is not None
+
         if isinstance(data, Value):
             return data
-        elif dtype in array_types.values():
+        elif check_isinstance(data, array_types.values()):
             return Array(data, *args, **kwargs)
-        elif dtype in itertools.chain(*number_types.values()):
+        elif check_isinstance(data, itertools.chain(*number_types.values())):
             return Number(data, *args, **kwargs)
+        elif isinstance(data, list):
+            return list(map(Value.wrap, data))
+        elif isinstance(data, tuple):
+            return tuple(map(Value.wrap, data))
         else:
-            raise TypeError('cannot wrap type: {}'.format(dtype))
+            raise TypeError('Cannot wrap type of "{}".'.format(dtype))
+
+    def __hash__(self):
+        return id(self)
 
     def __cmp__(self, other):
         raise NotImplementedError()
@@ -345,14 +258,13 @@ class Value(object):
 
 class Number(Value, float):
     """Class for numbers with derivative information"""
-    __slots__ = ['_node', '_val', '_marked_for_bp']
+    __slots__ = ['_val']
 
     def __new__(cls, val, marked=False):
         return float.__new__(cls, val)
 
     def __init__(self, val, marked=False, context=None):
         super(Number, self).__init__(marked=marked, context=context)
-        self._node = Node(self)
         self._val = val
 
     def __str__(self):
@@ -374,11 +286,6 @@ class Number(Value, float):
         """ return the underlying value """
         return self._val
 
-    @property
-    def node(self):
-        """ get node which contains derivative information from this array """
-        return self._node
-
 
 class Array(Value):
     """Base array type.
@@ -389,13 +296,12 @@ class Array(Value):
     2. Redirect normal member functions to correct member functions of
     underlying array object.
     """
-    __slots__ = ['_node', '_data', '_latest_version', '_marked_for_bp']
-    __array_priority__ = 100.0  # highest priority when compute with numpy.ndarray
+    __slots__ = ['_data', '_latest_version']
+    __array_priority__ = 100.0  # Highest priority when compute with numpy.ndarray.
 
     def __init__(self, data, marked=False, context=None):
         super(Array, self).__init__(marked, context)
         self._data = {}
-        self._node = Node(self)
         atype = Array.to_array_type(data)
         self._data[atype] = data
         self._latest_version = atype
@@ -416,11 +322,6 @@ class Array(Value):
 
     def __repr__(self):
         return self.__str__()
-
-    @property
-    def node(self):
-        """ get node which contains derivative information from this array """
-        return self._node
 
     @property
     def context(self):
@@ -452,10 +353,18 @@ class Array(Value):
         See `here <http://docs.scipy.org/doc/numpy/reference/generated/numpy.reshape.html>`_
         for further explanation.
 
-        :param args: A single iterable or a sequence of integers representing a new shape.
-            Although it being an iterable is not documented in official document, it is renowned and
-            widely used in practice.
-        :return: Reshaped array.
+        Parameters
+        ----------
+        args
+            A single iterable or a sequence of integers representing a
+            new shape.  Although it being an iterable is not
+            documented in official document, it is renowned and widely
+            used in practice.
+
+        Returns
+        -------
+        Array
+            Reshaped array.
         """
         if len(args) == 1 and isinstance(args[0], collections.Iterable):
             new_shape = args[0]
@@ -466,37 +375,47 @@ class Array(Value):
                 'Orders other than C are not currently supported.')
         return Value._ns.reshape(self, new_shape)
 
-    def dot(self, b, out=None):
+    def dot(self, other, out=None):
         """ Function for dot production. """
         if out is not None:
             # TODO: Support out argument
-            raise ValueError('out option is not supported.')
-        return Value._ns.dot(self, b)
+            raise ValueError('Out option is not supported.')
+        return Value._ns.dot(self, other)
 
     def argmax(self, axis=None, out=None):
         """ Returns the indices of the maximum values along an axis
 
-        :param axis: int. By default, the index is into the flattened array,
+        Parameters
+        ----------
+        axis
+            By default, the index is into the flattened array,
             otherwise along the specified axis.
-        :param out: If provided, the result will be inserted into this array.
+        out
+            If provided, the result will be inserted into this array.
             It should be of the appropriate shape and dtype.
-        :return: Array of indices into the array.
+
+        Returns
+        -------
+        Array
+            Array of indices into the array.
         """
         if out is not None:
             # TODO: Support out argument
-            raise ValueError('out option is not supported.')
+            raise ValueError('Out option is not supported.')
         return Value._ns.argmax(self, axis)
 
     def _synchronize_data(self):
         """ Synchronize the data of different array types. """
         if self._latest_version == ArrayType.MXNET:
-            _logger.info('Copy from mxnet array to numpy array Node#{}'.format(
-                id(self)))
+            _logger.info(
+                'Copy from MXNet array to NumPy array for Array "{}".'.format(
+                    id(self)))
             mxarray = self._data[ArrayType.MXNET]
             self._data[ArrayType.NUMPY] = mxarray.asnumpy()
         elif self._latest_version == ArrayType.NUMPY:
-            _logger.info('Copy from numpy array to mxnet array Node#{}'.format(
-                id(self)))
+            _logger.info(
+                'Copy from NumPy array to MXNet array for Array "{}".'.format(
+                    id(self)))
             nparray = self._data[ArrayType.NUMPY]
             self._data[ArrayType.MXNET] = mxnet.ndarray.array(
                 nparray, ctx=self._context.as_mxnet_context())
@@ -538,7 +457,7 @@ class Array(Value):
 
     @property
     def shape(self):
-        """ Get the shape of array """
+        """Get the shape of array."""
         return self._get_latest_data().shape
 
     def __getitem__(self, index):
@@ -582,11 +501,11 @@ class Array(Value):
     # pylint: disable= invalid-name
     @property
     def T(self):
-        """ Get transposed array """
+        """Get transposed array."""
         return Value._ns.transpose(self)
     # pylint: enable= invalid-name
 
     @property
     def size(self):
-        """ Get number of elements in the array """
+        """Get number of elements in the array."""
         return self._get_latest_data().size

@@ -1,10 +1,12 @@
-# coding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# pylint: disable=logging-format-interpolation
 """Context management API of minpy."""
 from __future__ import absolute_import
 
-from minpy.utils import log
-
 import mxnet
+
+from .utils import log
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
@@ -18,10 +20,10 @@ class Context(object):
     Parameters
     ----------
     device_type : {'cpu', 'gpu'} or Context.
-        String representing the device type
+        String representing the device type.
 
     device_id : int (default=0)
-        The device id of the device, needed for GPU
+        The device id of the device, needed for GPU.
 
     Note
     ----
@@ -74,8 +76,9 @@ class Context(object):
         return False
 
     def as_mxnet_context(self):
-        _logger.debug("typeid:{}, id:{}".format(self.device_typeid,
-                                                self.device_id))
+        """Get MXNet context."""
+        _logger.debug('Getting MXNet context with typeid "{}" and id "{}"'.
+                      format(self.device_typeid, self.device_id))
         return mxnet.Context(self.devtype2str[self.device_typeid],
                              self.device_id)
 
@@ -100,7 +103,7 @@ Context.default_ctx = Context('cpu', 0)
 def cpu(device_id=0):
     """Return a CPU context.
 
-    This function is a short cut for Context('cpu', device_id)
+    This function is a short cut for Context('cpu', device_id).
 
     Parameters
     ----------
@@ -119,12 +122,12 @@ def cpu(device_id=0):
 def gpu(device_id=0):
     """Return a GPU context.
 
-    This function is a short cut for Context('gpu', device_id)
+    This function is a short cut for Context('gpu', device_id).
 
     Parameters
     ----------
     device_id : int, optional
-        The device id of the device, needed for GPU
+        The device id of the device, needed for GPU.
 
     Returns
     -------
@@ -145,4 +148,5 @@ def current_context():
 
 
 def set_context(ctx):
+    """Set current context."""
     Context.default_ctx = ctx
