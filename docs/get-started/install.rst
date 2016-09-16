@@ -9,7 +9,8 @@ There are generally three steps to follow:
 * Setup Python package and environment
 * Install Minpy
 
-Docker installation guide is available at :doc:`/get-started/docker`.
+..
+    Docker installation guide is available at :doc:`/get-started/docker`.
 
 Install MXNet
 -------------
