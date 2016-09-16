@@ -44,7 +44,7 @@ Do the following instead.
 Setup Python and its environment
 --------------------------------
 
-Refer to MXNet installation document for `Python package installation. <http://mxnet.readthedocs.io/en/latest/how_to/build.html>`_. One of the most common mistake is forget to set the environment variable. Suppose you have installed ``mxnet`` under your home directory and is running bash shell. Put the following line in your `~/.bashrc` (or `~/.bash_profile`)
+Refer to MXNet installation document for `Python package installation. <http://mxnet.readthedocs.io/en/latest/how_to/build.html>`_. One of the most common problem a beginner runs into is not setting the environment variable to tell Python where to find the library. Suppose you have installed ``mxnet`` under your home directory and is running bash shell. Put the following line in your ``~/.bashrc`` (or ``~/.bash_profile``)
 
 ::
 
