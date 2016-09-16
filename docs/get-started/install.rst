@@ -42,6 +42,8 @@ Do the following instead.
     git clone --recursive https://github.com/dmlc/mxnet
     cd mxnet; cp make/osx.mk ./config.mk; make -j$(sysctl -n hw.ncpu)
 
+It turns out that installing ``openblas`` is necessary, in addition to modify the makefile, to fix `one of the build issues <https://github.com/dmlc/mxnet/issues/572>`_.
+
 Setup Python and its environment
 --------------------------------
 
