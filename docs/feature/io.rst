@@ -6,43 +6,43 @@ This tutorial introduces IO part of Minpy. We will describe the concepts of Data
 Dataset
 -------
 
-Dataset is a collection of samples. Each sample could have multiple entries, each represents a particular input variable for a learning task. For example, for image classification task, each sample should contain two entries, one is the input image, the other is the image label.
+Dataset is a collection of samples. Each sample may have multiple entries, each representing a particular input variable for a learning task. For example, for image classification task, each sample may contain one entry for the image, and another for the label.
 
-The source of a dataset could vary: a list of images for vision task, rows of text for NLP task, etc. The task of IO module is to turn the source dataset into the data structure that can be used by the learning system. In Minpy, the data structure for learning is Minpy.NDArray. Minpy could take numpy.ndarray, MXNet.NDArray and Minpy.NDArray as source dataset. These three kinds of source are easy to produce by our Minpy user in pure python code thus there’s no black box in preparing dataset. We can refer to `data_utils.py <https://github.com/dmlc/minpy/blob/master/examples/utils/data_utils.py>`_ to see how to prepare raw data for Minpy IO. 
+The source of a dataset can vary: a list of images for vision task, rows of text for NLP task, etc. The task of the IO module is to turn the source dataset into the data structure that can be used by the learning system. In Minpy, the data structure for learning is ``Minpy.NDArray``, whereas ``numpy.ndarray``, ``MXNet.NDArray`` and ``Minpy.NDArray`` can all serve as source dataset. These three kinds of source are easy to produce in pure Python code, thus there’s no black box in preparing the dataset. Please refer to `data_utils.py <https://github.com/dmlc/minpy/blob/master/examples/utils/data_utils.py>`_ to see how to prepare raw data for Minpy IO. 
 
-If you want to utilize more complex IO schemas like prefetching, or handle raw data with decoding and augmentations, you can use the MXNet IO to achieve that. We will discuss it in later sessions.
+If you want to utilize more complex IO schemas like prefetching, or handle raw data with decoding and augmentations, you can use the MXNet IO to achieve that, as we will discuss it later.
 
 DataIter
 --------
-Usually the optimization method for deep learning traverses data in a round-robin way. It perfectly match the pattern of python iterator. Minpy/MXNet both choose to implement IO logic into iterater. We can control the logic of each epoch by using:
-::
-    for each_batch in self.train_dataiter:
+Usually the optimization method for deep learning traverses data in a round-robin fashion. This perfectly matches the pattern of Python iterator. Therefore, Minpy/MXNet both choose to implement IO logic with iterater. 
 
-Generally to create a data iterator, you need to provide five kinds of parameters:
+Generally, to create a data iterator, you need to provide five kinds of parameters:
 
-**Dataset Param** gives the basic information for the dataset, e.g. Minpy/Numpy/MXNet NDArray, file path, input shape, etc.
+* **Dataset Param** gives the basic information for the dataset, e.g. Minpy/Numpy/MXNet NDArray, file path, input shape, etc.
+* **Batch Param** gives the information to form a batch, e.g. batch size.
+* **Augmentation Param** tells which augmentation operations(e.g. crop, mirror) should be taken on an input image.
+* **Backend Param** controls the behavior of the backend threads in order to hide data loading cost.
+* **Auxiliary Param** provides options to help checking and debugging.
 
-**Batch Param** gives the information to form a batch, e.g. batch size.
-
-**Augmentation Param** tells which augmentation operations(e.g. crop, mirror) should be taken on an input image.
-
-**Backend Param** controls the behavior of the backend threads to hide data loading cost.
-
-**Auxiliary Param** provides options to help checking and debugging.
-
-Usually, **Dataset Param** and **Batch Param** MUST be given, otherwise data batch can't be create. Other parameters can be given according to algorithm and performance need. Please check an example:
+Usually, **Dataset Param** and **Batch Param** MUST be given, otherwise data batch cannot be created. Other parameters can be given according to algorithm and performance need. Suppose the raw source dataset has been prepared into a dictionary``data``, with two entries, containing training input and label, then the following code materialize them into an ``NDArray`` iterator:
 ::
     train_dataiter = NDArrayIter(data=data['X_train'],
                                  label=data['y_train'],
                                  batch_size=batch_size,
                                  shuffle=True)
 
+We can now control the logic of each epoch by using:
+::
+    for each_batch in self.train_dataiter:
+    
+Refer to the ``_step`` function in `solver.py <https://github.com/dmlc/minpy/blob/master/minpy/nn/solver.py>`_ to see how data are accessed.
+    
 Using MXNet IO in Minpy
 -----------------------
 
-IO is a crucial part for deep learning. Raw data may need to go through a complex pipeline before feeding into solver and poor IO implementation could be the bottleneck for the whole system. MXNet has good practice on IO. Thus we would recommend referring to MXNet IO when you move on to complex task with performance requirement. 
+IO is a crucial part for deep learning. Raw data may need to go through a complex pipeline before feeding into solver. Obviously, poor IO implementation can become performance bottleneck. MXNet has a high performing and mature IO subsystem, we recommend MXNet IO when you move on to complex task and/or need better performance. 
 
-To use MXNet IO, we just need to ``import mxnet.io`` then using the DataIters in there. For example:
+To use MXNet IO, we just need to ``import mxnet.io`` then using the DataIters. For example:
 ::
     from mxnet.io import MNISTIter
     train           = MNISTIter(
@@ -55,11 +55,16 @@ To use MXNet IO, we just need to ``import mxnet.io`` then using the DataIters in
         num_parts   = kv.num_workers,
         part_index  = kv.rank)
 
-
-Minpy.NDArray can be constructed using MXNet.NDArray. So there’s nothing more we need to do on the rest of the code.
+..
+    not sure what the following sentence means. 
+    
+``Minpy.NDArray`` is constructed using ``MXNet.NDArray`` and is therefore fully compatible. Thus, there is nothing more we need to do.
 
 To get more information about MXNet IO, please visit `io.md <https://github.com/dmlc/mxnet/blob/master/docs/packages/python/io.md>`_ and `io.py <https://github.com/dmlc/mxnet/blob/master/python/mxnet/io.py>`_.
 
+Note
+----
+The above is in the context of supervised learning. Of course, this is not the only game in town. For example, `Policy gradient reinforcement learning <http://minpy.readthedocs.io/en/latest/rl_policy_gradient/rl_policy_gradient.html>`_ is an interesting departure. 
 
 
 
