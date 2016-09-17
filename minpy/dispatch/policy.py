@@ -5,6 +5,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import minpy
 from minpy.array import Value
 from minpy.array_variants import ArrayType
 from minpy.utils import log
@@ -17,7 +18,6 @@ _logger = log.get_logger(__name__)
 class PrimitivePolicyError(ValueError):
     """Error during choosing primitives."""
     pass
-
 
 class Policy(object):
     """Policy interface."""
@@ -35,6 +35,14 @@ class Policy(object):
     @property
     def name(self):
         return type(self).__name__
+
+    def __enter__(self):
+      self._old_policy = minpy.Config['default_policy']
+      minpy.set_global_policy(self)
+      return self
+
+    def __exit__(self, ptype, value, trace):
+      minpy.set_global_policy(self._old_policy)
 
 
 class PreferMXNetPolicy(Policy):
@@ -98,3 +106,14 @@ def resolve_name(name, reg, plc, args, kwargs):
                 "Cannot find function with proper gradient implementation for "
                 ": {}() under policy: {}.".format(name, plc.name))
     return reg.get(name, preference)
+
+def wrap_policy(policy):
+    def policy_decorator(func):
+        def policy_wrapper(*args, **kwargs):
+            old_policy = minpy.Config['default_policy']
+            minpy.set_global_policy(policy)
+            result = func(*args, **kwargs)
+            minpy.set_global_policy(old_policy)
+            return result
+        return policy_wrapper
+    return policy_decorator
