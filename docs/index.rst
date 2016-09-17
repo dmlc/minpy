@@ -9,19 +9,22 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     :glob:
 
     get-started/*
+    tutorial/ndarray_tutorial.ipynb
+    tutorial/complete_sol_opt_guide/complete.rst
+    tutorial/rnn_tutorial/rnn_tutorial.rst
+    tutorial/rl_policy_gradient_tutorial/rl_policy_gradient.rst
+    tutorial/model_builder_tutorial/model_builder.rst
     tutorial/*
-    tutorial/rnn_tutorial/*
-    rl_policy_gradient/*
 
 .. toctree::
     :maxdepth: 2
     :caption: Feature documentation
     :glob:
 
+    feature/autograd_tutorial.ipynb
     feature/policy.rst
     feature/context.rst
     feature/diff_policy_context.rst
-    ../examples/tutorials/autograd_tutorial.ipynb
     feature/*
 
 .. toctree::
