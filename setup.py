@@ -17,7 +17,6 @@ setuptools.setup(
         'numpy',
         'scipy',
         'pillow',
-        'mxnet',
         'semantic-version',
         'six',
         'h5py',
