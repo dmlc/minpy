@@ -42,9 +42,9 @@ Using MXNet IO in MinPy
 
 IO is a crucial part for deep learning. Raw data may need to go through a complex pipeline before feeding into solver. Obviously, poor IO implementation can become performance bottleneck. MXNet has a high performing and mature IO subsystem, we recommend MXNet IO when you move on to complex task and/or need better performance. 
 
-To use MXNet IO, we just need to ``import mxnet.io`` then using the DataIters. For example:
+Minpy has automatically importd all the available MXNet DataIter into minpy.io namespace. To use MXNet IO, we just need to ``import minpy.io`` then using the DataIters. For example:
 ::
-    from mxnet.io import MNISTIter
+    from minpy.io import MNISTIter
     train           = MNISTIter(
         image       = data_dir + "train-images-idx3-ubyte",
         label       = data_dir + "train-labels-idx1-ubyte",
@@ -56,11 +56,8 @@ To use MXNet IO, we just need to ``import mxnet.io`` then using the DataIters. F
         part_index  = kv.rank)
 
 ..
-    not sure what the following sentence means. 
-    
-``minpy.NDArray`` is constructed using ``MXNet.NDArray`` and is therefore fully compatible. Thus, there is nothing more we need to do.
 
-To get more information about MXNet IO, please visit `io.md <https://github.com/dmlc/mxnet/blob/master/docs/packages/python/io.md>`_ and `io.py <https://github.com/dmlc/mxnet/blob/master/python/mxnet/io.py>`_.
+Current available MXNet DataIters include: ``MNISTIter, ImageRecordIter, CSVIter, PrefetchingIter, ResizeIter``. To get more information about MXNet IO, please visit `io.md <https://github.com/dmlc/mxnet/blob/master/docs/packages/python/io.md>`_ and `io.py <https://github.com/dmlc/mxnet/blob/master/python/mxnet/io.py>`_.
 
 Note
 ----
