@@ -11,7 +11,7 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     get-started/install.rst
     get-started/logistic_regression.rst
     tutorial/ndarray_tutorial.ipynb
-    tutorial/autograd_torial.ipynb
+    tutorial/autograd_tutorial.ipynb
     tutorial/complete_sol_opt_guide/complete.rst
     tutorial/model_builder_tutorial/model_builder.rst
     tutorial/rnn_tutorial/rnn_tutorial.rst
