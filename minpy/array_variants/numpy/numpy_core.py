@@ -209,6 +209,9 @@ def def_grads(reg, prims):
     prims('true_divide').def_grad(
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: -g * x / y**2),
         argnum=1)
+    prims('broadcast_to').def_grad(
+        lambda ans, x, shape: _unbroadcast(ans, x, _identity)
+    )
     prims('mod').def_grad(lambda ans, x, y: _unbroadcast(ans, x, _identity))
     prims('mod').def_grad(
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: -g * np.floor(x / y)),
