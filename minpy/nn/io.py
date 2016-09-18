@@ -3,11 +3,11 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import OrderedDict
 
-import sys
+import sys, inspect
 import numpy as np
 import six.moves.cPickle as pickle
 import minpy
-
+import mxnet.io
 
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
@@ -279,3 +279,20 @@ def load_data_labels(file_name):
         X = data['data']
         Y = data['labels']
         return X, Y
+
+def _import_mxnetio():
+    module_obj = sys.modules[__name__]
+    member_dict = dict((cls[0], cls[1]) for cls in inspect.getmembers(module_obj))
+    # mxnet python io is class members
+    clsmembers = inspect.getmembers(mxnet.io, inspect.isclass)
+    for cls in clsmembers:
+        if cls[0].endswith("Iter") and (not member_dict.has_key(cls[0])):
+            setattr(module_obj, cls[0], cls[1])
+    # mxnet c++ io is function members
+    funmembers = inspect.getmembers(mxnet.io, inspect.isfunction)
+    for fun in funmembers:
+        if fun[0].endswith("Iter") and (not member_dict.has_key(fun[0])):
+            setattr(module_obj, fun[0], fun[1])
+
+# Import mxnet python io into minpy namespace
+_import_mxnetio()
