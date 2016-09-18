@@ -42,7 +42,7 @@ Using MXNet IO in MinPy
 
 IO is a crucial part for deep learning. Raw data may need to go through a complex pipeline before feeding into solver. Obviously, poor IO implementation can become performance bottleneck. MXNet has a high performing and mature IO subsystem, we recommend MXNet IO when you move on to complex task and/or need better performance. 
 
-Minpy has automatically importd all the available MXNet DataIter into minpy.io namespace. To use MXNet IO, we just need to ``import minpy.io`` then using the DataIters. For example:
+Minpy has automatically imported all the available MXNet DataIters into minpy.io namespace. To use MXNet IO, we just need to ``import minpy.io`` then using the DataIters. For example:
 ::
     from minpy.io import MNISTIter
     train           = MNISTIter(
