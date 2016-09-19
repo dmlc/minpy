@@ -29,7 +29,7 @@ Customize model builder layers
 ------------------------------
 MinPy's model builder is designed to be extended easily. To create customized layers, one only needs to inherit classes from ``minpy.nn.model_builder.Module`` class and implement several inherited functions. These functions are ``forward``, ``output_shape``, ``parameter_shape`` and ``parameter_settings``.
 
-* ``forward`` receives input data and a dictionary containing the parameters of the network, and generates output data. It can be implemented by Numpy syntax, layers provided in ``minpy.nn.layers``, MXNet symbols or their combination as described in `MinPy's solver tutorial <http://minpy.readthedocs.io/en/latest/tutorial/complete.html>`_.
+* ``forward`` receives input data and a dictionary containing the parameters of the network, and generates output data. It can be implemented by Numpy syntax, layers provided in ``minpy.nn.layers``, MXNet symbols or their combination as described in :ref:`complete_solver_guide`.
 * ``output_shape`` returns the layer's output shape given the input shape. Please be aware that the shapes should be tuples specifying shape of one training sample, i.e. the shape of CIFAR-10 data is either (3072,) or (3, 32, 32). 
 * ``parameter_shape`` returns a dictionary that includes the shapes of all parameters of the layer. One could pass more information to MinPy's solver in ``parameter_settings``.
 
