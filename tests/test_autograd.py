@@ -3,7 +3,7 @@ from __future__ import print_function
 import minpy.numpy as mp
 import numpy as np
 import minpy.dispatch.policy as policy
-from minpy.core import convert_args, grad_and_loss, minpy_to_numpy as mn, numpy_to_minpy as nm
+from minpy.core import return_numpy, grad_and_loss, minpy_to_numpy as mn, numpy_to_minpy as nm
 import time
 
 # mp.set_policy(policy.OnlyNumPyPolicy())
@@ -58,7 +58,7 @@ dnext_h = np.random.randn(*out.shape)
 # test MinPy
 start = time.time()
 rnn_step_forward_loss = lambda x, h, Wx, Wh, b, dnext_h: minpy_rnn_step_forward(x, h, Wx, Wh, b) * nm(dnext_h)
-grad_loss_function = convert_args('numpy')(grad_and_loss(rnn_step_forward_loss, range(5)))
+grad_loss_function = return_numpy(grad_and_loss(rnn_step_forward_loss, range(5)))
 grad_arrays = grad_loss_function(x, h, Wx, Wh, b, dnext_h)[0]
 end = time.time()
 print("MinPy total time elapsed:", end - start)

@@ -17,8 +17,8 @@ from . import tape
 _logger = log.get_logger(__name__)
 
 
-def grad_and_loss(func, argnum=0, method=False):
-    """Return function that computes both gradient and loss value.
+def grad_and_loss(func, argnum=0):
+    """ Return function that computes both gradient and loss value.
 
     Parameters
     ----------
@@ -26,8 +26,6 @@ def grad_and_loss(func, argnum=0, method=False):
         The forward (loss) function.
     argnum
         The index of argument to calculate gradient for.
-    method
-        Skip the first argument 'self' if func is a method.
 
     Returns
     -------
@@ -38,8 +36,6 @@ def grad_and_loss(func, argnum=0, method=False):
     @functools.wraps(func)
     def wrapped(*args):
         """Wrapped function."""
-        if method:
-            args = args[1:]
         arrays = tuple(Value.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
         for i in argnums:
@@ -59,16 +55,21 @@ def grad_and_loss(func, argnum=0, method=False):
 
 
 def grad(func, argnum=0, method=False):
-    """Return function that contains gradient calculation.
+    """ Return function that contains gradient calculation.
 
-    :param func: The forward (loss) function.
-    :param argnum: The index of argument to calculate gradient for.
-    :param method: Skip the first argument 'self' if func is a method.
-    :return: A function that would compute the gradient of the specified argument.
+    Parameters
+    ----------
+    func
+        The forward (loss) function.
+    argnum
+        The index of argument to calculate gradient for.
+
+    Returns
+    -------
+    A function that would compute the gradient of the specified argument.
     """
     grad_with_loss_func = grad_and_loss(func, argnum, method)
     # pylint: disable= missing-docstring
-
     @functools.wraps(grad_with_loss_func)
     def wrapped(*args):
         return grad_with_loss_func(*args)[0]
@@ -176,8 +177,14 @@ class Function(object):
 def numpy_to_minpy(var):
     """ Convert NumPy array(s) to MinPy array(s)
 
-    :param var: singular, list, tuple, or dict of NumPy array(s)
-    :return: singular, list, tuple, or dict of MinPy array(s)
+    Parameters
+    ----------
+    var
+        singular, list, tuple, or dict of NumPy array(s)
+
+    Returns
+    -------
+    singular, list, tuple, or dict of MinPy array(s)
     """
     return Value.wrap(var)
 
@@ -185,11 +192,19 @@ def numpy_to_minpy(var):
 def minpy_to_numpy(var):
     """ Convert a MinPy array to NumPy array
 
-    :param var: singular, list, or tuple of MinPy array(s)
-    :return: singular, list, or tuple of NumPy array(s)
+    Parameters
+    ----------
+    var
+        singular, list, tuple, or dict of MinPy array(s)
+
+    Returns
+    -------
+    singular, list, tuple, or dict of NumPy array(s)
     """
     if isinstance(var, (tuple, list)):
         return type(var)(Value.wrap(x).get_data(ArrayType.NUMPY) for x in var)
+    elif isinstance(var, dict):
+        return {k: Value.wrap(v).get_data(ArrayType.NUMPY) for k, v in var.items()}
     else:
         return Value.wrap(var).get_data(ArrayType.NUMPY)
 
@@ -224,7 +239,7 @@ def convert_args(func):
     Returns
     -------
     wrapper
-        A wrapper function with all arguments converted to MinPy compatible types.
+        A wrapped function with all arguments converted to MinPy compatible types
     """
     # pylint: disable= missing-docstring
     @functools.wraps(func)
@@ -234,5 +249,27 @@ def convert_args(func):
         mpy_kwargs = convert(kwargs)
         # call func
         return func(*mpy_args, **mpy_kwargs)
+    # pylint: enable= missing-docstring
+    return wrapper
+
+
+def return_numpy(func):
+    """ A wrapper that converts returns into NumPy values
+
+    Parameters
+    ----------
+    func
+        A function returns MinPy types
+
+    Returns
+    -------
+    wrapper
+        A wrapped function with returns converted to NumPy types
+    """
+    # pylint: disable= missing-docstring
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # call func
+        return minpy_to_numpy(func(*args, **kwargs))
     # pylint: enable= missing-docstring
     return wrapper
