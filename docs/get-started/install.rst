@@ -51,7 +51,7 @@ Refer to MXNet installation document for `Python package installation. <http://m
 
 ::
 
-    export PYTHONPATH=~/mxnet/python
+    export PYTHONPATH=~/mxnet/python:$PYTHONPATH
 
 Install Minpy
 -------------
