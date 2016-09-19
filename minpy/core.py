@@ -212,27 +212,22 @@ def minpy_to_numpy(var):
         return Value.wrap(var).get_data(ArrayType.NUMPY)
 
 
-def convert(val, converter, basic_types):
-    """Apply converter to the value according to their types.
+def convert(val):
+    """ Convert compatible val into MinPy Value.
 
-    :param val: Value that could be either array types or container types.
-    :param converter: A function to convert values.
-    :param basic_types: Allowed types for conversion.
-    :return: Converted value remained in its original contrainer structure.
+    Parameters
+    ----------
+    val
+        A value waiting for convertion if compatible with MinPy Value.
+
+    Returns
+    -------
+    A MinPy Value if val is compatible or return val without modification.
     """
-    if val is None:
-        return None
-    for ty in basic_types:
-        if isinstance(val, ty):
-            return converter(val)
-    if isinstance(val, tuple):
-        return tuple(convert(v, converter, basic_types) for v in val)
-    elif isinstance(val, list):
-        return list(convert(v, converter, basic_types) for v in val)
-    elif isinstance(val, dict):
-        return {k: convert(v, converter, basic_types) for k, v in val.items()}
-    else:
-        return val  # no conversion
+    try:
+        return Value.wrap(val)
+    except TypeError:
+        return val
 
 
 def convert_args(mode='lazy', method=False):
