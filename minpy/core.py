@@ -173,38 +173,20 @@ class Function(object):
         return list(self._out_shapes.values())[0]
 
 
-class MinpyWrapperError(TypeError):
-    """ Error when wrapping function return values """
-    pass
+def numpy_to_minpy(var):
+    """ Convert NumPy array(s) to MinPy array(s)
 
-
-def _numpy_to_minpy(var):
-    """ Convert a numpy array to minpy array """
+    :param var: singular, list, tuple, or dict of NumPy array(s)
+    :return: singular, list, tuple, or dict of MinPy array(s)
+    """
     return Value.wrap(var)
 
 
-def _minpy_to_numpy(var):
-    """ Convert a minpy array to numpy array """
-    return Value.wrap(var).get_data(ArrayType.NUMPY)
-
-
-def numpy_to_minpy(var):
-    """ Convert numpy array(s) to minpy array(s)
-
-    :param var: singular, list, or tuple of numpy array(s)
-    :return: singular, list, or tuple of minpy array(s)
-    """
-    if isinstance(var, (tuple, list)):
-        return type(var)(Value.wrap(x) for x in var)
-    else:
-        return Value.wrap(var)
-
-
 def minpy_to_numpy(var):
-    """ Convert a minpy array to numpy array
+    """ Convert a MinPy array to NumPy array
 
-    :param var: singular, list, or tuple of minpy array(s)
-    :return: singular, list, or tuple of numpy array(s)
+    :param var: singular, list, or tuple of MinPy array(s)
+    :return: singular, list, or tuple of NumPy array(s)
     """
     if isinstance(var, (tuple, list)):
         return type(var)(Value.wrap(x).get_data(ArrayType.NUMPY) for x in var)
@@ -230,51 +212,27 @@ def convert(val):
         return val
 
 
-def convert_args(mode='lazy', method=False):
-    """Convenient wrapper function separate MinPy and NumPy data structure.
+def convert_args(func):
+    """ A wrapper that converts NumPy values into MinPy values (and leave MinPy
+    values intact).
 
-    The wrapper will convert all array types in the input arguments as MinPy arrays.
-    The return type will be converted according to the mode that is given.
+    Parameters
+    ----------
+    func
+        A function
 
-    * In ``lazy`` mode, no conversion will be performed for the return values. So users need to
-      handle the return value type themselves.
-    * In ``numpy`` mode, all MinPy arrays will be converted to NumPy arrays.
-
-    :param mode: the mode how wrapper performs on the return values
-    :param method: set it to True only if the wrapper is applied on a method
+    Returns
+    -------
+    wrapper
+        A wrapper function with all arguments converted to MinPy compatible types.
     """
-
-    # TODO: Refactor to let this decorator work without method option
-    #pylint: disable= missing-docstring
-    def wrapper(func):
-        @functools.wraps(func)
-        def real_wrapper(*args, **kwargs):
-            basic_types = list(array_types.values())
-            for num_type_lists in number_types.values():
-                basic_types += num_type_lists
-            basic_types += [Value]
-            # convert input arguments into minpy structure
-            if method:
-                self = args[0]
-                args = args[1:]
-
-            mpy_args = convert(args, _numpy_to_minpy, basic_types)
-            mpy_kwargs = convert(kwargs, _numpy_to_minpy, basic_types)
-
-            if method:
-                mpy_args = (self, ) + mpy_args
-            # call func
-            mpy_res = func(*mpy_args, **mpy_kwargs)
-            # convert return value
-            if mode == 'lazy':
-                # lazy mode returns funciton result without converting
-                return mpy_res
-            elif mode == 'numpy':
-                # convert every returned array to numpy.ndarray
-                return convert(mpy_res, _minpy_to_numpy, basic_types)
-            else:
-                raise MinpyWrapperError('Unknown wrapper mode: %s' % mode)
-
-        return real_wrapper
+    # pylint: disable= missing-docstring
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # convert input arguments into Value
+        mpy_args = convert(args)
+        mpy_kwargs = convert(kwargs)
+        # call func
+        return func(*mpy_args, **mpy_kwargs)
     # pylint: enable= missing-docstring
     return wrapper

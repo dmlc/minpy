@@ -80,6 +80,8 @@ class Value(object):
             return list(map(Value.wrap, data))
         elif isinstance(data, tuple):
             return tuple(map(Value.wrap, data))
+        elif isinstance(data, dict):
+            return {k: Value.wrap(v) for k, v in data.items()}
         else:
             raise TypeError('Cannot wrap type of "{}".'.format(dtype))
 
