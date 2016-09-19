@@ -202,9 +202,9 @@ def minpy_to_numpy(var):
     singular, list, tuple, or dict of NumPy array(s)
     """
     if isinstance(var, (tuple, list)):
-        return type(var)(Value.wrap(x).get_data(ArrayType.NUMPY) for x in var)
+        return type(var)(minpy_to_numpy(x) for x in var)
     elif isinstance(var, dict):
-        return {k: Value.wrap(v).get_data(ArrayType.NUMPY) for k, v in var.items()}
+        return {k: minpy_to_numpy(v) for k, v in var.items()}
     else:
         return Value.wrap(var).get_data(ArrayType.NUMPY)
 
