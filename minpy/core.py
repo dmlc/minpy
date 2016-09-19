@@ -235,7 +235,7 @@ def convert(val, converter, basic_types):
         return val  # no conversion
 
 
-def wraps(mode='lazy', method=False):
+def convert_args(mode='lazy', method=False):
     """Convenient wrapper function separate MinPy and NumPy data structure.
 
     The wrapper will convert all array types in the input arguments as MinPy arrays.
