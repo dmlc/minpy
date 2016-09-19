@@ -8,7 +8,7 @@ from __future__ import print_function
 import functools
 
 from .array import Value
-from .array_variants import ArrayType, array_types, number_types
+from .array_variants import ArrayType
 from .context import current_context
 from .primitive import Primitive
 from .utils import log
