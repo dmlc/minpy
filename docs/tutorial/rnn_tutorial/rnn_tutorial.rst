@@ -25,9 +25,9 @@ sequence.
 .. figure:: img/adding_problem.png
 
     Figure: An example of the adding problem. 0.7 and 0.5 are chosen from the input data
-    on the left and sum up as 1.2, the label on the right [#1]_.
+    on the left and sum up as 1.2, the label on the right [1]_.
 
-The paper [#1]_ indicates that a less than 0.1767 Mean Square Error (MSE) proves the effectiveness
+The paper [1]_ indicates that a less than 0.1767 Mean Square Error (MSE) proves the effectiveness
 of the network compared to the random guess. We set 0.1767 as the MSE baseline of our experiment.
 
 We prepared an adding problem generator at ``examples.utils.data_utils.adding_problem_generator`` (
@@ -65,7 +65,7 @@ We see building rnn through imperative programming is both convenient and intuit
 LSTM
 ----
 
-LSTM was introduced by Hochreiter and Schmidhuber [#2]_. It adds more gates to control the
+LSTM was introduced by Hochreiter and Schmidhuber [2]_. It adds more gates to control the
 process of forgetting and remembering. LSTM is also quite easy to implement in MinPy
 like vanilla RNN:
 
@@ -86,7 +86,7 @@ The implementation of ``lstm_step`` is quite straightforward in MinPy.
 GRU
 ---
 
-GRU was proposed by Cho et al. [#3]_. It simplifies LSTM by using fewer gates and states.
+GRU was proposed by Cho et al. [3]_. It simplifies LSTM by using fewer gates and states.
 MinPy can also model GRU in an intuitive way:
 
 .. literalinclude:: gru.py
@@ -118,12 +118,12 @@ In this particular case, GRU converges much faster than LSTM, probabuly due to f
 
 .. rubric:: Reference
 
-.. [#1] Q. V. Le, N. Jaitly, and G. E. Hinton, “A Simple Way to Initialize Recurrent Networks
-of Rectified Linear Units,” arXiv.org, vol. cs.NE. 04-Apr-2015.
+.. [1] Q. V. Le, N. Jaitly, and G. E. Hinton, “A Simple Way to Initialize Recurrent Networks
+        of Rectified Linear Units,” arXiv.org, vol. cs.NE. 04-Apr-2015.
 
-.. [#2] S. Hochreiter and J. Schmidhuber, “Long Short-Term Memory,” Neural Computation,
-vol. 9, no. 8, pp. 1735–1780, Nov. 1997.
+.. [2] S. Hochreiter and J. Schmidhuber, “Long Short-Term Memory,” Neural Computation,
+        vol. 9, no. 8, pp. 1735–1780, Nov. 1997.
 
-.. [#3] K. Cho, B. van Merrienboer, C. Gulcehre, D. Bahdanau, F. Bougares, H. Schwenk,
-and Y. Bengio, “Learning Phrase Representations using RNN Encoder-Decoder for Statistical
-Machine Translation,” arXiv.org, vol. cs.CL. 04-Jun-2014.
+.. [3] K. Cho, B. van Merrienboer, C. Gulcehre, D. Bahdanau, F. Bougares, H. Schwenk,
+        and Y. Bengio, “Learning Phrase Representations using RNN Encoder-Decoder for Statistical
+        Machine Translation,” arXiv.org, vol. cs.CL. 04-Jun-2014.
