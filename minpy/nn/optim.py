@@ -1,7 +1,7 @@
 """ Optimizer codes. Adapted from cs231n lab codes. """
 import minpy
 import minpy.numpy as np
-from minpy.core import wraps
+from minpy.core import convert_args
 """
 This file implements various first-order update rules that are commonly used for
 training neural networks. Each update rule accepts current weights and the
@@ -32,7 +32,7 @@ setting next_w equal to w.
 """
 
 
-@wraps('lazy')
+@convert_args
 def sgd(w, dw, config=None):
     """
     Performs vanilla stochastic gradient descent.
@@ -47,7 +47,7 @@ def sgd(w, dw, config=None):
     return w, config
 
 
-@wraps('lazy')
+@convert_args
 def sgd_momentum(w, dw, config=None):
     """
     Performs stochastic gradient descent with momentum.
@@ -72,7 +72,7 @@ def sgd_momentum(w, dw, config=None):
     return next_w, config
 
 
-@wraps('lazy')
+@convert_args
 def rmsprop(x, dx, config=None):
     """
     Uses the RMSProp update rule, which uses a moving average of squared gradient
@@ -100,7 +100,7 @@ def rmsprop(x, dx, config=None):
     return next_x, config
 
 
-@wraps('lazy')
+@convert_args
 def adam(x, dx, config=None):
     """
     Uses the Adam update rule, which incorporates moving averages of both the

@@ -8,7 +8,7 @@ from __future__ import print_function
 import functools
 
 from .array import Value
-from .array_variants import ArrayType, array_types, number_types
+from .array_variants import ArrayType
 from .context import current_context
 from .primitive import Primitive
 from .utils import log
@@ -17,8 +17,8 @@ from . import tape
 _logger = log.get_logger(__name__)
 
 
-def grad_and_loss(func, argnum=0, method=False):
-    """Return function that computes both gradient and loss value.
+def grad_and_loss(func, argnum=0):
+    """ Return function that computes both gradient and loss value.
 
     Parameters
     ----------
@@ -26,8 +26,6 @@ def grad_and_loss(func, argnum=0, method=False):
         The forward (loss) function.
     argnum
         The index of argument to calculate gradient for.
-    method
-        Skip the first argument 'self' if func is a method.
 
     Returns
     -------
@@ -38,8 +36,6 @@ def grad_and_loss(func, argnum=0, method=False):
     @functools.wraps(func)
     def wrapped(*args):
         """Wrapped function."""
-        if method:
-            args = args[1:]
         arrays = tuple(Value.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
         for i in argnums:
@@ -58,17 +54,22 @@ def grad_and_loss(func, argnum=0, method=False):
     return wrapped
 
 
-def grad(func, argnum=0, method=False):
-    """Return function that contains gradient calculation.
+def grad(func, argnum=0):
+    """ Return function that contains gradient calculation.
 
-    :param func: The forward (loss) function.
-    :param argnum: The index of argument to calculate gradient for.
-    :param method: Skip the first argument 'self' if func is a method.
-    :return: A function that would compute the gradient of the specified argument.
+    Parameters
+    ----------
+    func
+        The forward (loss) function.
+    argnum
+        The index of argument to calculate gradient for.
+
+    Returns
+    -------
+    A function that would compute the gradient of the specified argument.
     """
-    grad_with_loss_func = grad_and_loss(func, argnum, method)
+    grad_with_loss_func = grad_and_loss(func, argnum)
     # pylint: disable= missing-docstring
-
     @functools.wraps(grad_with_loss_func)
     def wrapped(*args):
         return grad_with_loss_func(*args)[0]
@@ -173,113 +174,102 @@ class Function(object):
         return list(self._out_shapes.values())[0]
 
 
-class MinpyWrapperError(TypeError):
-    """ Error when wrapping function return values """
-    pass
+def numpy_to_minpy(var):
+    """ Convert NumPy array(s) to MinPy array(s)
 
+    Parameters
+    ----------
+    var
+        singular, list, tuple, or dict of NumPy array(s)
 
-def _numpy_to_minpy(var):
-    """ Convert a numpy array to minpy array """
+    Returns
+    -------
+    singular, list, tuple, or dict of MinPy array(s)
+    """
     return Value.wrap(var)
 
 
-def _minpy_to_numpy(var):
-    """ Convert a minpy array to numpy array """
-    return Value.wrap(var).get_data(ArrayType.NUMPY)
-
-
-def numpy_to_minpy(var):
-    """ Convert numpy array(s) to minpy array(s)
-
-    :param var: singular, list, or tuple of numpy array(s)
-    :return: singular, list, or tuple of minpy array(s)
-    """
-    if isinstance(var, (tuple, list)):
-        return type(var)(Value.wrap(x) for x in var)
-    else:
-        return Value.wrap(var)
-
-
 def minpy_to_numpy(var):
-    """ Convert a minpy array to numpy array
+    """ Convert a MinPy array to NumPy array
 
-    :param var: singular, list, or tuple of minpy array(s)
-    :return: singular, list, or tuple of numpy array(s)
+    Parameters
+    ----------
+    var
+        singular, list, tuple, or dict of MinPy array(s)
+
+    Returns
+    -------
+    singular, list, tuple, or dict of NumPy array(s)
     """
     if isinstance(var, (tuple, list)):
-        return type(var)(Value.wrap(x).get_data(ArrayType.NUMPY) for x in var)
+        return type(var)(minpy_to_numpy(x) for x in var)
+    elif isinstance(var, dict):
+        return {k: minpy_to_numpy(v) for k, v in var.items()}
     else:
         return Value.wrap(var).get_data(ArrayType.NUMPY)
 
 
-def convert(val, converter, basic_types):
-    """Apply converter to the value according to their types.
+def convert(val):
+    """ Convert compatible val into MinPy Value.
 
-    :param val: Value that could be either array types or container types.
-    :param converter: A function to convert values.
-    :param basic_types: Allowed types for conversion.
-    :return: Converted value remained in its original contrainer structure.
+    Parameters
+    ----------
+    val
+        A value waiting for convertion if compatible with MinPy Value.
+
+    Returns
+    -------
+    A MinPy Value if val is compatible or return val without modification.
     """
-    if val is None:
-        return None
-    for ty in basic_types:
-        if isinstance(val, ty):
-            return converter(val)
-    if isinstance(val, tuple):
-        return tuple(convert(v, converter, basic_types) for v in val)
-    elif isinstance(val, list):
-        return list(convert(v, converter, basic_types) for v in val)
-    elif isinstance(val, dict):
-        return {k: convert(v, converter, basic_types) for k, v in val.items()}
-    else:
-        return val  # no conversion
+    try:
+        return Value.wrap(val)
+    except TypeError:
+        return val
 
 
-def wraps(mode='lazy', method=False):
-    """Convenient wrapper function separate MinPy and NumPy data structure.
+def convert_args(func):
+    """ A wrapper that converts NumPy values into MinPy values (and leave MinPy
+    values intact).
 
-    The wrapper will convert all array types in the input arguments as MinPy arrays.
-    The return type will be converted according to the mode that is given.
+    Parameters
+    ----------
+    func
+        A function
 
-    * In ``lazy`` mode, no conversion will be performed for the return values. So users need to
-      handle the return value type themselves.
-    * In ``numpy`` mode, all MinPy arrays will be converted to NumPy arrays.
-
-    :param mode: the mode how wrapper performs on the return values
-    :param method: set it to True only if the wrapper is applied on a method
+    Returns
+    -------
+    wrapper
+        A wrapped function with all arguments converted to MinPy compatible types
     """
+    # pylint: disable= missing-docstring
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # convert input arguments into Value
+        mpy_args = convert(args)
+        mpy_kwargs = convert(kwargs)
+        # call func
+        return func(*mpy_args, **mpy_kwargs)
+    # pylint: enable= missing-docstring
+    return wrapper
 
-    # TODO: Refactor to let this decorator work without method option
-    #pylint: disable= missing-docstring
-    def wrapper(func):
-        @functools.wraps(func)
-        def real_wrapper(*args, **kwargs):
-            basic_types = list(array_types.values())
-            for num_type_lists in number_types.values():
-                basic_types += num_type_lists
-            basic_types += [Value]
-            # convert input arguments into minpy structure
-            if method:
-                self = args[0]
-                args = args[1:]
 
-            mpy_args = convert(args, _numpy_to_minpy, basic_types)
-            mpy_kwargs = convert(kwargs, _numpy_to_minpy, basic_types)
+def return_numpy(func):
+    """ A wrapper that converts returns into NumPy values
 
-            if method:
-                mpy_args = (self, ) + mpy_args
-            # call func
-            mpy_res = func(*mpy_args, **mpy_kwargs)
-            # convert return value
-            if mode == 'lazy':
-                # lazy mode returns funciton result without converting
-                return mpy_res
-            elif mode == 'numpy':
-                # convert every returned array to numpy.ndarray
-                return convert(mpy_res, _minpy_to_numpy, basic_types)
-            else:
-                raise MinpyWrapperError('Unknown wrapper mode: %s' % mode)
+    Parameters
+    ----------
+    func
+        A function returns MinPy types
 
-        return real_wrapper
+    Returns
+    -------
+    wrapper
+        A wrapped function with returns converted to NumPy types
+    """
+    # pylint: disable= missing-docstring
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # call func
+        return minpy_to_numpy(func(*args, **kwargs))
     # pylint: enable= missing-docstring
     return wrapper
