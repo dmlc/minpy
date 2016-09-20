@@ -54,7 +54,7 @@ def grad_and_loss(func, argnum=0):
     return wrapped
 
 
-def grad(func, argnum=0, method=False):
+def grad(func, argnum=0):
     """ Return function that contains gradient calculation.
 
     Parameters
@@ -68,7 +68,7 @@ def grad(func, argnum=0, method=False):
     -------
     A function that would compute the gradient of the specified argument.
     """
-    grad_with_loss_func = grad_and_loss(func, argnum, method)
+    grad_with_loss_func = grad_and_loss(func, argnum)
     # pylint: disable= missing-docstring
     @functools.wraps(grad_with_loss_func)
     def wrapped(*args):

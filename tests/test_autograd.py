@@ -3,7 +3,7 @@ from __future__ import print_function
 import minpy.numpy as mp
 import numpy as np
 import minpy.dispatch.policy as policy
-from minpy.core import return_numpy, grad_and_loss, minpy_to_numpy as mn, numpy_to_minpy as nm
+from minpy.core import convert_args, return_numpy, grad_and_loss, minpy_to_numpy as mn, numpy_to_minpy as nm
 import time
 
 # mp.set_policy(policy.OnlyNumPyPolicy())
