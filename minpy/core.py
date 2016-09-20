@@ -18,7 +18,7 @@ _logger = log.get_logger(__name__)
 
 
 def grad_and_loss(func, argnum=0):
-    """ Return function that computes both gradient and loss value.
+    """Return function that computes both gradient and loss value.
 
     Parameters
     ----------
@@ -55,7 +55,7 @@ def grad_and_loss(func, argnum=0):
 
 
 def grad(func, argnum=0):
-    """ Return function that contains gradient calculation.
+    """Return function that contains gradient calculation.
 
     Parameters
     ----------
@@ -79,7 +79,7 @@ def grad(func, argnum=0):
 
 
 class MXNetSymbolError(ValueError):
-    """ Error class for creating mxnet symbols """
+    """Error class for creating mxnet symbols"""
     pass
 
 
@@ -175,7 +175,7 @@ class Function(object):
 
 
 def numpy_to_minpy(var):
-    """ Convert NumPy array(s) to MinPy array(s)
+    """Convert NumPy array(s) to MinPy array(s)
 
     Parameters
     ----------
@@ -190,7 +190,7 @@ def numpy_to_minpy(var):
 
 
 def minpy_to_numpy(var):
-    """ Convert a MinPy array to NumPy array
+    """Convert a MinPy array to NumPy array
 
     Parameters
     ----------
@@ -210,7 +210,7 @@ def minpy_to_numpy(var):
 
 
 def convert(val):
-    """ Convert compatible val into MinPy Value.
+    """Convert compatible val into MinPy Value.
 
     Parameters
     ----------
@@ -228,7 +228,7 @@ def convert(val):
 
 
 def convert_args(func):
-    """ A wrapper that converts NumPy values into MinPy values (and leave MinPy
+    """A wrapper that converts NumPy values into MinPy values (and leave MinPy
     values intact).
 
     Parameters
@@ -254,7 +254,7 @@ def convert_args(func):
 
 
 def return_numpy(func):
-    """ A wrapper that converts returns into NumPy values
+    """A wrapper that converts returns into NumPy values
 
     Parameters
     ----------
