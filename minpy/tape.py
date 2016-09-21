@@ -132,14 +132,6 @@ class Tape(object):
 
         add_gradient(arr, grad)
 
-    def get_result_grad(self, result, primitive_type):
-        """Get gradient of result."""
-        if isinstance(result, array.Value):
-            return self._get_cached_gradient(result).get_data(primitive_type)
-        else:
-            return [self.get_result_grad(sub_result, primitive_type)
-                    for sub_result in result]
-
     def get_gradient(self, origin):
         """Get gradient of the specified array.
 
@@ -163,8 +155,16 @@ class Tape(object):
                     else:
                         return get_context(result[0])
 
+                def get_result_grad(result, primitive_type):
+                    """Get gradient of result."""
+                    if isinstance(result, array.Value):
+                        return self._get_cached_gradient(result).get_data(primitive_type)
+                    else:
+                        return [self.get_result_grad(sub_result, primitive_type)
+                                for sub_result in result]
+
                 for grad_record in grad_records:
-                    result_grad_value = self.get_result_grad(
+                    result_grad_value = get_result_grad(
                         grad_record.result, grad_record.primitive_type)
                     _logger.debug(
                         'Calling derivative func "{}" with type "{}".'.format(

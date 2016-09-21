@@ -1,3 +1,4 @@
+from __future__ import print_function
 import minpy.numpy as np
 from minpy.core import grad
 
@@ -8,4 +9,4 @@ def func(x):
 
 x = 1
 gradient = grad(func)
-print gradient(x)
+print('Gradient should be 1, and it is actually', gradient(x))
