@@ -208,7 +208,8 @@ class Primitive(object):
         Parameters
         ----------
         func
-            Gradient function.
+            Gradient function, in the form of
+            lambda ans, *args, **kwargs: lambda g: real_grad_func
         argnum
             Index of the argument.
         """

@@ -27,7 +27,9 @@ class Tape(object):
     global_tape = None
 
     def __init__(self):
+        # Stores grad value result from target back to [KEY]. Array -> grad result (Array)
         self._grads = {}
+        # Store derivation graph of gradients. Array -> list of grad records (or record tuples)
         self._array_grad_records = {}
 
     def add_partial_derivative(self, grad_func, owner, result, primitive_type):
@@ -81,13 +83,16 @@ class Tape(object):
         set_single_gradient_target(target)
 
     def _is_gradable(self, current_array):
-        """Check if gradient could now be calculated relative to the specified array.
+        """Check if the gradient can now be calculated relative to the specified array.
 
-        It means that all resulting arrays have gradients calculated.
+        It means that all resulting arrays taken the specified array as input
+        have gradients calculated.
         """
 
         def check_grad_record_empty(arr):
-            """Check if gradient record is empty for the array."""
+            """Check if gradient record is empty for the array. This means it haven't
+            been calculated.
+            """
             if isinstance(arr, array.Value):
                 if len(self._array_grad_records.get(arr, [])) != 0:
                     return False
@@ -113,7 +118,7 @@ class Tape(object):
         def add_gradient(arr, grad):
             """Add gradient.
 
-            Recurse when handed multiple arrays.
+            Recurse when handle multiple arrays.
             """
             if isinstance(arr, array.Value):
                 current_gradient = self._get_cached_gradient(arr)
