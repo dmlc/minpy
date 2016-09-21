@@ -148,6 +148,14 @@ class Tape(object):
                 self._get_cached_gradient(current_array)
                 grad_records = self._array_grad_records.get(current_array, [])
 
+                def get_result_grad(result, primitive_type):
+                    """Get gradient of result."""
+                    if isinstance(result, array.Value):
+                        return self._get_cached_gradient(result).get_data(primitive_type)
+                    else:
+                        return [get_result_grad(sub_result, primitive_type)
+                                for sub_result in result]
+
                 def get_context(result):
                     """Get context of result."""
                     if isinstance(result, array.Value):
@@ -160,7 +168,7 @@ class Tape(object):
                     if isinstance(result, array.Value):
                         return self._get_cached_gradient(result).get_data(primitive_type)
                     else:
-                        return [self.get_result_grad(sub_result, primitive_type)
+                        return [get_result_grad(sub_result, primitive_type)
                                 for sub_result in result]
 
                 for grad_record in grad_records:
