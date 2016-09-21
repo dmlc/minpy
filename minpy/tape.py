@@ -151,7 +151,7 @@ class Tape(object):
                 def get_result_grad(result, primitive_type):
                     """Get gradient of result."""
                     if isinstance(result, array.Value):
-                        return self._grads[result].get_data(primitive_type)
+                        return self._get_cached_gradient(result).get_data(primitive_type)
                     else:
                         return [get_result_grad(sub_result, primitive_type)
                                 for sub_result in result]
