@@ -5,8 +5,7 @@ class GRUNet(ModelBase):
                  hidden_size=100,
                  num_classes=1):
         super(GRUNet, self).__init__()
-        self.add_param(name='h0', shape=(batch_size, hidden_size))\
-            .add_param(name='Wx', shape=(input_size, 4*hidden_size))\
+        self.add_param(name='Wx', shape=(input_size, 4*hidden_size))\
             .add_param(name='Wh', shape=(hidden_size, 4*hidden_size))\
             .add_param(name='b', shape=(4*hidden_size,))\
             .add_param(name='Wxh', shape=(input_size, hidden_size))\
@@ -17,7 +16,9 @@ class GRUNet(ModelBase):
 
     def forward(self, X, mode):
         seq_len = X.shape[1]
-        h = self.params['h0']
+        batch_size = X.shape[0]
+        hidden_size = self.params['Wh'].shape[0]
+        h = np.zeros((batch_size, hidden_size))
         for t in xrange(seq_len):
             h = layers.gru_step(X[:, t, :], h, self.params['Wx'],
                                 self.params['Wh'], self.params['b'],
