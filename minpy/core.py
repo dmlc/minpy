@@ -269,7 +269,6 @@ def return_numpy(func):
     # pylint: disable= missing-docstring
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # call func
         return minpy_to_numpy(func(*args, **kwargs))
     # pylint: enable= missing-docstring
     return wrapper

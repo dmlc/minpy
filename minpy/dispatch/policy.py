@@ -5,6 +5,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import functools
 import minpy
 from minpy.array import Value
 from minpy.array_variants import ArrayType
@@ -107,8 +108,22 @@ def resolve_name(name, reg, plc, args, kwargs):
                 ": {}() under policy: {}.".format(name, plc.name))
     return reg.get(name, preference)
 
+
 def wrap_policy(policy):
+    """Wrap a function to use specific policy
+
+    Parameters
+    ----------
+    policy : Policy
+        A MinPy Policy Instance
+
+    Returns
+    -------
+    A wrapped function running under specific policy
+    """
     def policy_decorator(func):
+        # pylint: disable= missing-docstring
+        @functools.wraps(func)
         def policy_wrapper(*args, **kwargs):
             old_policy = minpy.Config['default_policy']
             minpy.set_global_policy(policy)
@@ -116,4 +131,5 @@ def wrap_policy(policy):
             minpy.set_global_policy(old_policy)
             return result
         return policy_wrapper
+        # pylint: enable= missing-docstring
     return policy_decorator
