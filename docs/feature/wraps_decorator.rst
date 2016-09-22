@@ -26,9 +26,14 @@ Now we declare two NumPy arrays:
     a = npp.ones((10, 10))
     b = npp.zeros((10, 10))
 
-If we pass ``a`` and ``b`` into function ``simple_add``. the add operation will happen in NumPy's namespace. This is not the expected behavior. Thus we need to provide a tool to handle this case.
+If we pass ``a`` and ``b`` into function ``simple_add``. the add operation
+will happen in NumPy's namespace. This is not the expected behavior.
+Thus we need to provide a tool to handle this case.
 
-That's why we have a function decorator ``minpy.core.convert_args``. If we apply decorator ``minpy.core.convert_args`` on ``simple_add``, we can wrap the input into MinPy's data type before passed to the function. Now the operation add is in MinPy's namespace, and therefore enjoys MinPy's GPU acceleration if GPU is available. Now, we have
+That's why we have a function decorator ``minpy.core.convert_args``. If we apply
+decorator ``minpy.core.convert_args`` on ``simple_add``, we can wrap the input into
+MinPy's data type before passed to the function. Now the operation add is in MinPy's
+namespace, and therefore enjoys MinPy's GPU acceleration if GPU is available. Now, we have
 
 ::
 
@@ -44,9 +49,11 @@ Notes
 
 1. No conversion will be performed for the return values.
 
-2. Even if you forget to add ``@convert_args`` decorator when you are working with NumPy data, the gradient solver will still get correct gradients. The only drawback is some operations will be performed in NumPy's namespace under some rare conditions.
+2. Even if you forget to add ``@convert_args`` decorator when you are working with
+NumPy data, the gradient solver will still get correct gradients. The only drawback
+is some operations will be performed in NumPy's namespace under some rare conditions.
 
-@return_numpy
--------------
+``@return_numpy``: Return NumPy Arrays
+--------------------------------------
 
 This is a simple wrapper in ``minpy.core`` which converts the MinPy output of a function to NumPy arrays.
