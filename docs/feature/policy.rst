@@ -48,19 +48,19 @@ It is worth mentioning that ``np.set_policy`` and ``minpy.set_global_policy`` on
     import minpy
     minpy.set_global_policy(minpy.PreferMXNetPolicy())
 
-    a = np.ones((2, 2))
-    b = np.zeros((2, 2))
-    # a + b runs under PreferMXNetPolicy
-    c = a + b
 
     @minpy.wrap_policy(minpy.OnlyNumPyPolicy())
     def foo(a, b)
         return np.log(a + b)
 
+    a = np.ones((2, 2))
+    b = np.zeros((2, 2))
+
+    # a + b runs under PreferMXNetPolicy
+    c = a + b
+
     # foo runs under OnlyNumPyPolicy.
     c = foo(np.ones((2, 2)), np.zeros((2, 2)))
 
-    a = np.ones((2, 2))
-    b = np.zeros((2, 2))
-    # a + b runs under PreferMXNetPolicy
+    # a + b runs under PreferMXNetPolicy again
     c = a + b
