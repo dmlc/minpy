@@ -6,7 +6,7 @@ This tutorial introduces IO part of MinPy. We will describe the concepts of Data
 Dataset
 -------
 
-Dataset is a collection of samples. Each sample may have multiple entries, each representing a particular input variable for a learning task. For example, for image classification task, each sample may contain one entry for the image, and another for the label.
+Dataset is a collection of samples. Each sample may have multiple entries, each representing a particular input variable for a certain learning task. Taking image classification as an example, each sample may contain one entry for the image, and another for the label. This is in the context of supervised learning. Of course, this is not the only game in town. For example, `Policy gradient reinforcement learning <https://minpy.readthedocs.io/en/latest/tutorial/rl_policy_gradient_tutorial/rl_policy_gradient.html>`_ is an interesting departure, where label is generated during computing, thus there's no label entry in the dataset.
 
 The source of a dataset can vary: a list of images for vision task, rows of text for NLP task, etc. The task of the IO module is to turn the source dataset into the data structure that can be used by the learning system. In MinPy, the data structure for learning is ``minpy.NDArray``, whereas ``numpy.ndarray``, ``mxnet.NDArray`` and ``minpy.NDArray`` can all serve as source dataset. These three kinds of source are easy to produce in pure Python code, thus there’s no black box in preparing the dataset. Please refer to `data_utils.py <https://github.com/dmlc/minpy/blob/master/examples/utils/data_utils.py>`_ to see how to prepare raw data for MinPy IO.
 
@@ -57,12 +57,5 @@ Minpy has automatically imported all the available MXNet DataIters into minpy.io
 
 ..
 
-Current available MXNet DataIters include: ``MNISTIter, ImageRecordIter, CSVIter, PrefetchingIter, ResizeIter``. To get more information about MXNet IO, please visit `io.md <https://github.com/dmlc/mxnet/blob/master/docs/packages/python/io.md>`_ and `io.py <https://github.com/dmlc/mxnet/blob/master/python/mxnet/io.py>`_.
-
-Note
-----
-The above is in the context of supervised learning. Of course, this is not the only game in town. For example, `Policy gradient reinforcement learning <http://minpy.readthedocs.io/en/latest/rl_policy_gradient/rl_policy_gradient.html>`_ is an interesting departure. 
-
-
-
+Current available MXNet DataIters include ``MNISTIter, ImageRecordIter, CSVIter, PrefetchingIter, ResizeIter``. They can directly take raw data like images, sequences as source and do decoding, augmenting and layout on the fly. To get more information about MXNet IO, please visit `io.md <https://github.com/dmlc/mxnet/blob/master/docs/packages/python/io.md>`_ and `io.py <https://github.com/dmlc/mxnet/blob/master/python/mxnet/io.py>`_.
 
