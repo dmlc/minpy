@@ -1,8 +1,16 @@
-Decorators for Functions
-========================
+Work across MinPy and NumPy
+===========================
+
+It is common to work across MinPy and NumPy. While MinPy shares compatible operators and functions with NumPy,
+many other packages that builds on NumPy only accepts the exact NumPy object as input. To handle this issue, we
+provide some useful tools to work across MinPy and NumPy.
+
 
 ``@convert_args``: Convert Function Input to MinPy types
 --------------------------------------------------------
+
+If you are not familiar with python decorators, see `this <https://wiki.python.org/moin/PythonDecorators>`_
+for more details.
 
 If your data is all generated under MinPy's namespace, this section is not for
 you. However, most of our users use MinPy along with other data, and the
@@ -39,7 +47,8 @@ namespace, and therefore enjoys MinPy's GPU acceleration if GPU is available. No
 
     import minpy.numpy as np
     from minpy.core import wraps
-    @wraps()
+
+    @convert_args
     def simple_add(a, b):
         return a + b
 
@@ -53,3 +62,13 @@ Notes
 --------------------------------------
 
 This is a simple wrapper in ``minpy.core`` which converts the MinPy output of a function to NumPy arrays.
+
+MinPy Array's ``asnumpy`` Method
+--------------------------------
+
+For any MinPy array, just use ``.asnumpy()`` to convert it to corresponding NumPy type. For example
+
+::
+
+    numpy_array = minpy_array.asnumpy()
+
