@@ -28,6 +28,21 @@ def _minpy_getitem_grad(arr, index, g):
     return ret
 
 
+# TODO: Collect customized functions into a separate module.
+def _sigmoid(x):
+    """
+    A numerically stable version of the logistic sigmoid function.
+    """
+    pos_mask = (x >= 0)
+    neg_mask = (x < 0)
+    z = np.zeros_like(x)
+    z[pos_mask] = np.exp(-x[pos_mask])
+    z[neg_mask] = np.exp(x[neg_mask])
+    top = np.ones_like(x)
+    top[neg_mask] = z[neg_mask]
+    return top / (1 + z)
+
+
 def _chooser_grad(ans, a, axis=None, out=None, keepdims=False):
     """ Gradient of amax function """
     repeater, _ = _match_shape(a, axis, keepdims=keepdims)
@@ -76,13 +91,6 @@ def _match_shape(a, axis, keepdims):
             return lambda g: np.tile(g, repeats), num_reps
         else:
             return lambda g: np.tile(np.reshape(g, expanded), repeats), num_reps
-
-
-def register_primitives(reg, prim_wrapper):
-    """ Register primitives in numpy """
-    numpy_wrapper.wrap_namespace(np.__dict__, reg, prim_wrapper)
-    # additional primitives
-    reg.register('_minpy_getitem', prim_wrapper(_minpy_getitem))
 
 
 def _unbroadcast(ans, x, gradfun):
@@ -163,10 +171,11 @@ def _sum_grad(ans, x, axis=None, keepdims=False):
 ################################################################
 # Functions exposed for primitive & gradient registry
 def register_primitives(reg, prim_wrapper):
-    """ Register primitives in numpy """
+    """Register primitives in numpy"""
     numpy_wrapper.wrap_namespace(np.__dict__, reg, prim_wrapper)
     # additional primitives
     reg.register('_minpy_getitem', prim_wrapper(_minpy_getitem))
+    reg.register('sigmoid', prim_wrapper(_sigmoid))
 
 def def_grads(reg, prims):
     """ Define gradient function for primitives """
@@ -252,4 +261,7 @@ def def_grads(reg, prims):
         argnum=1)
     prims('expand_dims').def_grad(
         lambda ans, x, axis: lambda g: np.reshape(g, x.shape)
+    )
+    prims('sigmoid').def_grad(
+        lambda ans, x: lambda g: ans * (1 - ans)
     )
