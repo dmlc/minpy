@@ -43,15 +43,11 @@ namespace, and therefore enjoys MinPy's GPU acceleration if GPU is available. No
     def simple_add(a, b):
         return a + b
 
-
 Notes
-^^^^^
+#####
 
-1. No conversion will be performed for the return values.
-
-2. Even if you forget to add ``@convert_args`` decorator when you are working with
-NumPy data, the gradient solver will still get correct gradients. The only drawback
-is some operations will be performed in NumPy's namespace under some rare conditions.
+#. No conversion will be performed for the return values.
+#. Even if you forget to add ``@convert_args`` decorator when you are working with NumPy data, the gradient solver will still get correct gradients. The only drawback is some operations will be performed in NumPy's namespace under some rare conditions.
 
 ``@return_numpy``: Return NumPy Arrays
 --------------------------------------
