@@ -263,5 +263,5 @@ def def_grads(reg, prims):
         lambda ans, x, axis: lambda g: np.reshape(g, x.shape)
     )
     prims('sigmoid').def_grad(
-        lambda ans, x: lambda g: ans * (1 - ans)
+        lambda ans, x: lambda g: g * ans * (1 - ans)
     )
