@@ -5,9 +5,9 @@ class GRUNet(ModelBase):
                  hidden_size=100,
                  num_classes=1):
         super(GRUNet, self).__init__()
-        self.add_param(name='Wx', shape=(input_size, 4*hidden_size))\
-            .add_param(name='Wh', shape=(hidden_size, 4*hidden_size))\
-            .add_param(name='b', shape=(4*hidden_size,))\
+        self.add_param(name='Wx', shape=(input_size, 2*hidden_size))\
+            .add_param(name='Wh', shape=(hidden_size, 2*hidden_size))\
+            .add_param(name='b', shape=(2*hidden_size,))\
             .add_param(name='Wxh', shape=(input_size, hidden_size))\
             .add_param(name='Whh', shape=(hidden_size, hidden_size))\
             .add_param(name='bh', shape=(hidden_size,))\
