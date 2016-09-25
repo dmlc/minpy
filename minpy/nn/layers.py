@@ -198,9 +198,9 @@ def softmax_loss(x, y):
         np.onehot_encode(y, onehot_y)
     else:
         onehot_y = y
-    probs = np.exp(x - np.max(x, axis=1, keepdims=True))
-    probs = probs / np.sum(probs, axis=1, keepdims=True)
-    loss = -np.sum(np.log(probs) * onehot_y) / N
+    probs = x - np.max(x, axis=1, keepdims=True)
+    loss = -np.sum(probs * onehot_y) / N
+    loss += np.sum(np.log(np.sum(np.exp(probs), axis=1, keepdims=True))) / N
     return loss
 
 
