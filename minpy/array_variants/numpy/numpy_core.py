@@ -58,9 +58,9 @@ def _onehot_encode(indices, out):
     out: Array
         Same as out.
     """
-	N = indices.shape[0]
-	out[np.arange(N), indices] = 1
-	return out
+    N = indices.shape[0]
+    out[np.arange(N), indices] = 1
+    return out
 
 
 def _chooser_grad(ans, a, axis=None, out=None, keepdims=False):
@@ -196,6 +196,7 @@ def register_primitives(reg, prim_wrapper):
     # additional primitives
     reg.register('_minpy_getitem', prim_wrapper(_minpy_getitem))
     reg.register('sigmoid', prim_wrapper(_sigmoid))
+    reg.register('onehot_encode', prim_wrapper(_onehot_encode))
 
 def def_grads(reg, prims):
     """ Define gradient function for primitives """
