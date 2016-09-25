@@ -43,6 +43,26 @@ def _sigmoid(x):
     return top / (1 + z)
 
 
+# TODO: Refine this function after MXNet's refinement.
+def _onehot_encode(indices, out):
+    """One hot encoding indices into matrix out. NumPy equivalence.
+
+    Parameters
+    ----------
+    indices: ndarray
+        An all zero ndarray containing indices of the categorical features.
+    out: ndarray
+        The result holder of the encoding.
+    Returns
+    -------
+    out: Array
+        Same as out.
+    """
+    N = indices.shape[0]
+    out[np.arange(N), indices] = 1
+    return out
+
+
 def _chooser_grad(ans, a, axis=None, out=None, keepdims=False):
     """ Gradient of amax function """
     repeater, _ = _match_shape(a, axis, keepdims=keepdims)
@@ -176,6 +196,7 @@ def register_primitives(reg, prim_wrapper):
     # additional primitives
     reg.register('_minpy_getitem', prim_wrapper(_minpy_getitem))
     reg.register('sigmoid', prim_wrapper(_sigmoid))
+    reg.register('onehot_encode', prim_wrapper(_onehot_encode))
 
 def def_grads(reg, prims):
     """ Define gradient function for primitives """
