@@ -48,7 +48,7 @@ fc1 = mx.symbol.CaffeOp(
     prototxt="layer {type:\"InnerProduct\" inner_product_param{num_output: 250} }")
 act2 = mx.symbol.CaffeOp(data_0=fc1, prototxt="layer {type:\"Sigmoid\"}")
 
-f = core.function(act2, {'x': xshape})
+f = core.Function(act2, {'x': xshape})
 
 
 def predict(inputs, fc_weight, fc_bias, conv_weight, conv_bias):

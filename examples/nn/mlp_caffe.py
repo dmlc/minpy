@@ -34,7 +34,7 @@ class TwoLayerCaffeNet(ModelBase):
                              num_weight=2,
                              prototxt="layer {type:\"InnerProduct\" inner_product_param{num_output: %d} }"%num_classes)
         # ATTENTION: when using mxnet symbols, input shape (including batch size) should be fixed
-        self.fwd_fn = core.function(fc2, {'X': (100, input_size)})
+        self.fwd_fn = core.Function(fc2, {'X': (100, input_size)})
 
     def forward(self, X, mode):
         return self.fwd_fn(X=X,
