@@ -1,8 +1,10 @@
 from minpy import core
 import minpy.numpy as np
 
+
 def f(x):
     return x
+
 
 if __name__ == '__main__':
     inp = np.random.random((3, 2))
@@ -16,4 +18,3 @@ if __name__ == '__main__':
     g1 = core.grad(injection)(inp)
     # Gradient will be as injected.
     print(g1.asnumpy())
-

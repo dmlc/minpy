@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
-import minpy 
+import minpy
 import minpy.array
 from minpy.array_variants import ArrayType
 
@@ -12,11 +12,14 @@ import minpy.dispatch.policy as policy
 
 #np.set_policy(policy.OnlyNumPyPolicy())
 
+
 def sigmoid(x):
     return 0.5 * (np.tanh(x / 2) + 1)
 
+
 def predict(weights, inputs):
     return sigmoid(np.dot(inputs, weights))
+
 
 def training_loss(weights, inputs):
     preds = predict(weights, inputs)
@@ -24,10 +27,15 @@ def training_loss(weights, inputs):
     l = -np.sum(np.log(label_probabilities))
     return l
 
+
 def training_accuracy(weights, inputs):
     preds = predict(weights, inputs)
-    error = np.count_nonzero(np.argmax(preds, axis=1) - np.argmax(targets, axis=1))
+    error = np.count_nonzero(
+        np.argmax(
+            preds, axis=1) - np.argmax(
+                targets, axis=1))
     return (256 - error) * 100 / 256.0
+
 
 xshape = (256, 500)
 wshape = (500, 250)

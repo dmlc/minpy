@@ -9,6 +9,7 @@ logging.getLogger('minpy.core').setLevel(logging.DEBUG)
 logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 np.set_policy(policy.OnlyNumPyPolicy())
 
+
 def f(x, y):
     return np.multiply(x, y)
 

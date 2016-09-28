@@ -3,8 +3,10 @@ import minpy.numpy as np
 import minpy.numpy.random as random
 import mxnet as mx
 
+
 def sigmoid(x):
     return np.multiply(0.5, np.add(np.tanh(x), 1))
+
 
 xshape = (256, 500)
 #needs to reverse. because of mixnet's setting
@@ -20,11 +22,13 @@ x = mx.sym.Variable(name='x')
 fc = mx.sym.FullyConnected(name='fc', data=x, num_hidden=250)
 act = mx.sym.Activation(data=fc, act_type='sigmoid')
 
-f = core.function(act, {'x': xshape})
+f = core.Function(act, {'x': xshape})
+
 
 def predict(weights, inputs):
     #return f( data=[('x', inputs)], weight=[('fc_weight', weights)], ctx=mx.cpu())
-    return f(x = inputs, fc_weight = weights)
+    return f(x=inputs, fc_weight=weights)
+
 
 def training_loss(weights, inputs):
     preds = predict(weights, inputs)

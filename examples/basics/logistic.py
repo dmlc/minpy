@@ -5,11 +5,14 @@ import minpy.dispatch.policy as policy
 
 #np.set_policy(policy.OnlyNumPyPolicy())
 
+
 def sigmoid(x):
     return 0.5 * (np.tanh(x / 2) + 1)
 
+
 def predict(weights, inputs):
     return sigmoid(np.dot(inputs, weights))
+
 
 def training_loss(weights, inputs):
     preds = predict(weights, inputs)
@@ -17,10 +20,15 @@ def training_loss(weights, inputs):
     l = -np.sum(np.log(label_probabilities))
     return l
 
+
 def training_accuracy(weights, inputs):
     preds = predict(weights, inputs)
-    error = np.count_nonzero(np.argmax(preds, axis=1) - np.argmax(targets, axis=1))
+    error = np.count_nonzero(
+        np.argmax(
+            preds, axis=1) - np.argmax(
+                targets, axis=1))
     return (256 - error) * 100 / 256.0
+
 
 xshape = (256, 500)
 wshape = (500, 250)
@@ -34,6 +42,7 @@ weights = random.rand(*wshape) - 0.5
 training_gradient_fun = grad(training_loss)
 
 for i in range(200):
-    print('Trained accuracy #{}: {}%'.format(i, training_accuracy(weights, inputs)))
+    print('Trained accuracy #{}: {}%'.format(i, training_accuracy(weights,
+                                                                  inputs)))
     gr = training_gradient_fun(weights, inputs)
     weights -= gr * 0.01
