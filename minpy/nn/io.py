@@ -9,8 +9,10 @@ import six.moves.cPickle as pickle
 import minpy
 import mxnet.io
 
+
 class DataBatch(object):
     """Default object for holding a mini-batch of data and related information."""
+
     def __init__(self, data, label, pad=None, index=None):
         self.data = data
         self.label = label
@@ -111,18 +113,20 @@ def _init_data(data, allow_empty, default_name):
         data = [data]
     if isinstance(data, list):
         if not allow_empty:
-            assert(len(data) > 0)
+            assert (len(data) > 0)
         if len(data) == 1:
             data = OrderedDict([(default_name, data[0])])
         else:
-            data = OrderedDict([('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
+            data = OrderedDict([('_%d_%s' % (i, default_name), d)
+                                for i, d in enumerate(data)])
     if not isinstance(data, dict):
-        raise TypeError("Input must be NDArray, numpy.ndarray, MinPy Array, or "
-                        "a list of them or dict with them as values.")
+        raise TypeError(
+            "Input must be NDArray, numpy.ndarray, MinPy Array, or "
+            "a list of them or dict with them as values.")
     for k, v in data.items():
         if not isinstance(v, (np.ndarray, minpy.array.Array)):
-            raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) +
-                            "should be NDArray, numpy.ndarray, or MinPy Array.")
+            raise TypeError(("Invalid type '%s' for %s, " % (type(
+                v), k)) + "should be NDArray, numpy.ndarray, or MinPy Array.")
 
     return list(data.items())
 
@@ -147,13 +151,20 @@ class NDArrayIter(DataIter):
     the size of data does not match batch_size. Roll over is intended
     for training and can cause problems if used for prediction.
     """
-    def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad'):
+
+    def __init__(self,
+                 data,
+                 label=None,
+                 batch_size=1,
+                 shuffle=False,
+                 last_batch_handle='pad'):
         # pylint: disable=W0201
 
         super(NDArrayIter, self).__init__()
 
         self.data = _init_data(data, allow_empty=False, default_name='data')
-        self.label = _init_data(label, allow_empty=True, default_name='softmax_label')
+        self.label = _init_data(
+            label, allow_empty=True, default_name='softmax_label')
 
         # shuffle data
         if shuffle:
@@ -168,7 +179,8 @@ class NDArrayIter(DataIter):
 
         # batching
         if last_batch_handle == 'discard':
-            new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % batch_size
+            new_n = self.data_list[0].shape[0] - self.data_list[0].shape[
+                0] % batch_size
             data_dict = OrderedDict(self.data)
             label_dict = OrderedDict(self.label)
             for k, _ in self.data:
@@ -187,12 +199,14 @@ class NDArrayIter(DataIter):
     @property
     def provide_data(self):
         """The name and shape of data provided by this iterator"""
-        return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.data]
+        return [(k, tuple([self.batch_size] + list(v.shape[1:])))
+                for k, v in self.data]
 
     @property
     def provide_label(self):
         """The name and shape of label provided by this iterator"""
-        return [(k, tuple([self.batch_size] + list(v.shape[1:]))) for k, v in self.label]
+        return [(k, tuple([self.batch_size] + list(v.shape[1:])))
+                for k, v in self.label]
 
     def hard_reset(self):
         """Igore roll over data and set to start"""
@@ -200,7 +214,8 @@ class NDArrayIter(DataIter):
 
     def reset(self):
         if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
-            self.cursor = -self.batch_size + (self.cursor%self.num_data)%self.batch_size
+            self.cursor = -self.batch_size + (self.cursor % self.num_data
+                                              ) % self.batch_size
         else:
             self.cursor = -self.batch_size
 
@@ -213,20 +228,24 @@ class NDArrayIter(DataIter):
 
     def next(self):
         if self.iter_next():
-            return DataBatch(data=self.getdata(), label=self.getlabel(),
-                             pad=self.getpad(), index=None)
+            return DataBatch(
+                data=self.getdata(),
+                label=self.getlabel(),
+                pad=self.getpad(),
+                index=None)
         else:
             raise StopIteration
 
     def _getdata(self, data_source):
         """Load data from underlying arrays, internal use only"""
-        assert(self.cursor < self.num_data), "DataIter needs reset."
+        assert (self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            return [x[1][self.cursor:self.cursor + self.batch_size] for x in data_source]
+            return [x[1][self.cursor:self.cursor + self.batch_size]
+                    for x in data_source]
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            return [np.concatenate((x[1][self.cursor:], x[1][:pad]),
-                                         axis=0) for x in data_source]
+            return [np.concatenate(
+                (x[1][self.cursor:], x[1][:pad]), axis=0) for x in data_source]
 
     def getdata(self):
         return self._getdata(self.data)
@@ -280,9 +299,11 @@ def load_data_labels(file_name):
         Y = data['labels']
         return X, Y
 
+
 def _import_mxnetio():
     module_obj = sys.modules[__name__]
-    member_dict = dict((cls[0], cls[1]) for cls in inspect.getmembers(module_obj))
+    member_dict = dict((cls[0], cls[1])
+                       for cls in inspect.getmembers(module_obj))
     # mxnet python io is class members
     clsmembers = inspect.getmembers(mxnet.io, inspect.isclass)
     for cls in clsmembers:
