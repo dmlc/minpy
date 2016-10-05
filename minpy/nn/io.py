@@ -286,12 +286,12 @@ def _import_mxnetio():
     # mxnet python io is class members
     clsmembers = inspect.getmembers(mxnet.io, inspect.isclass)
     for cls in clsmembers:
-        if cls[0].endswith("Iter") and (not member_dict.has_key(cls[0])):
+        if cls[0].endswith("Iter") and (not cls[0] in member_dict):
             setattr(module_obj, cls[0], cls[1])
     # mxnet c++ io is function members
     funmembers = inspect.getmembers(mxnet.io, inspect.isfunction)
     for fun in funmembers:
-        if fun[0].endswith("Iter") and (not member_dict.has_key(fun[0])):
+        if fun[0].endswith("Iter") and (not fun[0] in member_dict):
             setattr(module_obj, fun[0], fun[1])
 
 # Import mxnet python io into minpy namespace
