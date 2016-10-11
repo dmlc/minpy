@@ -9,13 +9,13 @@ from minpy.nn import io
 from minpy.nn import layers
 import minpy.nn.model
 import minpy.nn.solver
-import minpy.dispatch.policy
-np.set_policy(minpy.dispatch.policy.OnlyNumPyPolicy())
+from minpy import context
+context.set_context(context.gpu(0))
 
-# import logging
-# logging.getLogger('minpy.array').setLevel(logging.DEBUG)
-# logging.getLogger('minpy.core').setLevel(logging.DEBUG)
-# logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
+import logging
+logging.getLogger('minpy.array').setLevel(logging.DEBUG)
+logging.getLogger('minpy.core').setLevel(logging.DEBUG)
+logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 
 batch_size = 256
 flattened_input_size = 784
