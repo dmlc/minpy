@@ -58,7 +58,6 @@ def main(args):
         assert magic_nr == 2049
         assert size == 60000
         label = real_numpy.fromfile(f, dtype=real_numpy.int8)
-        label = label[:10000]
     with open(img_fname, 'rb') as f:
         magic_nr, size, rows, cols = struct.unpack('>IIII', f.read(16))
         assert magic_nr == 2051
@@ -66,7 +65,6 @@ def main(args):
         assert rows == cols == 28
         img = real_numpy.fromfile(
             f, dtype=real_numpy.uint8).reshape(size, rows * cols)
-        img = img[:10000, ...]
 
     train_dataiter = NDArrayIter(
         data=img, label=label, batch_size=batch_size, shuffle=True)
@@ -78,14 +76,10 @@ def main(args):
         train_dataiter,
         num_epochs=10,
         init_rule='gaussian',
-        init_config={
-            'stdvar': 0.001
-        },
+        init_config={'stdvar': 0.001},
         update_rule='sgd_momentum',
-        optim_config={
-            'learning_rate': 1e-4,
-            'momentum': 0.9
-        },
+        optim_config={'learning_rate': 1e-4,
+                      'momentum': 0.9},
         verbose=True,
         print_every=20)
     # Initialize model parameters.
