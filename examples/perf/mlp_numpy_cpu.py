@@ -12,7 +12,7 @@ mini_batch_size = 256
 layers = [784, 256, 10]
 biases = [np.random.randn(1, x) for x in layers[1:]]
 weights = [np.random.randn(x, y) for x, y in zip(layers[:-1], layers[1:])]
-alpha = 1e-3
+alpha = 1e-4
 
 
 def forward(inputs):
@@ -34,7 +34,7 @@ def backward(g, activations):
         bias_deltas.append(np.sum(g, axis=0, keepdims=True))
         weight_deltas.append(activation.T.dot(g))
         g = np.dot(g, weight.T)
-        g = g > 0
+        g = np.maximum(g, 0)
     return list(reversed(bias_deltas)), list(reversed(weight_deltas))
 
 
@@ -55,7 +55,7 @@ def softmax_loss_gradient(activation, one_hot):
     probs = activation - np.amax(activation, axis=1, keepdims=True)
     e = np.exp(probs)
     p = e / np.sum(e, axis=1, keepdims=True)
-    q = p - one_hot
+    q = n - one_hot
     return q
 
 
