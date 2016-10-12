@@ -71,6 +71,6 @@ class Registry(object):
                 if prim.gradable(bp_args, bp_kwargs):
                     ret.append(prim)
                 else:
-                    _logger.warn('The %s implementation: %s has no gradient '
+                    _logger.info('The %s implementation: %s has no gradient '
                                  'definition.', prim.typestr, prim)
             return ret
