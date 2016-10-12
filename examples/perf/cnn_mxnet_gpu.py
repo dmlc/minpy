@@ -1,10 +1,12 @@
+"""Simple convolutional neural network on CIFAR10."""
 import argparse
 import os.path
 import sys
 import time
 import mxnet as mx
+import examples.utils.data_utils
 
-data_shape = (3, 28, 28)
+data_shape = (3, 32, 32)
 batch_size = 128
 num_epochs = 10
 hidden_size = 512
@@ -30,12 +32,12 @@ def get_net():
 
 
 def main(args):
-    train = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(args.data_dir, 'train.rec'),
-        mean_img=os.path.join(args.data_dir, 'mean.bin'),
-        data_shape=data_shape,
+    data = examples.utils.data_utils.get_CIFAR10_data(args.data_dir)
+    train = mx.io.NDArrayIter(
+        data=data['X_train'],
+        label=data['y_train'],
         batch_size=batch_size,
-        rand_crop=True)
+        shuffle=True)
     net = get_net()
 
     model = mx.model.FeedForward(
