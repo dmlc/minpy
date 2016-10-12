@@ -307,6 +307,7 @@ class Array(Value):
         atype = Array.to_array_type(data)
         self._data[atype] = data
         self._latest_version = atype
+        self._dtype = data.dtype
 
     @staticmethod
     def to_array_type(arr):
@@ -432,6 +433,11 @@ class Array(Value):
         """Get array data of given type."""
         self.enforce_data(dtype)
         return self._data[dtype]
+
+    @property
+    def dtype(self):
+        """Return contained dtype, in NumPy's dtype object"""
+        return self._dtype
 
     def _get_latest_data(self):
         """Return the latest version of the raw data"""
