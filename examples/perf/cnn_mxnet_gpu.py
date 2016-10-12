@@ -1,51 +1,42 @@
-import mxnet as mx
 import argparse
-import os
+import os.path
 import sys
 import time
+import mxnet as mx
 
-batch_size = 256
+data_shape = (3, 28, 28)
+batch_size = 128
 num_epochs = 10
+hidden_size = 512
+num_classes = 10
 
 
-def get_lenet():
-    """
-    LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
-    Haffner. "Gradient-based learning applied to document recognition."
-    Proceedings of the IEEE (1998)
-    """
-    data = mx.symbol.Variable('data')
-    # first conv
-    conv1 = mx.symbol.Convolution(data=data, kernel=(5, 5), num_filter=20)
-    tanh1 = mx.symbol.Activation(data=conv1, act_type="tanh")
+def get_net():
+    input_data = mx.symbol.Variable(name='data')
+    # stage 1
+    conv1 = mx.symbol.Convolution(
+        data=input_data, kernel=(7, 7), num_filter=32)
+    relu1 = mx.symbol.Activation(data=conv1, act_type='relu')
     pool1 = mx.symbol.Pooling(
-        data=tanh1, pool_type="max", kernel=(2, 2), stride=(2, 2))
-    # second conv
-    conv2 = mx.symbol.Convolution(data=pool1, kernel=(5, 5), num_filter=50)
-    tanh2 = mx.symbol.Activation(data=conv2, act_type="tanh")
-    pool2 = mx.symbol.Pooling(
-        data=tanh2, pool_type="max", kernel=(2, 2), stride=(2, 2))
-    # first fullc
-    flatten = mx.symbol.Flatten(data=pool2)
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=500)
-    tanh3 = mx.symbol.Activation(data=fc1, act_type="tanh")
-    # second fullc
-    fc2 = mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
-    # loss
-    lenet = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
-    return lenet
+        data=relu1, pool_type='max', kernel=(2, 2), stride=(2, 2))
+
+    flatten = mx.symbol.Flatten(data=pool1)
+    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=hidden_size)
+    relu6 = mx.symbol.Activation(data=fc1, act_type='relu')
+    fc2 = mx.symbol.FullyConnected(data=relu6, num_hidden=num_classes)
+
+    softmax = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
+    return softmax
 
 
 def main(args):
-    img_fname = os.path.join(args.data_dir, 'train-images-idx3-ubyte')
-    label_fname = os.path.join(args.data_dir, 'train-labels-idx1-ubyte')
-    train = mx.io.MNISTIter(
-        image=img_fname,
-        label=label_fname,
+    train = mx.io.ImageRecordIter(
+        path_imgrec=os.path.join(args.data_dir, 'train.rec'),
+        mean_img=os.path.join(args.data_dir, 'mean.bin'),
+        data_shape=data_shape,
         batch_size=batch_size,
-        data_shape=(1, 28, 28))
-
-    net = get_lenet()
+        rand_crop=True)
+    net = get_net()
 
     model = mx.model.FeedForward(
         symbol=net, num_epoch=num_epochs, learning_rate=1e-4, ctx=mx.gpu(0))
