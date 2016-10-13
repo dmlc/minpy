@@ -22,9 +22,11 @@ class Module(object):
     """Mocking module class for name dispatching.
 
     It will register primitives from :mod:`minpy.array_variant`.
+
+    :param name_injector: an optional dict provides manual dispatching
     """
 
-    def __init__(self, old, name=None):
+    def __init__(self, old, name=None, name_injector={}):
         # Add module itself into global config
         minpy.Config['modules'].append(self)
         self._registry = Registry()
@@ -32,6 +34,7 @@ class Module(object):
         self._logger = log.get_logger(old['__name__'])
         self._logger.info('Initialize module: {}.'.format(old['__name__']))
         self._old = old
+        self._name_injector = name_injector
         for vname in variants:
             if name is None:
                 modname = 'minpy.array_variants.{}'.format(vname)
@@ -49,8 +52,8 @@ class Module(object):
             primitive_getter = lambda name: self._registry.get(name, variants[vname])
             # Define gradients of primitives.
             mod.def_grads(self._registry, primitive_getter)
-        self._logger.info('Import {} primitives'.format(len(
-            self._registry._reg)))
+        self._logger.info('Import {} primitives'.format(
+            len(self._registry._reg)))
 
     def set_policy(self, plc):
         """Set name dispatch policy.
@@ -77,11 +80,40 @@ class Module(object):
         elif name == '__all__':
             return self._old.__all__
         elif self._registry.has_name(name):
-            return PrimitiveSelector(name, self._registry,
-                                                        self._policy)
+            return PrimitiveSelector(name, self._registry, self._policy)
+        elif name in self._name_injector:
+            return self._name_injector[name]
         elif name in self._old:
             self._logger.info(
                 'No entry found for "{}" in registry, fallback.'.format(name))
             return self._old[name]
         else:
             raise AttributeError('Cannot find name "{}".'.format(name))
+
+
+class NameInjector(object):
+    """A proxy class dispatching given names into another class
+
+    """
+
+    def __init__(self, name_set, dest_class, exception=None):
+        """Initialize a new NameInjector
+
+        :param name_set: set of the names registered for proxy.
+        :param dest_class: the target class of the name dispatching
+        :param dict exception: a dictionary provides exceptions. The dictionary
+        matches injected name to dispatched name (string to string)
+        """
+        self._name_dict = {n: n for n in name_set}
+        self._dest_class = dest_class
+        if exception is not None:
+            self._name_dict.update(exception)
+
+    def __contains__(self, key):
+        return key in self._name_dict
+
+    def __getitem__(self, name):
+        if name in self._name_dict:
+            return getattr(self._dest_class, self._name_dict[name])
+        else:
+            raise KeyError(name)
