@@ -106,11 +106,19 @@ def MultiLayerPerceptron(*args, **kwargs):
       storage:            dictionary
   '''
   assert all(isinstance(arg, int) for arg in args)
-  try:
-    activation = kwargs.pop('activation', 'ReLU')
-    activation = getattr(builder, activation)()
-  except:
-    raise Exception('unsupported activation function')
+
+  activation = kwargs.pop('activation', 'ReLU')
+  if isinstance(activation, str):
+    try:
+      activation = getattr(builder, activation)
+    except:
+      raise Exception('unsupported activation function')
+  else:
+    if not issubclass(activation, builder.Module):
+      raise Exception(
+        'custom activation function must derive from minpy.nn.model_builder.Module'
+      )
+
   affine_monitor = kwargs.pop('affine_monitor', False)
   activation_monitor = kwargs.pop('activation_monitor', False)
   if affine_monitor or activation_monitor:
@@ -124,7 +132,7 @@ def MultiLayerPerceptron(*args, **kwargs):
     network.append(builder.Affine(arg))
     if affine_monitor:
       network.append(builder.Export('affine%d' % i, storage))
-    network.append(activation)
+    network.append(activation())
     if activation_monitor:
       network.append(builder.Export('activation%d' % i, storage))
   network.append(builder.Affine(args[-1]))

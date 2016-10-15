@@ -120,23 +120,23 @@ class Affine(Module):
         """
         super(Affine, self).__init__()
         self._hidden_number = hidden_number 
-        self.weight = 'fullyconnected%d_weight' % self.__class__.count
-        self.bias   = 'fullyconnected%d_bias' % self.__class__.count
+        self._weight = 'fullyconnected%d_weight' % self.__class__.count
+        self._bias   = 'fullyconnected%d_bias' % self.__class__.count
 
         self._initializer = initializer
 
         self.__class__.count += 1
 
     def forward(self, inputs, params):
-        return layers.affine(inputs, params[self.weight], params[self.bias])
+        return layers.affine(inputs, params[self._weight], params[self._bias])
 
     def parameter_shape(self, input_shape):
         assert len(input_shape) == 1, 'Affine layer inputs must be 2D.'
         weight_shape = (input_shape[-1], self._hidden_number)
         bias_shape   = (self._hidden_number,)
         return {
-            self.weight : weight_shape, 
-            self.bias   : bias_shape 
+            self._weight : weight_shape, 
+            self._bias   : bias_shape 
         }
 
     def output_shape(self, input_shape):
@@ -145,8 +145,8 @@ class Affine(Module):
     def parameter_settings(self):
       return self._initializer if self._initializer else \
       {
-          self.weight : {'init_rule' : 'xavier'},
-          self.bias   : {'init_rule' : 'constant'}
+          self._weight : {'init_rule' : 'xavier'},
+          self._bias   : {'init_rule' : 'constant'}
       }
         
 
@@ -263,8 +263,8 @@ class Convolution(Module):
         self._stride        = stride
         self._pad           = pad
 
-        self.weight = 'convolution%d_weight' % self.__class__.count
-        self.bias   = 'convolution%d_bias' % self.__class__.count
+        self._weight = 'convolution%d_weight' % self.__class__.count
+        self._bias   = 'convolution%d_bias' % self.__class__.count
 
         self._initializer = initializer
 
@@ -283,8 +283,8 @@ class Convolution(Module):
     def forward(self, inputs, params):
         args = {
             'inputs'             : inputs,
-            'convolution_weight' : params[self.weight],
-            'convolution_bias'   : params[self.bias]
+            'convolution_weight' : params[self._weight],
+            'convolution_bias'   : params[self._bias]
         }
         return minpy.core.Function(self._convolution, {'inputs':inputs.shape})(**args)
 
@@ -298,15 +298,15 @@ class Convolution(Module):
         weight_shape = (self._kernel_number, input_shape[0], W, H)
         bias_shape   = (self._kernel_number,)
         return {
-            self.weight : weight_shape, 
-            self.bias   : bias_shape 
+            self._weight : weight_shape, 
+            self._bias   : bias_shape 
         }
 
     def parameter_settings(self):
       return self._initializer if self._initializer else \
           {
-              self.weight : {'init_rule' : 'xavier'},
-              self.bias   : {'init_rule' : 'constant'}
+              self._weight : {'init_rule' : 'xavier'},
+              self._bias   : {'init_rule' : 'constant'}
           }
 
 
