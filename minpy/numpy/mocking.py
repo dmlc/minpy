@@ -67,11 +67,19 @@ class Module(object):
     def set_policy(self, plc):
         """Set name dispatch policy.
 
-        :param plc: New policy.
+        Parameters
+        ----------
+        plc
+            New policy.
         """
         assert isinstance(
             plc, Policy), 'Need an instance of `minpy.dispatch.policy.Policy`.'
         self._policy = plc
+
+    @property
+    def policy(self):
+        """Get policy of current module"""
+        return self._policy
 
     def __getattr__(self, name):
         """Fetch attributes from this module.

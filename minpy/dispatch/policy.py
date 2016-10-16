@@ -62,12 +62,15 @@ class Policy(object):
         return type(self).__name__
 
     def __enter__(self):
-        self._old_policy = minpy.Config['default_policy']
-        minpy.set_global_policy(self)
+        self._old_policy = {}
+        for mod in minpy.Config['modules']:
+            self._old_policy[mod] = mod.policy
+            mod.set_policy(self)
         return self
 
     def __exit__(self, ptype, value, trace):
-        minpy.set_global_policy(self._old_policy)
+        for mod, plc in self._old_policy.items():
+            mod.set_policy(plc)
 
     @staticmethod
     def _available_prims(name, reg, args, kwargs):
