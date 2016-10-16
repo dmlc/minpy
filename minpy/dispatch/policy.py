@@ -19,6 +19,7 @@ from .rule import Blacklist
 _logger = log.get_logger(__name__)
 # pylint: enable= invalid-name
 
+# Singleton instance
 Blacklist = Blacklist()
 
 
@@ -32,6 +33,7 @@ class PrimitivePolicyError(ValueError):
     policy_name : str
         Name of the policy in which the error occurs.
     """
+
     def __init__(self, name, policy_name):
         super(PrimitivePolicyError,
               self).__init__("Cannot find implementation for function: %s() "
@@ -63,6 +65,7 @@ class Policy(object):
 
     @property
     def name(self):
+        """Return policy name"""
         return type(self).__name__
 
     def __enter__(self):
@@ -252,5 +255,3 @@ def wrap_policy(policy):
         # pylint: enable= missing-docstring
 
     return policy_decorator
-
-

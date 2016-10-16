@@ -4,6 +4,13 @@
 from __future__ import absolute_import
 from minpy.dispatch.policy import PreferMXNetPolicy, OnlyNumPyPolicy, OnlyMXNetPolicy, wrap_policy
 from minpy.dispatch.policy import AutoBlacklistPolicy
+
+# Singleton instances
+OnlyNumPyPolicy = OnlyNumPyPolicy()
+OnlyMXNetPolicy = OnlyMXNetPolicy()
+PreferMXNetPolicy = PreferMXNetPolicy()
+AutoBlacklistPolicy = AutoBlacklistPolicy(gen_rule=True)
+
 # Global config
 Config = {'modules': [], }
 Config['default_policy'] = PreferMXNetPolicy()
@@ -18,9 +25,3 @@ def set_global_policy(policy):
     for mod in Config['modules']:
         mod.set_policy(policy)
     Config['default_policy'] = policy
-
-
-OnlyNumPyPolicy = OnlyNumPyPolicy()
-OnlyMXNetPolicy = OnlyMXNetPolicy()
-PreferMXNetPolicy = PreferMXNetPolicy()
-AutoBlacklistPolicy = AutoBlacklistPolicy()

@@ -110,7 +110,7 @@ class Rules(object):
             self._build_hash()
             self.save_rules_config()
         else:
-            _logger.info('Load and use rule configuration at %s', filename)
+            _logger.info('Load and use rule configuration at %s', self._loc)
 
     @property
     def name(self):
@@ -228,7 +228,7 @@ class Blacklist(Rules):
             self._rules[name].append(entry)
             key = self._get_arg_rule_key(args, kwargs)
             self._hash[name].add(key)
-            _logger.info('New rule {} added.'.format(key))
+            _logger.info('New rule %s added.', key)
 
     def _build_hash(self):
         self._hash = {}
