@@ -23,7 +23,14 @@ class Module(object):
 
     It will register primitives from :mod:`minpy.array_variant`.
 
-    :param name_injector: an optional dict provides manual dispatching
+    Parameters
+    ----------
+    old : dict
+        A meta class including info such as name, path, etc.
+    name : None, or str
+        Second level name if specified.
+    name_injector : dict, or dict-like object
+        An optional dict provides manual dispatching
     """
 
     def __init__(self, old, name=None, name_injector={}):
@@ -35,6 +42,8 @@ class Module(object):
         self._logger.info('Initialize module: {}.'.format(old['__name__']))
         self._old = old
         self._name_injector = name_injector
+        if len(name_injector) != 0:
+            self._logger.info('Inject Name Injector {}'.format(name_injector.__name__))
         for vname in variants:
             if name is None:
                 modname = 'minpy.array_variants.{}'.format(vname)
@@ -94,26 +103,63 @@ class Module(object):
 class NameInjector(object):
     """A proxy class dispatching given names into another class
 
+    Parameters
+    ----------
+    dest_mod : module
+        The target module of the name dispatch.
+    name : str
+        Name of the instance. Used for logger.
+    injected_type : None, or iterable of types
+        List of the types. Objects in the list will be registerd for the proxy.
+    name_set : None, or iterable of types
+        Set of the names registered for the proxy.
+    exception : None, or dict
+        A dictionary provides exceptions. The dictionary matches injected name
+        to dispatched name (string to string).
     """
 
-    def __init__(self, name_set, dest_class, exception=None):
-        """Initialize a new NameInjector
-
-        :param name_set: set of the names registered for proxy.
-        :param dest_class: the target class of the name dispatching
-        :param dict exception: a dictionary provides exceptions. The dictionary
-        matches injected name to dispatched name (string to string)
-        """
-        self._name_dict = {n: n for n in name_set}
-        self._dest_class = dest_class
+    def __init__(self,
+                 dest_mod,
+                 name='',
+                 injected_type=None,
+                 name_set=None,
+                 exception=None):
+        if len(name) != 0:
+            name = '<' + name + '>'
+        self.__name__ = name
+        self._logger = log.get_logger(__name__)
+        self._logger.info('Initialize Name Injector {}'.format(self.__name__))
+        self._name_dict = {}
+        dest_ns = dest_mod.__dict__
+        if injected_type is not None:
+            for name, obj in dest_ns.items():
+                if type(obj) in injected_type:
+                    self._name_dict[name] = obj
+                    self._logger.debug(
+                        'Add {} from {} to Name Injector {}'.format(
+                            name, dest_mod.__name__, self.__name__))
+        if name_set is not None:
+            for name in name_set:
+                self._name_dict[name] = dest_ns[name]
+                self._logger.debug(
+                    'Add {} from {}i to Name Injector {}'.format(
+                        name, dest_mod.__name__, self.__name__))
         if exception is not None:
+            exception = {k: dest_ns[v] for k, v in exception.items()}
+            self._logger.debug('Update {} exceptions to Name Injector {}'.
+                               format(len(exception), self.__name__))
             self._name_dict.update(exception)
+        self._logger.info('Import {} objects from {} to Name Injector {}'.
+                          format(len(self), dest_mod.__name__, self.__name__))
+
+    def __len__(self):
+        return len(self._name_dict)
 
     def __contains__(self, key):
         return key in self._name_dict
 
     def __getitem__(self, name):
         if name in self._name_dict:
-            return getattr(self._dest_class, self._name_dict[name])
+            return self._name_dict[name]
         else:
             raise KeyError(name)
