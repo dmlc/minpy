@@ -1,21 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # pylint: disable= no-self-use
-"""Policy for selecting appropriate function to call."""
+"""Policy for selecting appropriate function to call.
+
+Please use policy instance in minpy root namespace and don't initialize your
+own instance unless you fully understand what your are doing."""
 from __future__ import absolute_import
 from __future__ import print_function
 
 import functools
 import minpy
-from .rule import Blacklist
 from minpy.array import Value
 from minpy.array_variants import ArrayType
 from minpy.utils import log
+from .rule import Blacklist
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
+# pylint: enable= invalid-name
 
-# pylint: enadle= invalid-name
+Blacklist = Blacklist()
 
 
 class PrimitivePolicyError(ValueError):
@@ -32,7 +36,7 @@ class PrimitivePolicyError(ValueError):
         super(PrimitivePolicyError,
               self).__init__("Cannot find implementation for function: %s() "
                              "under policy: %s. Maybe lack of gradient "
-                             "implementation?", name, self.name)
+                             "implementation?", name, policy_name)
 
 
 class Policy(object):
@@ -71,6 +75,10 @@ class Policy(object):
     def __exit__(self, ptype, value, trace):
         for mod, plc in self._old_policy.items():
             mod.set_policy(plc)
+
+    def __call__(self):
+        """Compatible with old instance style policy"""
+        return self
 
     @staticmethod
     def _available_prims(name, reg, args, kwargs):
@@ -122,6 +130,8 @@ class Policy(object):
 class AutoBlacklistPolicy(Policy):
     """Automatically dispatch ops to MXNet impl by provided config.
 
+    Note the underlying rule object is singleton.
+
     Parameters
     ----------
     gen_rule : bool
@@ -135,10 +145,14 @@ class AutoBlacklistPolicy(Policy):
     """
 
     def __init__(self, gen_rule=False, append_rule=True, loc=None):
+        self.__call__(gen_rule, append_rule, loc)
+
+    def __call__(self, gen_rule=False, append_rule=True, loc=None):
         self._gen_rule = gen_rule
         self._rules = Blacklist(loc=loc, save_config_atexit=gen_rule)
         if gen_rule and not append_rule:
             self._rules.reset_rules()
+        return self
 
     def resolve_call(self, name, reg, args, kwargs):
         def get_result(impl_type):
@@ -238,3 +252,5 @@ def wrap_policy(policy):
         # pylint: enable= missing-docstring
 
     return policy_decorator
+
+
