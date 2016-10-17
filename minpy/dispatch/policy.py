@@ -36,9 +36,9 @@ class PrimitivePolicyError(ValueError):
 
     def __init__(self, name, policy_name):
         super(PrimitivePolicyError,
-              self).__init__("Cannot find implementation for function: %s() "
-                             "under policy: %s. Maybe lack of gradient "
-                             "implementation?", name, policy_name)
+              self).__init__("Cannot find implementation for function: {}() "
+                             "under policy: {}. Maybe lack of gradient "
+                             "implementation?".format(name, policy_name))
 
 
 class Policy(object):
