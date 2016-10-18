@@ -203,8 +203,9 @@ class Blacklist(Rules):
             _logger.debug('Rule applies: block by auto-generated rule on %s.',
                           name)
             return False
-        if name in mxnet_type_compatible_ops:
-            return True
+        # Due to MXNet's lack of full type support
+        # if name in mxnet_type_compatible_ops:
+            # return True
         if not all(is_supported_array_type(x) for x in args):
             _logger.debug(
                 'Rule applies: contain unsupported type for MXNet op.')
