@@ -13,7 +13,7 @@ AutoBlacklistPolicy = AutoBlacklistPolicy(gen_rule=True)
 
 # Global config
 Config = {'modules': [], }
-Config['default_policy'] = PreferMXNetPolicy()
+Config['default_policy'] = AutoBlacklistPolicy
 
 
 def set_global_policy(policy):
