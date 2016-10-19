@@ -4,11 +4,20 @@ import os.path
 import struct
 import numpy as real_numpy
 
+import mxnet as mx
+import minpy
 import minpy.numpy as np
-from minpy.nn.io import NDArrayIter
+from minpy.nn import io
 from minpy.nn import layers
-from minpy.nn.model import ModelBase
-from minpy.nn.solver import Solver
+import minpy.nn.model
+import minpy.nn.solver
+from minpy import context
+context.set_context(context.gpu(0))
+
+# import logging
+# logging.getLogger('minpy.array').setLevel(logging.DEBUG)
+# logging.getLogger('minpy.core').setLevel(logging.DEBUG)
+# logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 
 batch_size = 256
 flattened_input_size = 784
@@ -16,24 +25,26 @@ hidden_size = 256
 num_classes = 10
 
 
-class TwoLayerNet(ModelBase):
+class TwoLayerNet(minpy.nn.model.ModelBase):
     def __init__(self):
         super(TwoLayerNet, self).__init__()
-        self.add_param(name='w1', shape=(flattened_input_size, hidden_size)) \
-            .add_param(name='b1', shape=(hidden_size,)) \
-            .add_param(name='w2', shape=(hidden_size, num_classes)) \
-            .add_param(name='b2', shape=(num_classes,))
+        # Use MXNet symbol to define the whole network.
+        net = mx.sym.Variable(name='X')
+        # Flatten the input data to matrix.
+        net = mx.sym.Flatten(net)
+        net = mx.sym.FullyConnected(
+            data=net, name='fc1', num_hidden=hidden_size)
+        net = mx.sym.Activation(data=net, act_type='relu')
+        net = mx.sym.FullyConnected(
+            data=net, name='fc2', num_hidden=num_classes)
+        # Wrap the final symbol into a function.
+        self.fwd_fn = minpy.core.Function(
+            net, input_shapes={'X': (batch_size, flattened_input_size)})
+        # Add parameters.
+        self.add_params(self.fwd_fn.get_params())
 
     def forward(self, X, mode):
-        # Flatten the input data to matrix.
-        X = np.reshape(X, (batch_size, flattened_input_size))
-        # First affine layer (fully-connected layer).
-        y1 = layers.affine(X, self.params['w1'], self.params['b1'])
-        # ReLU activation.
-        y2 = layers.relu(y1)
-        # Second affine layer.
-        y3 = layers.affine(y2, self.params['w2'], self.params['b2'])
-        return y3
+        return self.fwd_fn(X=X, **self.params)
 
     def loss(self, predict, y):
         # Compute softmax loss between the output and the label.
@@ -51,7 +62,6 @@ def main(args):
         assert magic_nr == 2049
         assert size == 60000
         label = real_numpy.fromfile(f, dtype=real_numpy.int8)
-        label = label[:10000]
     with open(img_fname, 'rb') as f:
         magic_nr, size, rows, cols = struct.unpack('>IIII', f.read(16))
         assert magic_nr == 2051
@@ -59,26 +69,21 @@ def main(args):
         assert rows == cols == 28
         img = real_numpy.fromfile(
             f, dtype=real_numpy.uint8).reshape(size, rows * cols)
-        img = img[:10000, ...]
 
-    train_dataiter = NDArrayIter(
+    train_dataiter = io.NDArrayIter(
         data=img, label=label, batch_size=batch_size, shuffle=True)
 
     # Create solver.
-    solver = Solver(
+    solver = minpy.nn.solver.Solver(
         model,
         train_dataiter,
         train_dataiter,
         num_epochs=10,
         init_rule='gaussian',
-        init_config={
-            'stdvar': 0.001
-        },
+        init_config={'stdvar': 0.001},
         update_rule='sgd_momentum',
-        optim_config={
-            'learning_rate': 1e-4,
-            'momentum': 0.9
-        },
+        optim_config={'learning_rate': 1e-4,
+                      'momentum': 0.9},
         verbose=True,
         print_every=20)
     # Initialize model parameters.

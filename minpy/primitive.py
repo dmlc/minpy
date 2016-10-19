@@ -280,10 +280,5 @@ class Primitive(object):
         bool
             Whether all the arguments have gradients defined.
         """
-        for i in bp_args:
-            if i not in self._grad_func:
-                return False
-        for i in bp_kwargs:
-            if i not in self._grad_func_kw:
-                return False
-        return True
+        return  all(i in self._grad_func for i in bp_args) and \
+                all(i in self._grad_func_kw for i in bp_kwargs)

@@ -20,6 +20,7 @@ setuptools.setup(
         'semantic-version',
         'six',
         'h5py',
+        'PyYAML',
     ],
     data_files=[('', ['VERSION'])],
     url='https://github.com/dmlc/minpy')
