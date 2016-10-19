@@ -244,8 +244,8 @@ class NDArrayIter(DataIter):
                     for x in data_source]
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            return [np.concatenate(
-                (x[1][self.cursor:], x[1][:pad]), axis=0) for x in data_source]
+            return [minpy.array.Array(np.concatenate(
+                (x[1][self.cursor:].asnumpy(), x[1][:pad].asnumpy()), axis=0)) for x in data_source]
 
     def getdata(self):
         return self._getdata(self.data)

@@ -54,6 +54,9 @@ def test_NDArrayIter():
     # check padding
     datas = np.ones([1000, 2, 2])
     labels = np.ones([1000, 1])
+    for i in range(1000):
+        datas[i] = i / 100
+        labels[i] = i / 100
     dataiter = io.NDArrayIter(datas, labels, batch_size = 128, shuffle = True, last_batch_handle='pad')
     batchidx = 0
     for batch in dataiter:
@@ -62,7 +65,7 @@ def test_NDArrayIter():
     dataiter = io.NDArrayIter(datas, labels, batch_size = 128, shuffle = False, last_batch_handle='pad')
     batchidx = 0
     labelcount = [0 for i in range(10)]
-    for batch in dataiter:
+    for batch in dataiter:  
         label = batch.label[0].asnumpy().flatten()
         assert((batch.data[0].asnumpy()[:,0,0] == label).all())
         for i in range(label.shape[0]):
