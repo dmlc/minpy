@@ -79,7 +79,8 @@ class Rules(object):
         if cls._rules is None or force:
             config = None
             locs = [os.curdir, os.path.expandvars(cls._env_var),
-                    os.path.expanduser('~')]
+                    os.path.expanduser('~'),
+                    os.path.join(os.path.dirname(__file__), '../utils/blacklist.yml')]
             locs = [os.path.join(loc, cls._conf_file) for loc in locs]
             if cls._loc is not None:
                 locs.insert(0, cls._loc)
