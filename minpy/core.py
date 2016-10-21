@@ -49,6 +49,7 @@ def grad_and_loss(func, argnum=0):
                 grad_vals = grad_vals[0]
         for i in argnums:
             arrays[i]._marked_for_bp = False
+        result_array._marked_for_bp = False
         return grad_vals, result_array
 
     return wrapped

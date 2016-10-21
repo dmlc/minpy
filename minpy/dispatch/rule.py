@@ -1,10 +1,11 @@
+"""Rules for rule-based policy"""
 from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import atexit
 import yaml
 import numpy
-import atexit
 from minpy.array_variants import ArrayType
 from minpy.array import Array
 from minpy.array import Number
@@ -33,98 +34,107 @@ class RuleError(ValueError):
 class Rules(object):
     """Rules interface.
 
-    Rule instance acts like singleton.
-
     Parameters
     ----------
     loc : str
         Path to rule configuration file.
+    save_config_atexit : bool
+        True will save config after the program exits.
     """
-    _rules = None
-    _hash = None
-    _env_var = '$MINPY_CONF'
-    _conf_file = '.minpy_rules.conf'
-    _loc = None
-    _save_config_atexit = False
 
-    def __init__(self, loc=None, save_config_atexit=False):
-        self.__class__._loc = loc
-        if save_config_atexit and not self._save_config_atexit:
-            self.__class__._save_config_atexit = True
+    def __init__(self, *args, **kwargs):
+        self._rules = None
+        self._conf_file = '.minpy_rules.conf'
+        self._env_var = '$MINPY_CONF'
+        self._rules = None
+        self._hash = None
+        self._save_config_atexit = False
+        self._loc = None
+        self(*args, **kwargs)
+
+    def __call__(self, loc=None, save_config_atexit=False):
+        if save_config_atexit:
+            self._register_save_atexit()
+        if not self._loc or loc:
+            self._loc = loc
+            self.load_rules_config()
+        return self
+
+    def _register_save_atexit(self):
+        """Register a saving function when program exits."""
+        if not self._save_config_atexit:
+            self._save_config_atexit = True
             atexit.register(self.save_rules_config)
-        self.load_rules_config()
 
-    @classmethod
-    def _build_hash(cls):
+    def _build_hash(self):
         """Clear hash and rebuild hash by rules"""
         raise NotImplementedError()
 
-    @classmethod
-    def load_rules_config(cls, force=False):
+    def load_rules_config(self):
         """Load rules configuration from configs and build hash.
 
         Find rule configuration at current directory, self._env_var, and user's
         root in order. Then load the config into corresponding class variable.
-        Load empty rules if loading fails.
-
-        Parameters
-        ----------
-        force : bool
-            if True, force to load configuration.
+        Load empty rules if loading fails. Configuration path will be set to
+        the file first found if loc is not specified.
         """
         # TODO: add package data through installation
         # http://peak.telecommunity.com/DevCenter/setuptools#non-package-data-files
-        if cls._rules is None or force:
-            config = None
-            locs = [os.curdir, os.path.expandvars(cls._env_var),
-                    os.path.expanduser('~')]
-            locs = [os.path.join(loc, cls._conf_file) for loc in locs]
-            if cls._loc is not None:
-                locs.insert(0, cls._loc)
-            for filename in locs:
-                try:
-                    with open(filename) as f:
-                        config = yaml.safe_load(f)
-                    break
-                except IOError:
-                    pass
-                except yaml.YAMLError:
-                    _logger.warn('Find corrupted configuration at {}'.format(
-                        loc))
-            if config is None:
-                _logger.error("Cannot find MinPy's rule configuration {} "
-                              "at {}. You can also use {} to specify.".format(
-                                  cls._conf_file, locs, cls._env_var))
-                config = {}
-            else:
-                _logger.info('Use rule configuration at %s', filename)
-            cls._rules = config
-            cls._build_hash()
+        loaded = False
+        locs = [os.curdir, os.path.expandvars(self._env_var),
+                os.path.expanduser('~')]
+        locs = [os.path.join(loc, self._conf_file) for loc in locs]
+        if self._loc is not None:
+            locs.insert(0, self._loc)
+        for filename in locs:
+            try:
+                with open(filename) as f:
+                    config = yaml.safe_load(f)
+                self._rules = config
+                self._build_hash()
+                loaded = True
+                if self._loc is None:
+                    self._loc = filename
+                break
+            except IOError:
+                pass
+            except Exception:
+                _logger.warn('Find corrupted configuration at %s', filename)
+        if not loaded:
+            if self._loc is None:
+                self._loc = locs[-1]
+            _logger.error(
+                "Cannot find MinPy's rule configuration %s at %s. Create new config file at %s.",
+                self._conf_file, locs, self._loc)
+            self._rules = {}
+            self._build_hash()
+            self.save_rules_config()
+        else:
+            _logger.info('Load and use rule configuration at %s', self._loc)
 
-    @classmethod
-    def save_rules_config(cls):
-        '''Save rules configuration from configs and build hash.
+    @property
+    def name(self):
+        """Return name of the policy"""
+        return self.__class__.__name__
 
-        Save
+    def save_rules_config(self):
+        '''Save rules configuration from configs.
+
+        Must ensure self._loc is set before calling this function.
         '''
-        loc = cls._loc
-        if loc is None:
-            loc = os.environ.get(cls._env_var)
-            if loc is None:
-                loc = os.path.expanduser('~')
-            loc = os.path.join(loc, cls._conf_file)
+        loc = self._loc
+        assert loc is not None, "The config saving path is None."
         with open(loc, 'w+') as f:
-            yaml.safe_dump(cls._rules, f, default_flow_style=False)
-        _logger.info('Rule %s saved to %s.', cls.__name__, loc)
+            yaml.safe_dump(self._rules, f, default_flow_style=False)
+        _logger.info('Rule %s saved to %s.', self.name, loc)
 
-    @classmethod
-    def reset_rules(cls):
+    def reset_rules(self):
         """Reset rules.
 
         Delete all current rules. Also clear hash.
         """
-        cls._rules = {}
-        cls._hash = {}
+        self._rules = {}
+        self._hash = {}
 
     def allow(self, name, impl_type, args, kwargs):
         """Rule inquiry interface.
@@ -193,8 +203,9 @@ class Blacklist(Rules):
             _logger.debug('Rule applies: block by auto-generated rule on %s.',
                           name)
             return False
-        if name in mxnet_type_compatible_ops:
-            return True
+        # Due to MXNet's lack of full type support
+        # if name in mxnet_type_compatible_ops:
+            # return True
         if not all(is_supported_array_type(x) for x in args):
             _logger.debug(
                 'Rule applies: contain unsupported type for MXNet op.')
@@ -218,15 +229,14 @@ class Blacklist(Rules):
             self._rules[name].append(entry)
             key = self._get_arg_rule_key(args, kwargs)
             self._hash[name].add(key)
-            _logger.info('New rule {} added.'.format(key))
+            _logger.info('New rule %s added.', key)
 
-    @classmethod
-    def _build_hash(cls):
-        cls._hash = {}
-        for k, v in cls._rules.items():
-            cls._hash[k] = set()
+    def _build_hash(self):
+        self._hash = {}
+        for k, v in self._rules.items():
+            self._hash[k] = set()
             for x in v:
-                cls._hash[k].add('-'.join(x['args']) + '+' + '-'.join(
+                self._hash[k].add('-'.join(x['args']) + '+' + '-'.join(
                     sorted(x.get('kwargs', []))))
 
     def _get_type_signiture(self, x):
