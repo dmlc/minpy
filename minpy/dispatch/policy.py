@@ -7,15 +7,15 @@ from __future__ import print_function
 
 import functools
 import minpy
-from .rule import Blacklist
 from minpy.array import Value
 from minpy.array_variants import ArrayType
 from minpy.utils import log
+from .rule import Blacklist
 
 # pylint: disable= invalid-name
 _logger = log.get_logger(__name__)
 
-# pylint: enadle= invalid-name
+# pylint: enable= invalid-name
 
 
 class PrimitivePolicyError(ValueError):
@@ -28,11 +28,12 @@ class PrimitivePolicyError(ValueError):
     policy_name : str
         Name of the policy in which the error occurs.
     """
+
     def __init__(self, name, policy_name):
         super(PrimitivePolicyError,
-              self).__init__("Cannot find implementation for function: %s() "
-                             "under policy: %s. Maybe lack of gradient "
-                             "implementation?", name, self.name)
+              self).__init__("Cannot find implementation for function: {}() "
+                             "under policy: {}. Maybe lack of gradient "
+                             "implementation?".format(name, policy_name))
 
 
 class Policy(object):
@@ -59,6 +60,7 @@ class Policy(object):
 
     @property
     def name(self):
+        """Return policy name"""
         return type(self).__name__
 
     def __enter__(self):
@@ -68,7 +70,7 @@ class Policy(object):
             mod.set_policy(self)
         return self
 
-    def __exit__(self, ptype, value, trace):
+    def __exit__(self):
         for mod, plc in self._old_policy.items():
             mod.set_policy(plc)
 
@@ -121,6 +123,8 @@ class Policy(object):
 
 class AutoBlacklistPolicy(Policy):
     """Automatically dispatch ops to MXNet impl by provided config.
+
+    Note: different instances of the rule class act as a single singleton.
 
     Parameters
     ----------

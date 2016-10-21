@@ -2,9 +2,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import atexit
 import yaml
 import numpy
-import atexit
 from minpy.array_variants import ArrayType
 from minpy.array import Array
 from minpy.array import Number
@@ -33,12 +33,14 @@ class RuleError(ValueError):
 class Rules(object):
     """Rules interface.
 
-    Rule instance acts like singleton.
+    Different rule instances act like a single singleton.
 
     Parameters
     ----------
     loc : str
         Path to rule configuration file.
+    save_config_atexit : bool
+        True will save config after the program exits.
     """
     _rules = None
     _hash = None

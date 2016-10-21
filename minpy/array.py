@@ -379,14 +379,14 @@ class Array(Value):
         return Value._ns.reshape(self, new_shape)
 
     def dot(self, other, out=None):
-        """ Function for dot production. """
+        """Function for dot production. """
         if out is not None:
             # TODO: Support out argument
             raise ValueError('Out option is not supported.')
         return Value._ns.dot(self, other)
 
     def argmax(self, axis=None, out=None):
-        """ Returns the indices of the maximum values along an axis
+        """Returns the indices of the maximum values along an axis
 
         Parameters
         ----------
@@ -408,7 +408,7 @@ class Array(Value):
         return Value._ns.argmax(self, axis)
 
     def _synchronize_data(self):
-        """ Synchronize the data of different array types. """
+        """Synchronize the data of different array types. """
         if self._latest_version == ArrayType.MXNET:
             _logger.info(
                 'Copy from MXNet array to NumPy array for Array "{}".'.format(
