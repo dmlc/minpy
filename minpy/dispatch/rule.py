@@ -91,17 +91,19 @@ class Rules(object):
                 except IOError:
                     pass
                 except yaml.YAMLError:
-                    _logger.warn('Find corrupted configuration at {}'.format(
-                        loc))
+                    _logger.warn('Find corrupted configuration at %s', filename)
             if config is None:
-                _logger.error("Cannot find MinPy's rule configuration {} "
-                              "at {}. You can also use {} to specify.".format(
-                                  cls._conf_file, locs, cls._env_var))
+                _logger.error("Cannot find MinPy's rule configuration %s at %s.", cls._conf_file, locs)
                 config = {}
             else:
-                _logger.info('Use rule configuration at %s', filename)
+                _logger.info('Load and use rule configuration at %s', filename)
             cls._rules = config
             cls._build_hash()
+
+    @property
+    def name(self):
+        """Return name of the policy"""
+        return self.__class__.__name__
 
     @classmethod
     def save_rules_config(cls):
@@ -220,7 +222,7 @@ class Blacklist(Rules):
             self._rules[name].append(entry)
             key = self._get_arg_rule_key(args, kwargs)
             self._hash[name].add(key)
-            _logger.info('New rule {} added.'.format(key))
+            _logger.info('New rule %s added.', key)
 
     @classmethod
     def _build_hash(cls):
