@@ -103,3 +103,7 @@ ENV/
 /examples/cs231n/assignment3/cs231n/datasets/coco_captioning/
 /examples/cs231n/assignment3/cs231n/datasets/pretrained_model.h5
 /examples/cs231n/assignment3/cs231n/datasets/tiny-imagenet-100-A/
+
+log
+mxnet/
+blacklist.yml

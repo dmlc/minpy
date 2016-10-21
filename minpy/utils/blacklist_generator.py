@@ -1,13 +1,16 @@
 from __future__ import division
-import numpy as np
 from math import pi
+import minpy
+import minpy.numpy as np
+from minpy.dispatch.policy import AutoBlacklistPolicy
+import logging
+
 
 def test_ufunc():
     x = np.array([-1.2, 1.2])
     np.absolute(x)
     np.absolute(1.2 + 1j)
     x = np.linspace(start=-10, stop=10, num=101)
-    xx = x + 1j * x[:, np.newaxis]
     np.add(1.0, 4.0)
     x1 = np.arange(9.0).reshape((3, 3))
     x2 = np.arange(3.0)
@@ -29,23 +32,23 @@ def test_ufunc():
     np.arctanh([0, -0.5])
     np.bitwise_and(13, 17)
     np.bitwise_and(14, 13)
-    np.binary_repr(12)
+    # np.binary_repr(12)    return str
     np.bitwise_and([14,3], 13)
     np.bitwise_and([11,7], [4,25])
     np.bitwise_and(np.array([2,5,255]), np.array([3,14,16]))
     np.bitwise_and([True, True], [False, True])
     np.bitwise_or(13, 16)
-    np.binary_repr(29)
+    # np.binary_repr(29)
     np.bitwise_or(32, 2)
     np.bitwise_or([33, 4], 1)
     np.bitwise_or([33, 4], [1, 2])
     np.bitwise_or(np.array([2, 5, 255]), np.array([4, 4, 4]))
-    np.array([2, 5, 255]) | np.array([4, 4, 4])
+    # np.array([2, 5, 255]) | np.array([4, 4, 4])
     np.bitwise_or(np.array([2, 5, 255, 2147483647L], dtype=np.int32),
                   np.array([4, 4, 4, 2147483647L], dtype=np.int32))
     np.bitwise_or([True, True], [False, True])
     np.bitwise_xor(13, 17)
-    np.binary_repr(28)
+    # np.binary_repr(28)
     np.bitwise_xor(31, 5)
     np.bitwise_xor([31,3], 5)
     np.bitwise_xor([31,3], [5,6])
@@ -54,9 +57,6 @@ def test_ufunc():
     np.ceil(a)
     a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
     np.trunc(a)
-    np.conjugate(1+2j)
-    x = np.eye(2) + 1j * np.eye(2)
-    np.conjugate(x)
     np.cos(np.array([0, np.pi/2, np.pi]))
     np.cosh(0)
     x = np.linspace(-4, 4, 1000)
@@ -64,7 +64,7 @@ def test_ufunc():
     np.degrees(rad)
     out = np.zeros((rad.shape))
     r = np.degrees(rad, out)
-    np.all(r == out)
+    # np.all(r == out) return bool
     np.rad2deg(np.pi/2)
     np.divide(2.0, 4.0)
     x1 = np.arange(9.0).reshape((3, 3))
@@ -74,7 +74,6 @@ def test_ufunc():
     np.equal([0, 1, 3], np.arange(3))
     np.equal(1, np.ones(1))
     x = np.linspace(-2*np.pi, 2*np.pi, 100)
-    out = np.exp(xx)
     np.exp2([2, 3])
     np.expm1(1e-10)
     np.exp(1e-10) - 1
@@ -98,31 +97,31 @@ def test_ufunc():
     np.hypot(3*np.ones((3, 3)), [4])
     np.bitwise_not is np.invert
     np.invert(np.array([13], dtype=np.uint8))
-    np.binary_repr(242, width=8)
+    # np.binary_repr(242, width=8)
     np.invert(np.array([13], dtype=np.uint16))
     np.invert(np.array([13], dtype=np.int8))
-    np.binary_repr(-14, width=8)
+    # np.binary_repr(-14, width=8)
     np.invert(np.array([True, False]))
-    np.isfinite(1)
-    np.isfinite(0)
-    np.isfinite(np.nan)
-    np.isfinite(np.inf)
-    np.isfinite(np.NINF)
+    # np.isfinite(1)
+    # np.isfinite(0)
+    # np.isfinite(np.nan)
+    # np.isfinite(np.inf)
+    # np.isfinite(np.NINF)
     x = np.array([-np.inf, 0., np.inf])
     y = np.array([2, 2, 2])
     np.isfinite(x, y)
-    np.isinf(np.inf)
-    np.isinf(np.nan)
-    np.isinf(np.NINF)
-    np.isinf([np.inf, -np.inf, 1.0, np.nan])
+    # np.isinf(np.inf)
+    # np.isinf(np.nan)
+    # np.isinf(np.NINF)
+    # np.isinf([np.inf, -np.inf, 1.0, np.nan])
     x = np.array([-np.inf, 0., np.inf])
     y = np.array([2, 2, 2])
-    np.isinf(x, y)
-    np.isnan(np.nan)
-    np.isnan(np.inf)
-    np.binary_repr(5)
+    # np.isinf(x, y)
+    # np.isnan(np.nan)
+    # np.isnan(np.inf)
+    # np.binary_repr(5)
     np.left_shift(5, 2)
-    np.binary_repr(20)
+    # np.binary_repr(20)
     np.left_shift(5, [1,2,3])
     np.less([1, 2], [2, 2])
     np.less_equal([4, 2, 1], [2, 2, 2])
@@ -141,35 +140,35 @@ def test_ufunc():
     2**prob12
     np.log1p(1e-99)
     np.log(1 + 1e-99)
-    np.logical_and(True, False)
-    np.logical_and([True, False], [False, False])
+    # np.logical_and(True, False)
+    # np.logical_and([True, False], [False, False])
     x = np.arange(5)
-    np.logical_and(x>1, x<4)
-    np.logical_not(3)
-    np.logical_not([True, False, 0, 1])
+    # np.logical_and(x>1, x<4)
+    # np.logical_not(3)
+    # np.logical_not([True, False, 0, 1])
     x = np.arange(5)
-    np.logical_not(x<3)
-    np.logical_or(True, False)
-    np.logical_or([True, False], [False, False])
+    # np.logical_not(x<3)
+    # np.logical_or(True, False)
+    # np.logical_or([True, False], [False, False])
     x = np.arange(5)
-    np.logical_or(x < 1, x > 3)
-    np.logical_xor(True, False)
-    np.logical_xor([True, True, False, False], [True, False, True, False])
+    # np.logical_or(x < 1, x > 3)
+    # np.logical_xor(True, False)
+    # np.logical_xor([True, True, False, False], [True, False, True, False])
     x = np.arange(5)
-    np.logical_xor(x < 1, x > 3)
-    np.logical_xor(0, np.eye(2))
+    # np.logical_xor(x < 1, x > 3)
+    # np.logical_xor(0, np.eye(2))
     np.maximum([2, 3, 4], [1, 5, 2])
-    np.maximum([np.nan, 0, np.nan], [0, np.nan, np.nan])
-    np.maximum(np.Inf, 1)
+    # np.maximum([np.nan, 0, np.nan], [0, np.nan, np.nan])
+    # np.maximum(np.Inf, 1)
     np.minimum([2, 3, 4], [1, 5, 2])
-    np.minimum([np.nan, 0, np.nan],[0, np.nan, np.nan])
-    np.minimum(-np.Inf, 1)
+    # np.minimum([np.nan, 0, np.nan],[0, np.nan, np.nan])
+    # np.minimum(-np.Inf, 1)
     np.fmax([2, 3, 4], [1, 5, 2])
     np.fmax(np.eye(2), [0.5, 2])
-    np.fmax([np.nan, 0, np.nan],[0, np.nan, np.nan])
+    # np.fmax([np.nan, 0, np.nan],[0, np.nan, np.nan])
     np.fmin([2, 3, 4], [1, 5, 2])
     np.fmin(np.eye(2), [0.5, 2])
-    np.fmin([np.nan, 0, np.nan],[0, np.nan, np.nan])
+    # np.fmin([np.nan, 0, np.nan],[0, np.nan, np.nan])
     np.modf([0, 3.5])
     np.modf(-0.5)
     np.multiply(2.0, 4.0)
@@ -195,29 +194,25 @@ def test_ufunc():
     np.reciprocal([1, 2., 3.33])
     np.remainder([4, 7], [2, 3])
     np.remainder(np.arange(7), 5)
-    np.binary_repr(10)
+    # np.binary_repr(10)
     np.right_shift(10, 1)
-    np.binary_repr(5)
+    # np.binary_repr(5)
     np.right_shift(10, [1,2,3])
     a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
     np.rint(a)
     np.sign([-5., 4.5])
     np.sign(0)
-    np.sign(5-2j)
-    np.signbit(-1.2)
+    # np.sign(5-2j)
+    # np.signbit(-1.2)
     np.signbit(np.array([1, -2.3, 2.1]))
     np.copysign(1.3, -1)
     np.copysign([-1, 0, 1], -1.1)
     np.copysign([-1, 0, 1], np.arange(3)-1)
-    eps = np.finfo(np.float64).eps
-    np.nextafter(1, 2) == eps + 1
-    np.nextafter([1, 2], [2, 1]) == [eps + 1, 2 - eps]
-    np.spacing(1) == np.finfo(np.float64).eps
     np.sin(np.pi/2.)
     np.sin(np.array((0., 30., 45., 60., 90.)) * np.pi / 180. )
     x = np.linspace(-np.pi, np.pi, 201)
     np.sinh(0)
-    np.sinh(np.pi*1j/2)
+    # np.sinh(np.pi*1j/2)
     np.sqrt([1,4,9])
     np.sqrt([4, -1, -3+4J])
     np.cbrt([1,8,27])
@@ -276,9 +271,6 @@ def test_numeric():
     x = np.arange(6, dtype=np.int)
     np.full_like(x, 1)
     np.full_like(x, 0.1)
-    np.full_like(x, 0.1, dtype=np.double)
-    np.full_like(x, np.nan, dtype=np.double)
-    y = np.arange(6, dtype=np.double)
     np.full_like(y, 0.1)
     np.count_nonzero(np.eye(4))
     np.count_nonzero([[0,1,7,0,0],[3,0,0,2,19]])
@@ -291,25 +283,17 @@ def test_numeric():
     a = np.array([1, 2], dtype=np.float32)
     np.asarray(a, dtype=np.float32) is a
     np.asarray(a, dtype=np.float64) is a
-    issubclass(np.matrix, np.ndarray)
-    a = np.matrix([[1, 2]])
     np.asarray(a) is a
     np.asanyarray(a) is a
     a = [1, 2]
     np.asanyarray(a)
-    a = np.matrix([1, 2])
     np.asanyarray(a) is a
     x = np.arange(6).reshape(2,3)
     np.ascontiguousarray(x, dtype=np.float32)
-    x.flags['C_CONTIGUOUS']
     x = np.arange(6).reshape(2,3)
     y = np.asfortranarray(x)
-    x.flags['F_CONTIGUOUS']
-    y.flags['F_CONTIGUOUS']
     x = np.arange(6).reshape(2,3)
-    x.flags
     y = np.require(x, dtype=np.float32, requirements=['A', 'O', 'W', 'F'])
-    y.flags
     a = np.array([[1, 2, 3], [4, 5, 6]], order='C')
     np.isfortran(a)
     b = np.array([[1, 2, 3], [4, 5, 6]], order='FORTRAN')
@@ -323,7 +307,6 @@ def test_numeric():
     np.argwhere(x>1)
     x = np.arange(-2, 3)
     np.flatnonzero(x)
-    x.ravel()[np.flatnonzero(x)]
     np.correlate([1, 2, 3], [0, 1, 0.5])
     np.correlate([1, 2, 3], [0, 1, 0.5], "same")
     np.correlate([1, 2, 3], [0, 1, 0.5], "full")
@@ -333,8 +316,8 @@ def test_numeric():
     np.convolve([1,2,3],[0,1,0.5], 'same')
     np.convolve([1,2,3],[0,1,0.5], 'valid')
     rl = np.outer(np.ones((5,)), np.linspace(-2, 2, 5))
-    im = np.outer(1j*np.linspace(2, -2, 5), np.ones((5,)))
-    grid = rl + im
+    # im = np.outer(1j*np.linspace(2, -2, 5), np.ones((5,)))
+    # grid = rl + im
     x = np.array(['a', 'b', 'c'], dtype=object)
     np.outer(x, [1, 2, 3])
     a = np.arange(60.).reshape(3,4,5)
@@ -344,16 +327,7 @@ def test_numeric():
     # A slower but equivalent way of computing the same...
     d = np.zeros((5,2))
     a = np.array(range(1, 9))
-    a.shape = (2, 2, 2)
     A = np.array(('a', 'b', 'c', 'd'), dtype=object)
-    A.shape = (2, 2)
-    np.tensordot(a, A) # third argument default is 2 for double-contraction
-    np.tensordot(a, A, 1)
-    np.tensordot(a, A, 0) # tensor product (result too long to incl.)
-    np.tensordot(a, A, (0, 1))
-    np.tensordot(a, A, (2, 1))
-    np.tensordot(a, A, ((0, 1), (0, 1)))
-    np.tensordot(a, A, ((2, 1), (1, 0)))
     x = np.arange(10)
     np.roll(x, 2)
     x2 = np.reshape(x, (2,5))
@@ -390,12 +364,12 @@ def test_numeric():
     y = np.array([[7, 8, 9], [4,5,6], [1,2,3]])
     np.cross(x, y)
     np.cross(x, y, axisa=0, axisb=0)
-    np.array_repr(np.array([1,2]))
-    np.array_repr(np.ma.array([0.]))
-    np.array_repr(np.array([], np.int32))
+    # np.array_repr(np.array([1,2]))
+    # np.array_repr(np.ma.array([0.]))
+    # np.array_repr(np.array([], np.int32))
     x = np.array([1e-6, 4e-7, 2, 3])
-    np.array_repr(x, precision=6, suppress_small=True)
-    np.array_str(np.arange(3))
+    # np.array_repr(x, precision=6, suppress_small=True)
+    # np.array_str(np.arange(3))
     a = np.arange(10)
     x = np.arange(4)
     np.set_string_function(lambda x:'random', repr=False)
@@ -411,27 +385,27 @@ def test_numeric():
     np.isscalar(3.1)
     np.isscalar([3.1])
     np.isscalar(False)
-    np.binary_repr(3)
-    np.binary_repr(-3)
-    np.binary_repr(3, width=4)
-    np.binary_repr(-3, width=3)
-    np.binary_repr(-3, width=5)
-    np.base_repr(5)
-    np.base_repr(6, 5)
-    np.base_repr(7, base=5, padding=3)
-    np.base_repr(10, base=16)
-    np.base_repr(32, base=16)
+    # np.binary_repr(3)
+    # np.binary_repr(-3)
+    # np.binary_repr(3, width=4)
+    # np.binary_repr(-3, width=3)
+    # np.binary_repr(-3, width=5)
+    # np.base_repr(5)
+    # np.base_repr(6, 5)
+    # np.base_repr(7, base=5, padding=3)
+    # np.base_repr(10, base=16)
+    # np.base_repr(32, base=16)
     np.identity(3)
     np.allclose([1e10,1e-7], [1.00001e10,1e-8])
     np.allclose([1e10,1e-8], [1.00001e10,1e-9])
     np.allclose([1e10,1e-8], [1.0001e10,1e-9])
-    np.allclose([1.0, np.nan], [1.0, np.nan])
-    np.allclose([1.0, np.nan], [1.0, np.nan], equal_nan=True)
+    # np.allclose([1.0, np.nan], [1.0, np.nan])
+    # np.allclose([1.0, np.nan], [1.0, np.nan], equal_nan=True)
     np.isclose([1e10,1e-7], [1.00001e10,1e-8])
     np.isclose([1e10,1e-8], [1.00001e10,1e-9])
     np.isclose([1e10,1e-8], [1.0001e10,1e-9])
-    np.isclose([1.0, np.nan], [1.0, np.nan])
-    np.isclose([1.0, np.nan], [1.0, np.nan], equal_nan=True)
+    # np.isclose([1.0, np.nan], [1.0, np.nan])
+    # np.isclose([1.0, np.nan], [1.0, np.nan], equal_nan=True)
     np.array_equal([1, 2], [1, 2])
     np.array_equal(np.array([1, 2]), np.array([1, 2]))
     np.array_equal([1, 2], [1, 2, 3])
@@ -456,7 +430,7 @@ def test_fromnumeric():
     indices = [0, 1, 4]
     np.take(a, indices)
     a = np.array(a)
-    a[indices]
+    # a[indices]
     np.take(a, [[0, 1], [2, 3]])
     a = np.zeros((10, 2))
     b = a.T
@@ -550,10 +524,7 @@ def test_fromnumeric():
     np.squeeze(x).shape
     np.squeeze(x, axis=(2,)).shape
     a = np.arange(4).reshape(2,2)
-    a.diagonal()
-    a.diagonal(1)
     a = np.arange(8).reshape(2,2,2); a
-    a.diagonal(0, 0, 1)
     a[:,:,0] # main diagonal is [0 6]
     a[:,:,1] # main diagonal is [1 7]
     np.trace(np.eye(3))
@@ -568,11 +539,7 @@ def test_fromnumeric():
     np.ravel(x.T)
     np.ravel(x.T, order='A')
     a = np.arange(3)[::-1]; a
-    a.ravel(order='C')
-    a.ravel(order='K')
-    a = np.arange(12).reshape(2,3,2).swapaxes(1,2); a
-    a.ravel(order='C')
-    a.ravel(order='K')
+    # a = np.arange(12).reshape(2,3,2).swapaxes(1,2); a
     x = np.eye(3)
     np.nonzero(x)
     x[np.nonzero(x)]
@@ -580,7 +547,6 @@ def test_fromnumeric():
     a = np.array([[1,2,3],[4,5,6],[7,8,9]])
     a > 3
     np.nonzero(a > 3)
-    (a > 3).nonzero()
     np.shape(np.eye(3))
     np.shape([[1, 2]])
     np.shape([0])
@@ -604,15 +570,15 @@ def test_fromnumeric():
     np.sum([[0, 1], [0, 5]])
     np.sum([[0, 1], [0, 5]], axis=0)
     np.sum([[0, 1], [0, 5]], axis=1)
-    np.ones(128, dtype=np.int8).sum(dtype=np.int8)
-    np.any([[True, False], [True, True]])
-    np.any([[True, False], [False, False]], axis=0)
-    np.any([-1, 0, 5])
-    np.any(np.nan)
-    np.all([[True,False],[True,True]])
-    np.all([[True,False],[True,True]], axis=0)
-    np.all([-1, 4, 5])
-    np.all([1.0, np.nan])
+    # np.ones(128, dtype=np.int8).sum(dtype=np.int8)
+    # np.any([[True, False], [True, True]])
+    # np.any([[True, False], [False, False]], axis=0)
+    # np.any([-1, 0, 5])
+    # np.any(np.nan)
+    # np.all([[True,False],[True,True]])
+    # np.all([[True,False],[True,True]], axis=0)
+    # np.all([-1, 4, 5])
+    # np.all([1.0, np.nan])
     a = np.array([[1,2,3], [4,5,6]])
     np.cumsum(a)
     np.cumsum(a, dtype=float)     # specifies type of output value(s)
@@ -626,7 +592,7 @@ def test_fromnumeric():
     np.amax(a, axis=0)   # Maxima along the first axis
     np.amax(a, axis=1)   # Maxima along the second axis
     b = np.arange(5, dtype=np.float)
-    b[2] = np.NaN
+    # b[2] = np.NaN
     np.amax(b)
     np.nanmax(b)
     a = np.arange(4).reshape((2,2))
@@ -634,7 +600,7 @@ def test_fromnumeric():
     np.amin(a, axis=0)   # Minima along the first axis
     np.amin(a, axis=1)   # Minima along the second axis
     b = np.arange(5, dtype=np.float)
-    b[2] = np.NaN
+    # b[2] = np.NaN
     np.amin(b)
     np.nanmin(b)
     a = np.zeros((7,4,5))
@@ -647,9 +613,9 @@ def test_fromnumeric():
     np.prod([[1.,2.],[3.,4.]])
     np.prod([[1.,2.],[3.,4.]], axis=1)
     x = np.array([1, 2, 3], dtype=np.uint8)
-    np.prod(x).dtype == np.uint
+    # np.prod(x).dtype == np.uint
     x = np.array([1, 2, 3], dtype=np.int8)
-    np.prod(x).dtype == np.int
+    # np.prod(x).dtype == np.int
     a = np.array([1,2,3])
     np.cumprod(a) # intermediate results 1, 1*2
     a = np.array([[1, 2, 3], [4, 5, 6]])
@@ -696,8 +662,19 @@ def test_fromnumeric():
     np.var(a)
     np.var(a, dtype=np.float64)
 
+def generate_default_blacklist():
+    p = AutoBlacklistPolicy(gen_rule=True, append_rule=True)
+    with p:
+        test_ufunc()
+        test_numeric()
+        test_fromnumeric()
+    p.save_rules()
 
 if __name__ == '__main__':
+    p = AutoBlacklistPolicy(gen_rule=True, append_rule=True)
+    minpy.set_global_policy(p)
+    logging.getLogger('minpy.dispatch.policy').setLevel(logging.DEBUG)
     test_ufunc()
     test_numeric()
     test_fromnumeric()
+    logging.getLogger('minpy.dispatch.policy').setLevel(logging.WARN)
