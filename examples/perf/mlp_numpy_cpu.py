@@ -44,7 +44,7 @@ def backward(g, activations):
 def softmax(activation, one_hot):
     n = activation.shape[0]
     probs = activation - np.amax(activation, axis=1, keepdims=True)
-    loss = -np.sum(probs * one_hot + np.log(
+    loss = -np.sum(probs * one_hot - np.log(
         np.sum(np.exp(probs), axis=1, keepdims=True))) / n
     return loss
 
@@ -55,12 +55,23 @@ def accuracy(activation, label):
 
 
 def softmax_loss_gradient(activation, one_hot):
-    n = activation.shape[0]
-    probs = activation - np.amax(activation, axis=1, keepdims=True)
-    e = np.exp(probs)
-    p = e / np.sum(e, axis=1, keepdims=True)
-    q = p - one_hot
-    return q
+    if False:
+        n = activation.shape[0]
+        m = np.amax(activation, axis=1, keepdims=True)
+        probs = activation - m
+        exp = np.exp(probs)
+        loss = -np.sum(probs * one_hot - np.log(
+            np.sum(exp, axis=1, keepdims=True))) / n
+        g = -1 / n * (np.ones_like(activation) * one_hot - np.broadcast_to(
+            1 / np.sum(exp, axis=1, keepdims=True), activation.shape) * exp)
+        g = g * (1 - (np.broadcast_to(m, activation.shape) == activation))
+        return g
+    else:
+        probs = activation - np.amax(activation, axis=1, keepdims=True)
+        e = np.exp(probs)
+        p = e / np.sum(e, axis=1, keepdims=True)
+        q = p - one_hot
+        return q
 
 
 def main(args):
