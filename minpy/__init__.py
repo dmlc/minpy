@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#pylint: disable= invalid-name
+# pylint: disable= invalid-name
 from __future__ import absolute_import
 from minpy.dispatch.policy import PreferMXNetPolicy, OnlyNumPyPolicy, OnlyMXNetPolicy, wrap_policy
 from minpy.dispatch.policy import AutoBlacklistPolicy

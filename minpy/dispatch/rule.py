@@ -2,9 +2,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import atexit
 import yaml
 import numpy
-import atexit
 from minpy.array_variants import ArrayType
 from minpy.array import Array
 from minpy.array import Number
@@ -33,12 +33,14 @@ class RuleError(ValueError):
 class Rules(object):
     """Rules interface.
 
-    Rule instance acts like singleton.
+    Different rule instances act like a single singleton.
 
     Parameters
     ----------
     loc : str
         Path to rule configuration file.
+    save_config_atexit : bool
+        True will save config after the program exits.
     """
     _rules = None
     _hash = None
@@ -77,7 +79,8 @@ class Rules(object):
         if cls._rules is None or force:
             config = None
             locs = [os.curdir, os.path.expandvars(cls._env_var),
-                    os.path.expanduser('~')]
+                    os.path.expanduser('~'),
+                    os.path.join(os.path.dirname(__file__), '../utils/blacklist.yml')]
             locs = [os.path.join(loc, cls._conf_file) for loc in locs]
             if cls._loc is not None:
                 locs.insert(0, cls._loc)
@@ -89,17 +92,19 @@ class Rules(object):
                 except IOError:
                     pass
                 except yaml.YAMLError:
-                    _logger.warn('Find corrupted configuration at {}'.format(
-                        loc))
+                    _logger.warn('Find corrupted configuration at %s', filename)
             if config is None:
-                _logger.error("Cannot find MinPy's rule configuration {} "
-                              "at {}. You can also use {} to specify.".format(
-                                  cls._conf_file, locs, cls._env_var))
+                _logger.error("Cannot find MinPy's rule configuration %s at %s.", cls._conf_file, locs)
                 config = {}
             else:
-                _logger.info('Use rule configuration at %s', filename)
+                _logger.info('Load and use rule configuration at %s', filename)
             cls._rules = config
             cls._build_hash()
+
+    @property
+    def name(self):
+        """Return name of the policy"""
+        return self.__class__.__name__
 
     @classmethod
     def save_rules_config(cls):
@@ -218,7 +223,7 @@ class Blacklist(Rules):
             self._rules[name].append(entry)
             key = self._get_arg_rule_key(args, kwargs)
             self._hash[name].add(key)
-            _logger.info('New rule {} added.'.format(key))
+            _logger.info('New rule %s added.', key)
 
     @classmethod
     def _build_hash(cls):

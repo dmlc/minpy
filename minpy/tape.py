@@ -9,6 +9,7 @@ import contextlib
 import collections
 
 import numpy
+import mxnet
 
 from . import array
 from . import array_variants
@@ -110,8 +111,14 @@ class Tape(object):
     def _get_cached_gradient(self, arr):
         """Get cached gradient. Initialize if not exist."""
         if arr not in self._grads:
-            self._grads[arr] = array.Value.wrap(0.0 if isinstance(
-                arr, array.Number) else numpy.zeros(arr.shape))
+            if isinstance(arr, array.Number):
+                self._grads[arr] = array.Value.wrap(0.0)
+            elif arr.has_type(array_variants.ArrayType.MXNET):
+                with arr.context.as_mxnet_context():
+                    self._grads[arr] = array.Value.wrap(
+                        mxnet.nd.zeros(arr.shape))
+            else:
+                self._grads[arr] = array.Value.wrap(numpy.zeros(arr.shape))
         return self._grads[arr]
 
     def _cumulate_gradient(self, arr, grad):
@@ -151,10 +158,13 @@ class Tape(object):
                 def get_result_grad(result, primitive_type):
                     """Get gradient of result."""
                     if isinstance(result, array.Value):
-                        return self._get_cached_gradient(result).get_data(primitive_type)
+                        return self._get_cached_gradient(result).get_data(
+                            primitive_type)
                     else:
-                        return [get_result_grad(sub_result, primitive_type)
-                                for sub_result in result]
+                        return [
+                            get_result_grad(sub_result, primitive_type)
+                            for sub_result in result
+                        ]
 
                 def get_context(result):
                     """Get context of result."""
