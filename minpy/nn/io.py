@@ -240,12 +240,21 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays, internal use only"""
         assert (self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            return [x[1][self.cursor:self.cursor + self.batch_size]
-                    for x in data_source]
+            if isinstance(data_source[0][1], minpy.array.Array):
+                return [x[1][self.cursor:self.cursor + self.batch_size] for x in data_source]
+            elif isinstance(data_source[0][1], np.ndarray):
+                return [minpy.array.Array(x[1][self.cursor:self.cursor + self.batch_size]) for x in data_source]
+            else:
+                raise TypeError("Invalid data type, only numpy.ndarray and minpy.array.Array are allowed.")
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            return [minpy.array.Array(np.concatenate(
-                (x[1][self.cursor:].asnumpy(), x[1][:pad].asnumpy()), axis=0)) for x in data_source]
+            if isinstance(data_source[0][1], minpy.array.Array):
+                return [minpy.array.Array(np.concatenate((x[1][self.cursor:].asnumpy(), x[1][:pad].asnumpy()), axis=0)) for x in data_source]
+            elif isinstance(data_source[0][1], np.ndarray):
+                return [minpy.array.Array(np.concatenate((x[1][self.cursor:], x[1][:pad]), axis=0)) for x in data_source]
+            else:
+                raise TypeError("Invalid data type, only numpy.ndarray and minpy.array.Array are allowed.")
+
 
     def getdata(self):
         return self._getdata(self.data)

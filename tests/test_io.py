@@ -44,8 +44,8 @@ def test_NDArrayIter():
     batchidx = 0
     labelcount = [0 for i in range(10)]
     for batch in dataiter:
-        label = batch.label[0].flatten()
-        assert((batch.data[0][:,0,0] == label).all())
+        label = batch.label[0].asnumpy().flatten()
+        assert((batch.data[0][:,0,0].asnumpy() == label).all())
         for i in range(label.shape[0]):
             labelcount[int(label[i])] += 1
     for i in range(10):
