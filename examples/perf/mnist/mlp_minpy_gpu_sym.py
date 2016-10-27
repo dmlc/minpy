@@ -19,7 +19,7 @@ context.set_context(context.gpu(0))
 # logging.getLogger('minpy.core').setLevel(logging.DEBUG)
 # logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 
-batch_size = 256
+batch_size = 128
 flattened_input_size = 784
 hidden_size = 256
 num_classes = 10
@@ -37,18 +37,20 @@ class TwoLayerNet(minpy.nn.model.ModelBase):
         net = mx.sym.Activation(data=net, act_type='relu')
         net = mx.sym.FullyConnected(
             data=net, name='fc2', num_hidden=num_classes)
+        net = mx.sym.SoftmaxOutput(net, name='softmax')
         # Wrap the final symbol into a function.
-        self.fwd_fn = minpy.core.Function(
-            net, input_shapes={'X': (batch_size, flattened_input_size)})
+        input_shapes={'X': (batch_size, flattened_input_size), 'softmax_label': (batch_size,)}
+        self.fwd_fn = minpy.core.Function(net, input_shapes=input_shapes)
         # Add parameters.
         self.add_params(self.fwd_fn.get_params())
 
     def forward(self, X, mode):
-        return self.fwd_fn(X=X, **self.params)
+        return X
 
-    def loss(self, predict, y):
+    def loss(self, X, y):
+        predict = self.fwd_fn(X=X, softmax_label=y, **self.params)
         # Compute softmax loss between the output and the label.
-        return layers.softmax_loss(predict, y)
+        return layers.softmax_cross_entropy(predict, y)
 
 
 def main(args):

@@ -6,7 +6,7 @@ import time
 
 from minpy.nn import optim, init
 from minpy import core
-import numpy as np
+import minpy.numpy as np
 
 
 class Solver(object):
@@ -223,7 +223,7 @@ class Solver(object):
                 np.argmax(
                     predict, axis=1) == each_batch.label[0])
             num_samples += check_dataiter.batch_size
-        return float(acc_count) / num_samples
+        return float(acc_count.asnumpy()) / num_samples
 
     def init(self):
         """
