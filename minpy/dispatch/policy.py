@@ -58,6 +58,16 @@ class Policy(object):
         """
         raise NotImplementedError()
 
+    def __init__(self):
+        self._mxnet_op_cnt = 0
+        self._numpy_op_cnt = 0
+
+    def op_stat(self):
+        total_cnt = self._mxnet_op_cnt + self._numpy_op_cnt
+        return 'No op statistics available' if total_cnt == 0 else 'Op Dispatch Statistics: {:.1%} in MXNet, {:.1%} in Numpy'.format(
+            self._mxnet_op_cnt * 1.0 / total_cnt,
+            self._numpy_op_cnt * 1.0 / total_cnt)
+
     @property
     def name(self):
         """Return policy name"""
@@ -83,13 +93,15 @@ class Policy(object):
             return x
 
         bp_args = tuple(
-            map(fst, filter(
-                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                enumerate(args))))
+            map(fst,
+                filter(
+                    lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
+                    enumerate(args))))
         bp_kwargs = tuple(
-            map(fst, filter(
-                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                kwargs.items())))
+            map(fst,
+                filter(
+                    lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
+                    kwargs.items())))
         available = reg.iter_available_types(name, bp_args, bp_kwargs)
         return available
 
@@ -113,7 +125,11 @@ class Policy(object):
         """
         available = self._available_prims(name, reg, args, kwargs)
         preference = self.decide(available, args, kwargs)
-        if preference is None:
+        if preference == ArrayType.MXNET:
+            self._mxnet_op_cnt += 1
+        elif preference == ArrayType.NUMPY:
+            self._numpy_op_cnt += 1
+        elif preference is None:
             raise PrimitivePolicyError(name, self.name)
         prim = reg.get(name, preference)
         _logger.debug('Found primitive "{}" with type {}.'.format(
@@ -139,6 +155,7 @@ class AutoBlacklistPolicy(Policy):
     """
 
     def __init__(self, gen_rule=False, append_rule=True, loc=None):
+        super(AutoBlacklistPolicy, self).__init__()
         self._gen_rule = gen_rule
         self._rules = Blacklist(loc=loc, save_config_atexit=gen_rule)
         if gen_rule and not append_rule:
@@ -157,22 +174,27 @@ class AutoBlacklistPolicy(Policy):
                 try:
                     _logger.debug('Try primitive {} with MXNet '
                                   'implementation.'.format(name))
+                    self._mxnet_op_cnt += 1
                     return get_result(ArrayType.MXNET)
                 except Exception as err:
+                    self._mxnet_op_cnt -= 1
                     if ArrayType.NUMPY in possible_impl:
                         _logger.info('Error occurs. Try primitive {} with '
                                      'NumPy implementation'.format(name))
                         self._rules.add(name, ArrayType.MXNET, args, kwargs)
+                        self._numpy_op_cnt += 1
                         return get_result(ArrayType.NUMPY)
                     else:
                         raise err
             else:
                 _logger.debug('Execute primitive {} with '
                               'MXNet implementation'.format(name))
+                self._mxnet_op_cnt += 1
                 return get_result(ArrayType.MXNET)
         elif ArrayType.NUMPY in possible_impl:
             _logger.debug('Execute primitive {} with '
                           'NumPy implementation'.format(name))
+            self._numpy_op_cnt += 1
             return get_result(ArrayType.NUMPY)
         else:
             raise PrimitivePolicyError(name, self.name)
@@ -184,6 +206,9 @@ class AutoBlacklistPolicy(Policy):
 
 class PreferMXNetPolicy(Policy):
     """ Prefer using MXNet functions. Return None if no required function. """
+
+    def __init__(self):
+        super(PreferMXNetPolicy, self).__init__()
 
     def decide(self, candidates, args, kwargs):
         possible_impl = set(x.type for x in candidates)
@@ -198,6 +223,9 @@ class PreferMXNetPolicy(Policy):
 class OnlyNumPyPolicy(Policy):
     """ Only use NumPy functions. Return None if no required function. """
 
+    def __init__(self):
+        super(OnlyNumPyPolicy, self).__init__()
+
     def decide(self, candidates, args, kwargs):
         if ArrayType.NUMPY in tuple(x.type for x in candidates):
             return ArrayType.NUMPY
@@ -207,6 +235,9 @@ class OnlyNumPyPolicy(Policy):
 
 class OnlyMXNetPolicy(Policy):
     """ Only use MXNet functions. Return None if no required function. """
+
+    def __init__(self):
+        super(OnlyMXNetPolicy, self).__init__()
 
     def decide(self, candidates, args, kwargs):
         if ArrayType.MXNET in tuple(x.type for x in candidates):
