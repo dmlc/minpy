@@ -44,9 +44,9 @@ class Primitive(object):
         ty
             Type of primitive.
         mutate_args
-            Whether the function mutates arguments.
+            The indices of arguments that need to be mutated.
         mutate_kw
-            Whether the function mutates arguments.
+            The keywords of arguments that need to be mutated.
         """
         self._func = func
         self._grad_func = {}
@@ -59,7 +59,8 @@ class Primitive(object):
     def type(self):
         """Return the type of the primitive.
 
-        Either :attribute:`ArrayType.NUMPY` or :attribute:`ArrayType.MXNET`."""
+        Either :attribute:`ArrayType.NUMPY` or :attribute:`ArrayType.MXNET`.
+        """
         return self._type
 
     @property
@@ -168,16 +169,20 @@ class Primitive(object):
                         'Adding partial derivative to func "{}" on argument {}.'.
                         format(self._func, i))
                     grad_func_rec = self._grad_func[i]
+                    # Save forward results and arguments in the gradient function closure
+                    # for later use.
                     grad_func = grad_func_rec.f(result_value, *arg_values,
                                                 **kwargs_values)
                     if grad_func_rec.multi_grad_indices is None:
+                        # Derivative function of each argument is defined separately.
                         owner = arg
                     else:
+                        # Derivative function could compute gradients of multiple arguments
+                        # in one call.
                         owner = []
                         for grad_index in grad_func_rec.multi_grad_indices:
-                            if isinstance(args[grad_index],
-                                          array.Value) and args[
-                                              grad_index].marked_for_bp:
+                            if (isinstance(args[grad_index], array.Value) and
+                                args[grad_index].marked_for_bp):
                                 owner.append(args[grad_index])
                             else:
                                 owner.append(None)
@@ -280,5 +285,5 @@ class Primitive(object):
         bool
             Whether all the arguments have gradients defined.
         """
-        return  all(i in self._grad_func for i in bp_args) and \
-                all(i in self._grad_func_kw for i in bp_kwargs)
+        return all(i in self._grad_func for i in bp_args) and \
+               all(i in self._grad_func_kw for i in bp_kwargs)

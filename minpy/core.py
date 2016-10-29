@@ -156,7 +156,6 @@ class Function(object):
     def __call__(self, **kwargs):
         # Remove arguments that are not defined in symbol's argument
         # list.
-        filtered_kwargs = {}
         ordered_args = [(kwargs[name] if name in kwargs else None)
                         for name in self._symbol.list_arguments()]
         return self._prim(*ordered_args)

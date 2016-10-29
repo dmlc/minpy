@@ -78,6 +78,24 @@ def test_mxnet_affine():
     gradient_checker.quick_grad_check(check_fn, weights, rs=rng)
 
 
+def test_mxnet_softmax():
+    xshape = (10, 40)
+    fake_y = np.zeros([10,])
+    x = rng.randn(*xshape)
+
+    net = mx.sym.Variable(name='x')
+    net = mx.sym.FullyConnected(net, name='fc', num_hidden=20)
+    net = mx.sym.SoftmaxOutput(net, name='softmax', normalization='batch')
+    f = core.Function(net, {'x': xshape, 'softmax_label': fake_y.shape})
+
+    def check_fn(weights):
+        return layers.softmax_cross_entropy(
+                f(x=x, softmax_label=fake_y, fc_weight=weights),
+                fake_y)
+    weights = rng.randn(20, 40) * 0.01
+
+    gradient_checker.quick_grad_check(check_fn, weights, rs=rng)
+
 def test_caffe_concat():
     xshape_0 = (10, 40)
     xshape_1 = (10, 30)
@@ -107,6 +125,7 @@ def main():
     test_batchnorm()
     test_softmax()
     test_mxnet_affine()
+    test_mxnet_softmax()
     #test_caffe_concat()
 
 

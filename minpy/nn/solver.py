@@ -162,16 +162,12 @@ class Solver(object):
         Make a single gradient update. This is called by train() and should not
         be called manually.
         """
-        # Get a minibatch of training data
-        X_batch = batch.data[0]
-        y_batch = batch.label[0]
-
         # Compute loss and gradient
         def loss_func(*params):
             # It seems that params are not used in forward function. But since we will pass
             # model.params as arguments, we are ok here.
-            predict = self.model.forward(X_batch, mode='train')
-            return self.model.loss(predict, y_batch)
+            predict = self.model.forward_batch(batch, mode='train')
+            return self.model.loss_batch(batch, predict)
 
         param_arrays = list(self.model.params.values())
         param_keys = list(self.model.params.keys())
@@ -217,8 +213,9 @@ class Solver(object):
         acc_count = 0
         num_samples = 0
         for each_batch in check_dataiter:
-            predict = self.model.forward(
-                each_batch.data[0], mode='test').asnumpy()
+            predict = self.model.forward_batch(
+                each_batch, mode='test').asnumpy()
+            # TODO(minjie): multiple labels.
             acc_count += np.sum(
                 np.argmax(
                     predict, axis=1) == each_batch.label[0])
