@@ -65,8 +65,8 @@ class Policy(object):
     def op_stat(self):
         total_cnt = self._mxnet_op_cnt + self._numpy_op_cnt
         return 'No op statistics available' if total_cnt == 0 else 'Op Dispatch Statistics: {:.1%} in MXNet, {:.1%} in Numpy'.format(
-            self._mxnet_op_cnt * 1.0 / total_cnt, self._numpy_op_cnt * 1.0 /
-            total_cnt)
+            self._mxnet_op_cnt * 1.0 / total_cnt,
+            self._numpy_op_cnt * 1.0 / total_cnt)
 
     @property
     def name(self):
@@ -155,6 +155,7 @@ class AutoBlacklistPolicy(Policy):
     """
 
     def __init__(self, gen_rule=False, append_rule=True, loc=None):
+        super(AutoBlacklistPolicy, self).__init__()
         self._gen_rule = gen_rule
         self._rules = Blacklist(loc=loc, save_config_atexit=gen_rule)
         if gen_rule and not append_rule:
@@ -173,22 +174,27 @@ class AutoBlacklistPolicy(Policy):
                 try:
                     _logger.debug('Try primitive {} with MXNet '
                                   'implementation.'.format(name))
+                    self._mxnet_op_cnt += 1
                     return get_result(ArrayType.MXNET)
                 except Exception as err:
+                    self._mxnet_op_cnt -= 1
                     if ArrayType.NUMPY in possible_impl:
                         _logger.info('Error occurs. Try primitive {} with '
                                      'NumPy implementation'.format(name))
                         self._rules.add(name, ArrayType.MXNET, args, kwargs)
+                        self._numpy_op_cnt += 1
                         return get_result(ArrayType.NUMPY)
                     else:
                         raise err
             else:
                 _logger.debug('Execute primitive {} with '
                               'MXNet implementation'.format(name))
+                self._mxnet_op_cnt += 1
                 return get_result(ArrayType.MXNET)
         elif ArrayType.NUMPY in possible_impl:
             _logger.debug('Execute primitive {} with '
                           'NumPy implementation'.format(name))
+            self._numpy_op_cnt += 1
             return get_result(ArrayType.NUMPY)
         else:
             raise PrimitivePolicyError(name, self.name)
