@@ -39,8 +39,14 @@ class PrimitivePolicyError(ValueError):
 class Policy(object):
     """Policy interface."""
 
-    def decide(self, candidates, args, kwargs):
+    def __init__(self):
+        self._mxnet_op_cnt = 0
+        self._numpy_op_cnt = 0
+
+    def _decide(self, candidates, args, kwargs):
         """Primitive decision policy interface.
+
+        Note that this method is only used for default resolve_call.
 
         Parameters
         ----------
@@ -58,15 +64,15 @@ class Policy(object):
         """
         raise NotImplementedError()
 
-    def __init__(self):
-        self._mxnet_op_cnt = 0
-        self._numpy_op_cnt = 0
-
     def op_stat(self):
+        """Print policy dispatch statistics."""
         total_cnt = self._mxnet_op_cnt + self._numpy_op_cnt
-        return 'No op statistics available' if total_cnt == 0 else 'Op Dispatch Statistics: {:.1%} in MXNet, {:.1%} in Numpy'.format(
-            self._mxnet_op_cnt * 1.0 / total_cnt,
-            self._numpy_op_cnt * 1.0 / total_cnt)
+        if total_cnt == 0:
+            return 'No operator statistics available.'
+        else:
+            return 'Operator Dispatch Statistics: {:.1%} in MXNet, {:.1%} in NumPy'.format(
+                float(self._mxnet_op_cnt) / total_cnt,
+                float(self._numpy_op_cnt) / total_cnt)
 
     @property
     def name(self):
@@ -93,15 +99,13 @@ class Policy(object):
             return x
 
         bp_args = tuple(
-            map(fst,
-                filter(
-                    lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                    enumerate(args))))
+            map(fst, filter(
+                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
+                enumerate(args))))
         bp_kwargs = tuple(
-            map(fst,
-                filter(
-                    lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                    kwargs.items())))
+            map(fst, filter(
+                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
+                kwargs.items())))
         available = reg.iter_available_types(name, bp_args, bp_kwargs)
         return available
 
@@ -124,7 +128,7 @@ class Policy(object):
         Result from appropriate function call.
         """
         available = self._available_prims(name, reg, args, kwargs)
-        preference = self.decide(available, args, kwargs)
+        preference = self._decide(available, args, kwargs)
         if preference == ArrayType.MXNET:
             self._mxnet_op_cnt += 1
         elif preference == ArrayType.NUMPY:
@@ -207,10 +211,7 @@ class AutoBlacklistPolicy(Policy):
 class PreferMXNetPolicy(Policy):
     """ Prefer using MXNet functions. Return None if no required function. """
 
-    def __init__(self):
-        super(PreferMXNetPolicy, self).__init__()
-
-    def decide(self, candidates, args, kwargs):
+    def _decide(self, candidates, args, kwargs):
         possible_impl = set(x.type for x in candidates)
         if ArrayType.MXNET in possible_impl:
             return ArrayType.MXNET
@@ -223,10 +224,7 @@ class PreferMXNetPolicy(Policy):
 class OnlyNumPyPolicy(Policy):
     """ Only use NumPy functions. Return None if no required function. """
 
-    def __init__(self):
-        super(OnlyNumPyPolicy, self).__init__()
-
-    def decide(self, candidates, args, kwargs):
+    def _decide(self, candidates, args, kwargs):
         if ArrayType.NUMPY in tuple(x.type for x in candidates):
             return ArrayType.NUMPY
         else:
@@ -236,10 +234,7 @@ class OnlyNumPyPolicy(Policy):
 class OnlyMXNetPolicy(Policy):
     """ Only use MXNet functions. Return None if no required function. """
 
-    def __init__(self):
-        super(OnlyMXNetPolicy, self).__init__()
-
-    def decide(self, candidates, args, kwargs):
+    def _decide(self, candidates, args, kwargs):
         if ArrayType.MXNET in tuple(x.type for x in candidates):
             return ArrayType.MXNET
         else:
