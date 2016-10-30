@@ -35,15 +35,18 @@ class TwoLayerNet(minpy.nn.model.ModelBase):
         net = mx.sym.Activation(data=net, act_type='relu')
         net = mx.sym.FullyConnected(
             data=net, name='fc2', num_hidden=10)
-        net = mx.sym.SoftmaxOutput(net)
+        net = mx.sym.SoftmaxOutput(net, name='softmax', normalization='batch')
         # Wrap the final symbol into a function.
-        self.fwd_fn = minpy.core.Function(
-            net, input_shapes={'X': (args.batch_size, 784)})
+        input_shapes={'X': (args.batch_size, 784),
+                      'softmax_label': (args.batch_size,)}
+        self.fwd_fn = minpy.core.Function(net, input_shapes=input_shapes)
         # Add parameters.
         self.add_params(self.fwd_fn.get_params())
 
-    def forward(self, X, mode):
-        return self.fwd_fn(X=X, **self.params)
+    def forward_batch(self, batch, mode):
+        return self.fwd_fn(X=batch.data[0],
+                           softmax_label=batch.label[0],
+                           **self.params)
 
     def loss(self, predict, y):
         # Compute softmax loss between the output and the label.
@@ -58,15 +61,16 @@ def main(args):
 
     img = np.zeros((args.batch_size, 784))
     label = np.zeros((args.batch_size,))
+    batch = minpy.nn.io.DataBatch([img], [label])
 
     start = time.time()
     for l in range(num_loops):
         print('loop', l)
         def loss_func(*params):
-            f = model.forward(img, 'train')
+            f = model.forward_batch(batch, 'train')
             return model.loss(f, label)
         if args.only_forward:
-            loss_func()
+            loss = loss_func()
             loss.asnumpy()
         else:
             param_arrays = list(model.params.values())

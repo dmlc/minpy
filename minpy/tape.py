@@ -118,6 +118,7 @@ class Tape(object):
                     self._grads[arr] = array.Value.wrap(
                         mxnet.nd.zeros(arr.shape))
             else:
+                # TODO(minjie): the initialization may incur memcopy.
                 self._grads[arr] = array.Value.wrap(numpy.zeros(arr.shape))
         return self._grads[arr]
 
@@ -133,7 +134,7 @@ class Tape(object):
                 self._grads[arr] = current_gradient
             elif arr is not None:
                 if len(arr) != len(grad):
-                    _logger.warning('Number of gradients does not match.')
+                    _logger.fatal('Number of gradients does not match.')
                 for sub_arr, sub_grad in zip(arr, grad):
                     add_gradient(sub_arr, sub_grad)
 

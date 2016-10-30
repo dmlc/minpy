@@ -37,18 +37,19 @@ class TwoLayerNet(minpy.nn.model.ModelBase):
         net = mx.sym.Activation(data=net, act_type='relu')
         net = mx.sym.FullyConnected(
             data=net, name='fc2', num_hidden=num_classes)
-        net = mx.sym.SoftmaxOutput(net, name='softmax')
+        net = mx.sym.SoftmaxOutput(net, name='softmax', normalization='batch')
         # Wrap the final symbol into a function.
         input_shapes={'X': (batch_size, flattened_input_size), 'softmax_label': (batch_size,)}
         self.fwd_fn = minpy.core.Function(net, input_shapes=input_shapes)
         # Add parameters.
         self.add_params(self.fwd_fn.get_params())
 
-    def forward(self, X, mode):
-        return X
+    def forward_batch(self, batch, mode):
+        return self.fwd_fn(X=batch.data[0],
+                           softmax_label=batch.label[0],
+                           **self.params)
 
-    def loss(self, X, y):
-        predict = self.fwd_fn(X=X, softmax_label=y, **self.params)
+    def loss(self, predict, y):
         # Compute softmax loss between the output and the label.
         return layers.softmax_cross_entropy(predict, y)
 
@@ -80,7 +81,7 @@ def main(args):
         model,
         train_dataiter,
         train_dataiter,
-        num_epochs=10,
+        num_epochs=20,
         init_rule='gaussian',
         init_config={'stdvar': 0.001},
         update_rule='sgd_momentum',

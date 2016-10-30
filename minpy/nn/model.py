@@ -49,9 +49,53 @@ class ModelBase(object):
         self.aux_param_configs[name] = value
         return self
 
+    def forward_batch(self, batch, mode):
+        """Do forward propagation.
+
+        This is a more general interface than `forward` which only uses one input data.
+
+        Parameters
+        ---------
+        batch
+            A dictionary containing data/labels of the current batch.
+            `batch.data` will return a list of arrays representing all the input data.
+            `batch.label` will return a list of arrays representing all the input labels.
+        mode
+            A mode string that is either 'train' or 'test'.
+
+        Returns
+        ------
+        Array
+            Output of the model. TODO(minjie): support multiple outputs.
+        """
+        # Default implementation is to use only the first input data.
+        return self.forward(batch.data[0], mode)
+
+    def loss_batch(self, batch, forward_outputs):
+        """Calculate the loss value of the current batch.
+
+        This is a more general interface than `loss` which only uses one label.
+
+        Parameters
+        ---------
+        batch
+            A dictionary containing data/labels of the current batch.
+            `batch.data` will return a list of arrays representing all the input data.
+            `batch.label` will return a list of arrays representing all the input labels.
+        forward_outputs
+            An array representing the output of the model. TODO(minjie): support multiple outputs.
+
+        Returns
+        ------
+        Value
+            Loss value.
+        """
+        # Default implementation is to use only the first label.
+        return self.loss(forward_outputs, batch.label[0])
+
     @abc.abstractmethod
     def forward(self, X, mode):
-        """  do forward and output the loss
+        """Do forward propagation.
 
         :param X: input vector
         :param mode: a mode string either 'train' or 'test'
@@ -61,6 +105,20 @@ class ModelBase(object):
 
     @abc.abstractmethod
     def loss(self, predict, y):
+        """Return the loss value given the output of the model.
+
+        Parameters
+        ----------
+        predict
+            An array representing the output of the model (return by `forward`).
+        y
+            Label of the current batch.
+
+        Returns
+        -------
+        Value
+            Loss value.
+        """
         return
 
     def save(self, prefix):

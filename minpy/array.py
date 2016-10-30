@@ -411,14 +411,14 @@ class Array(Value):
         """Synchronize the data of different array types. """
         if self._latest_version == ArrayType.MXNET:
             _logger.info(
-                'Copy from MXNet array to NumPy array for Array "{}".'.format(
-                    id(self)))
+                'Copy from MXNet array to NumPy array for Array "{}" of shape {}.'
+                .format(id(self), self.shape))
             mxarray = self._data[ArrayType.MXNET]
             self._data[ArrayType.NUMPY] = mxarray.asnumpy()
         elif self._latest_version == ArrayType.NUMPY:
             _logger.info(
-                'Copy from NumPy array to MXNet array for Array "{}".'.format(
-                    id(self)))
+                'Copy from NumPy array to MXNet array for Array "{}" of shape {}.'
+                .format(id(self), self.shape))
             nparray = self._data[ArrayType.NUMPY]
             self._data[ArrayType.MXNET] = mxnet.ndarray.array(
                 nparray, ctx=self._context.as_mxnet_context())

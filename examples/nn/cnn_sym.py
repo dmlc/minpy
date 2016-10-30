@@ -43,18 +43,20 @@ class ConvolutionNet(ModelBase):
                 data=net, act_type='relu')
         net = mx.sym.FullyConnected(
                 data=net, name='fc2', num_hidden=num_classes)
+        net = mx.sym.SoftmaxOutput(data=net, name='softmax', normalization='batch')
         # Create forward function and add parameters to this model.
-        self.cnn = Function(
-                net, input_shapes={'X': (batch_size,) + input_size},
-                name='cnn')
+        input_shapes = {'X': (batch_size,) + input_size, 'softmax_label': (batch_size,)}
+        self.cnn = Function(net, input_shapes=input_shapes, name='cnn')
         self.add_params(self.cnn.get_params())
 
-    def forward(self, X, mode):
-        out = self.cnn(X=X, **self.params)
+    def forward_batch(self, batch, mode):
+        out = self.cnn(X=batch.data[0],
+                       softmax_label=batch.label[0],
+                       **self.params)
         return out
 
     def loss(self, predict, y):
-        return layers.softmax_loss(predict, y)
+        return layers.softmax_cross_entropy(predict, y)
 
 def main(args):
     # Create model.
