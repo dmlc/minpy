@@ -18,26 +18,34 @@ np.set_policy(minpy.dispatch.policy.OnlyNumPyPolicy())
 # logging.getLogger('minpy.core').setLevel(logging.DEBUG)
 # logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 
-num_loops = 100
+num_loops = 10
 
 class TwoLayerNet(minpy.nn.model.ModelBase):
     def __init__(self, args):
         super(TwoLayerNet, self).__init__()
-        self.add_param(name='w1', shape=(784, args.hidden_size)) \
-            .add_param(name='b1', shape=(args.hidden_size,)) \
-            .add_param(name='w2', shape=(args.hidden_size, 10)) \
-            .add_param(name='b2', shape=(10,))
+        self.add_param(name='wi', shape=(784, args.hidden_size)) \
+            .add_param(name='bi', shape=(args.hidden_size,))
+        for i in range(args.num_hidden - 1):
+            self.add_param(name='w%d' % i, shape=(args.hidden_size, args.hidden_size)) \
+                .add_param(name='b%d' % i, shape=(args.hidden_size,))
+        self.add_param(name='wo', shape=(args.hidden_size, 10)) \
+            .add_param(name='bo', shape=(10,))
         self.batch_size = args.batch_size
+        self.num_hidden = args.num_hidden
 
     def forward(self, X, mode):
         # Flatten the input data to matrix.
         X = np.reshape(X, (self.batch_size, 784))
         # First affine layer (fully-connected layer).
-        y1 = layers.affine(X, self.params['w1'], self.params['b1'])
+        y1 = layers.affine(X, self.params['wi'], self.params['bi'])
         # ReLU activation.
         y2 = layers.relu(y1)
+        # Hidden layers.
+        for i in range(self.num_hidden - 1):
+            y2 = layers.affine(y2, self.params['w%d' % i], self.params['b%d' % i])
+            y2 = layers.relu(y2)
         # Second affine layer.
-        y3 = layers.affine(y2, self.params['w2'], self.params['b2'])
+        y3 = layers.affine(y2, self.params['wo'], self.params['bo'])
         return y3
 
     def loss(self, predict, y):
@@ -60,7 +68,7 @@ def main(args):
             f = model.forward(img, 'train')
             return model.loss(f, label)
         if args.only_forward:
-            loss_func()
+            loss = loss_func()
             loss.asnumpy()
         else:
             param_arrays = list(model.params.values())
@@ -79,4 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--only-forward', default=False, action='store_true')
     parser.add_argument('--batch-size', default=256, type=int)
     parser.add_argument('--hidden-size', default=256, type=int)
-    main(parser.parse_args())
+    parser.add_argument('--num-hidden', default=1, type=int)
+    import profile
+    profile.run('main(parser.parse_args())')
+    #main(parser.parse_args())

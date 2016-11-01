@@ -9,7 +9,7 @@ import numpy as np
 num_loops = 100
 
 def init(args):
-    layers = [784, args.hidden_size, 10]
+    layers = [784] + [args.hidden_size] * args.num_hidden + [10]
     biases = [np.random.normal(scale=0.001, size=(1, x)) for x in layers[1:]]
     weights = [
         np.random.normal(
@@ -101,4 +101,5 @@ if __name__ == '__main__':
     parser.add_argument('--only-forward', default=False, action='store_true')
     parser.add_argument('--batch-size', default=256, type=int)
     parser.add_argument('--hidden-size', default=256, type=int)
+    parser.add_argument('--num-hidden', default=1, type=int)
     main(parser.parse_args())
