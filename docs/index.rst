@@ -10,8 +10,8 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
 
     get-started/install.rst
     get-started/logistic_regression.rst
-    tutorial/autograd_tutorial.ipynb
     tutorial/ndarray_tutorial.ipynb
+    tutorial/autograd_tutorial.ipynb
 
 .. toctree::
     :maxdepth: 2
@@ -19,6 +19,7 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     :glob:
 
     tutorial/complete_sol_opt_guide/complete.rst
+    tutorial/cnn_tutorial/cnn_tutorial.rst
     tutorial/rnn_tutorial/rnn_tutorial.rst
     tutorial/rnn_mnist.ipynb
     tutorial/rl_policy_gradient_tutorial/rl_policy_gradient.rst
