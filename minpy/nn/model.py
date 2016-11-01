@@ -1,5 +1,4 @@
 """ Model base class codes. Adapted from cs231n lab codes. """
-import abc
 import functools
 import minpy
 import numpy
@@ -14,8 +13,7 @@ class UnknownAccessModeError(ValueError):
     pass
 
 class ModelBase(object):
-    __metaclass__ = abc.ABCMeta
-
+    """Base class for describing a neural network model."""
     def __init__(self):
         self.params = {}
         self.param_configs = {}
@@ -93,7 +91,6 @@ class ModelBase(object):
         # Default implementation is to use only the first label.
         return self.loss(forward_outputs, batch.label[0])
 
-    @abc.abstractmethod
     def forward(self, X, mode):
         """Do forward propagation.
 
@@ -101,9 +98,8 @@ class ModelBase(object):
         :param mode: a mode string either 'train' or 'test'
         :return: output vector
         """
-        return
+        raise NotImplementedError()
 
-    @abc.abstractmethod
     def loss(self, predict, y):
         """Return the loss value given the output of the model.
 
@@ -119,7 +115,7 @@ class ModelBase(object):
         Value
             Loss value.
         """
-        return
+        raise NotImplementedError()
 
     def save(self, prefix):
         """Save model params into file.
