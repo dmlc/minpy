@@ -8,17 +8,22 @@ env:
   # run examples/
   - TASK=example_test
 
+# TODO: Add Mxnet Compilation
+
 addons:
   apt:
     packages:
     - libblas-dev
     - liblapack-dev
     - gfortran
+
 python:
   - "2.7"
   - "3.5"
+
 script:
   - ./travis/run_test.sh
+
 deploy:
   provider: pypi
   user: hotpxl
