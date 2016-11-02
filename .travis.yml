@@ -1,15 +1,24 @@
+sudo: false
+
+language: python
+
+env:
+  # code style
+  - TASK=lint
+  # run examples/
+  - TASK=example_test
+
 addons:
   apt:
     packages:
     - libblas-dev
     - liblapack-dev
     - gfortran
-language: python
 python:
-- "2.7"
-- "3.5"
+  - "2.7"
+  - "3.5"
 script:
-- python ./dmlc-core/scripts/lint.py python minpy
+  - ./travis/run_test.sh
 deploy:
   provider: pypi
   user: hotpxl
