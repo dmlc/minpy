@@ -26,12 +26,14 @@ GradRecord = collections.namedtuple(
 class Tape(object):
     """Records gradient calculation."""
     global_tape = None
+    timestamp = 0
 
     def __init__(self):
         # Stores grad value result from target back to [KEY]. Array -> grad result (Array)
         self._grads = {}
         # Store derivation graph of gradients. Array -> list of grad records (or record tuples)
         self._array_grad_records = {}
+        self.__class__.timestamp += 1
 
     def add_partial_derivative(self, grad_func, owner, result, primitive_type):
         """Add partial derivative.
