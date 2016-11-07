@@ -10,6 +10,7 @@ import collections
 
 import mxnet
 import numpy
+import minpy
 
 from .array_variants import ArrayType
 from .array_variants import array_types
@@ -33,7 +34,9 @@ class Value(object):
     _ns = None
 
     def __init__(self, marked, context):
-        self._marked_for_bp = marked
+        self._bp_timestamp = -1
+        if marked:
+            self.set_bp()
         if context is None:
             self._context = current_context()
         else:
@@ -42,7 +45,12 @@ class Value(object):
     @property
     def marked_for_bp(self):
         """Return whether the current `Value` will be used for autograd."""
-        return self._marked_for_bp
+        return minpy.tape.global_tape() is not None and self._bp_timestamp == minpy.tape.global_tape().timestamp
+
+    def set_bp(self):
+        """Set flag to record gradient information."""
+        assert minpy.tape.global_tape is not None, "No active Tape found."
+        self._bp_timestamp = minpy.tape.global_tape().timestamp
 
     @property
     def context(self):
