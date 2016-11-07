@@ -38,18 +38,15 @@ def grad_and_loss(func, argnum=0):
         """Wrapped function."""
         arrays = tuple(Value.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
-        for i in argnums:
-            arrays[i]._marked_for_bp = True
         with tape.tape() as current_tape:
+            for i in argnums:
+                arrays[i].set_bp()
             result_array = func(*arrays)
             _logger.debug('Forward pass finished. Start backward pass.')
             current_tape.set_gradient_target(result_array)
             grad_vals = [current_tape.get_gradient(arrays[i]) for i in argnums]
             if len(grad_vals) == 1:
                 grad_vals = grad_vals[0]
-        for i in argnums:
-            arrays[i]._marked_for_bp = False
-        result_array._marked_for_bp = False
         return grad_vals, result_array
 
     return wrapped
