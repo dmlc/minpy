@@ -113,13 +113,16 @@ class Parallel(Container):
 
 class Affine(Module):
     count = 0
-    def __init__(self, hidden_number, initializer=None):
+    def __init__(self, hidden_number, no_bias=False, initializer=None):
         """ Fully connected layer. (affine transformation)
 
         param int hidden_number: number of hidden units.
         """
         super(Affine, self).__init__()
+
         self._hidden_number = hidden_number 
+        self._no_bias = no_bias
+
         self._weight = 'fullyconnected%d_weight' % self.__class__.count
         self._bias   = 'fullyconnected%d_bias' % self.__class__.count
 
@@ -128,7 +131,11 @@ class Affine(Module):
         self.__class__.count += 1
 
     def forward(self, inputs, params):
-        return layers.affine(inputs, params[self._weight], params[self._bias])
+        weight, bias = params[self._weight], params[self._bias]
+        if self._no_bias:
+            return np.dot(inputs, weight)
+        else:
+            return layers.affine(inputs, weight, bias)
 
     def parameter_shape(self, input_shape):
         assert len(input_shape) == 1, 'Affine layer inputs must be 2D.'
@@ -386,39 +393,32 @@ class Export(Identity):
         return inputs
 
 
-class ReLU(Module):
-    def __init__(self):
-        """ Rectified linear unit.
-        """
-
-        super(ReLU, self).__init__()
+class ElementwiseTransformation(Module):
+    def __init__(self, function):
+        super(ElementwiseTransformation, self).__init__()
+        self._function = function
     def forward(self, inputs, *args):
-        return layers.relu(inputs)
+        return self._function(inputs)
     def output_shape(self, input_shape):
         return input_shape
+
+
+class ReLU(ElementwiseTransformation):
+    def __init__(self):
+        """ Rectified linear unit. """
+        super(ReLU, self).__init__(layers.relu)
    
 
-class Sigmoid(Module):
+class Sigmoid(ElementwiseTransformation):
     def __init__(self):
-        """ Sigmoid activation function.
-        """
-
-        super(Sigmoid, self).__init__()
-    def forward(self, inputs, *args):
-        return 1 / (1 + np.exp(-inputs))
-    def output_shape(self, input_shape):
-        return input_shape
+        """ Sigmoid activation function. """
+        super(Sigmoid, self).__init__(lambda X : 1 / (1 + np.exp(-X)))
 
 
-class Tanh(Module):
+class Tanh(ElementwiseTransformation):
     def __init__(self):
-        """ Hyperbolic tangent activation function.
-        """
-        super(Tanh, self).__init__()
-    def forward(self, inputs, *args):
-        return np.tanh(inputs)
-    def output_shape(self, input_shape):
-        return input_shape
+        """ Hyperbolic tangent activation function. """
+        super(Tanh, self).__init__(np.tanh)
 
 
 class Reshape(Module):
