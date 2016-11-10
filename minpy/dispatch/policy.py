@@ -86,7 +86,7 @@ class Policy(object):
             mod.set_policy(self)
         return self
 
-    def __exit__(self):
+    def __exit__(self, ptype, value, trace):
         for mod, plc in self._old_policy.items():
             mod.set_policy(plc)
 
