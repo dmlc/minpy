@@ -5,7 +5,7 @@ import minpy.dispatch.policy as policy
 from minpy.context import Context, cpu, gpu, set_context
 
 #np.set_policy(policy.OnlyNumpyPolicy())
-set_context(gpu(0)) # set the global context as gpu(0)
+set_context(gpu(1)) # set the global context as gpu(1)
 
 def sigmoid(x):
     return 0.5 * (np.tanh(x / 2) + 1)
@@ -54,10 +54,12 @@ with gpu(0):
     x_gpu0 = random.rand(32, 64) - 0.5
     y_gpu0 = random.rand(64, 32) - 0.5
     z_gpu0 = np.dot(x_gpu0, y_gpu0)
+    z_gpu0.asnumpy()
     print('z_gpu0.context = {0}'.format(z_gpu0.context))
 
 print("\n[use global context] execute on gpu(1)")
 x_gpu1 = random.rand(32, 64) - 0.5
 y_gpu1 = random.rand(64, 32) - 0.5
 z_gpu1 = np.dot(x_gpu1, y_gpu1)
+z_gpu1.asnumpy()
 print('z_gpu1.context = {0}'.format(z_gpu1.context))
