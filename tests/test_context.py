@@ -54,6 +54,7 @@ with gpu(0):
     x_gpu0 = random.rand(32, 64) - 0.5
     y_gpu0 = random.rand(64, 32) - 0.5
     z_gpu0 = np.dot(x_gpu0, y_gpu0)
+    z_gpu0.asnumpy()
     print('z_gpu0.context = {0}'.format(z_gpu0.context))
 
 print("\n[use global context] execute on gpu(1)")
