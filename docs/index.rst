@@ -10,8 +10,9 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
 
     get-started/install.rst
     get-started/logistic_regression.rst
-    tutorial/ndarray_tutorial.ipynb
+    tutorial/numpy_under_minpy.ipynb
     tutorial/autograd_tutorial.ipynb
+    tutorial/transparent_fallback.ipynb
 
 .. toctree::
     :maxdepth: 2
