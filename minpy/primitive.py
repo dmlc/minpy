@@ -154,6 +154,39 @@ class Primitive(object):
             # Record partial derivative paths, only for `array.Value` type values.
             # If no gradient function is defined, also omit it
             visited_arg_indices = set()
+
+            def get_context(result):
+                """Get context of result."""
+                if isinstance(result, array.Value):
+                    return result.context
+                else:
+                    return get_context(result[0])
+
+            def context_wrapper(func):
+                """A context wrapper only for gradient function.
+
+                Note: no need to use functools.wraps to get old function
+                signature.
+                """
+
+                def wrapped(result):
+                    with get_context(result).as_mxnet_context():
+                        return func(result)
+
+                return wrapped
+
+            def raw_value_wrapper(func):
+                """Unwrap Value for gradient function.
+
+                Note: no need to use functools.wraps to get old function
+                signature.
+                """
+
+                def wrapped(result):
+                    return func(result.get_data(self.type))
+
+                return wrapped
+
             for i, arg in enumerate(args):
                 if i in visited_arg_indices:
                     continue
@@ -173,6 +206,7 @@ class Primitive(object):
                     # for later use.
                     grad_func = grad_func_rec.f(result_value, *arg_values,
                                                 **kwargs_values)
+
                     if grad_func_rec.multi_grad_indices is None:
                         # Derivative function of each argument is defined separately.
                         owner = arg
@@ -182,13 +216,16 @@ class Primitive(object):
                         owner = []
                         for grad_index in grad_func_rec.multi_grad_indices:
                             if (isinstance(args[grad_index], array.Value) and
-                                args[grad_index].marked_for_bp):
+                                    args[grad_index].marked_for_bp):
                                 owner.append(args[grad_index])
                             else:
                                 owner.append(None)
                             visited_arg_indices.add(grad_index)
+                    grad_func = raw_value_wrapper(grad_func)
+                    if self.type == ArrayType.MXNET:
+                        grad_func = context_wrapper(grad_func)
                     tape.global_tape().add_partial_derivative(
-                        grad_func, owner, result, self.type)
+                        grad_func, owner, result)
             for k, arg in kwargs.items():
                 if isinstance(arg, array.Value) and arg.marked_for_bp:
                     if k not in self._grad_func_kw:
@@ -202,8 +239,11 @@ class Primitive(object):
                     grad_func_rec = self._grad_func_kw[k]
                     grad_func = grad_func_rec.f(result_value, *arg_values,
                                                 **kwargs_values)
+                    grad_func = raw_value_wrapper(grad_func)
+                    if self.type == ArrayType.MXNET:
+                        grad_func = context_wrapper(grad_func)
                     tape.global_tape().add_partial_derivative(
-                        grad_func, arg, result, self.type)
+                        grad_func, arg, result)
         return result
         # pylint: enable=invalid-name, too-many-locals
 
