@@ -109,6 +109,11 @@ class Tape(object):
 
     def _get_cached_gradient(self, arr):
         """Get cached gradient. Initialize if not exist."""
+        if isinstance(arr, (tuple, list)):
+            return (
+                self._get_cached_gradient(sub_result)
+                for sub_result in arr
+            )
         if arr not in self._grads:
             if isinstance(arr, array.Number):
                 self._grads[arr] = array.Value.wrap(0.0)
@@ -156,7 +161,7 @@ class Tape(object):
                 grad_records = self._array_grad_records.get(current_array, [])
 
                 for grad_record in grad_records:
-					# TODO: add primitive_type info in debug info later.
+                     # TODO: add primitive_type info in debug info later.
                     _logger.debug(
                         'Calling derivative func "{}"'.format(grad_record.grad_func))
                     grad = grad_record.grad_func(self._get_cached_gradient(grad_record.result))

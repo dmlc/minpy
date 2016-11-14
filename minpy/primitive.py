@@ -179,7 +179,11 @@ class Primitive(object):
 
                 @functools.wraps(func)
                 def wrapped(result):
-                    return func(result.get_data(self.type))
+                    if isinstance(result, (tuple, list)):
+                        result = (elm.get_data(self.type) for elm in result)
+                    else:
+                        result = result.get_data(self.type)
+                    return func(result)
 
                 return wrapped
 
