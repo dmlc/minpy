@@ -3,9 +3,7 @@ import minpy.numpy as np
 import minpy.numpy.random as random
 import minpy.dispatch.policy as policy
 
-#np.set_policy(policy.OnlyNumPyPolicy())
-
-def test_logistic():
+def test_op_statistics():
 
     def sigmoid(x):
         return 0.5 * (np.tanh(x / 2) + 1)
@@ -29,7 +27,8 @@ def test_logistic():
                 preds, axis=1) - np.argmax(
                     targets, axis=1))
         return (256 - error) * 100 / 256.0
-
+    
+    
     xshape = (256, 500)
     wshape = (500, 250)
     tshape = (256, 250)
@@ -41,11 +40,14 @@ def test_logistic():
     
     training_gradient_fun = grad(training_loss)
     
-    for i in range(200):
+    for i in range(30):
         print('Trained accuracy #{}: {}%'.format(i, training_accuracy(weights,
                                                                       inputs)))
         gr = training_gradient_fun(weights, inputs)
         weights -= gr * 0.01
+    
+    # Print Op Statistics Info
+    print np.policy.op_stat()
 
 if __name__ == "__main__":
-    test_logistic()
+    test_policy()

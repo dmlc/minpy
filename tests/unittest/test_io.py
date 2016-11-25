@@ -103,6 +103,5 @@ def test_NDArrayIter():
         else:
             assert(labelcount[i] == 100)
 
-
-
-test_NDArrayIter()
+if __name__ == "__main__":
+    test_NDArrayIter()
