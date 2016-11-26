@@ -15,6 +15,10 @@ from minpy.nn.solver import Solver
 from minpy.nn.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
+# Please uncomment following if you have GPU-enabled MXNet installed.
+#from minpy.context import set_context, gpu
+#set_context(gpu(0)) # set the global context as gpu(0)
+
 batch_size = 128
 flattened_input_size=3 * 32 * 32
 hidden_size = 512
