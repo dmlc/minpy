@@ -32,10 +32,10 @@ MinPy code defines a classical CNN to classify CIFAR-10 dataset.
 Build Your Network with Minpy.model_builder
 -------------------------------------------
 
-Minpy.model_builder provides an interface helping you implement models more efficiently.
+``minpy.model_builder`` provides an interface helping you implement models more efficiently.
 Model builder generates models compatible with Minpy's solver. You only need to specify basic layer configurations of your model and model builder is going to handle the rest.
 Below is a model builder implementation of CNN. Please refer to :ref:`model_builder_tutorial` for details.
 
-.. literalinclude:: /examples/nn/model_gallery.py
+.. literalinclude:: model_gallery.py
   :language: python
   :linenos: 1-35
