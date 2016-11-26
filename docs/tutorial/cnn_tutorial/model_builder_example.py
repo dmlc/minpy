@@ -16,7 +16,6 @@ from minpy.nn.io import NDArrayIter
 from examples.utils.data_utils import get_CIFAR10_data
 
 batch_size = 128
-flattened_input_size=3 * 32 * 32
 hidden_size = 512
 num_classes = 10
 
@@ -26,7 +25,7 @@ def main(args):
         builder.Convolution((7, 7), 32),
         builder.ReLU(),
         builder.Pooling('max', (2, 2), (2, 2)),
-        builder.Reshape((flattened_input_size,))
+        builder.Flatten(),
         builder.Affine(hidden_size),
         builder.Affine(num_classes),
     )
