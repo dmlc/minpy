@@ -10,8 +10,11 @@ num_epochs = 10
 mini_batch_size = 256
 
 layers = [784, 256, 10]
-biases = [np.random.randn(1, x) for x in layers[1:]]
-weights = [np.random.randn(x, y) for x, y in zip(layers[:-1], layers[1:])]
+biases = [np.random.normal(scale=0.001, size=(1, x)) for x in layers[1:]]
+weights = [
+    np.random.normal(
+        scale=0.001, size=(x, y)) for x, y in zip(layers[:-1], layers[1:])
+]
 alpha = 1e-3
 
 
@@ -34,29 +37,41 @@ def backward(g, activations):
         bias_deltas.append(np.sum(g, axis=0, keepdims=True))
         weight_deltas.append(activation.T.dot(g))
         g = np.dot(g, weight.T)
-        g = g > 0
+        g = g * (activation > 1e-4)
     return list(reversed(bias_deltas)), list(reversed(weight_deltas))
 
 
 def softmax(activation, one_hot):
     n = activation.shape[0]
     probs = activation - np.amax(activation, axis=1, keepdims=True)
-    loss = -np.sum(probs * one_hot + np.log(
+    loss = -np.sum(probs * one_hot - np.log(
         np.sum(np.exp(probs), axis=1, keepdims=True))) / n
     return loss
 
 
 def accuracy(activation, label):
-    return np.sum(np.argmax(activation, axis=1) == label) / activation.shape[0]
+    return np.sum(np.argmax(
+        activation, axis=1) == label) / float(activation.shape[0])
 
 
 def softmax_loss_gradient(activation, one_hot):
-    n = activation.shape[0]
-    probs = activation - np.amax(activation, axis=1, keepdims=True)
-    e = np.exp(probs)
-    p = e / np.sum(e, axis=1, keepdims=True)
-    q = p - one_hot
-    return q
+    if False:
+        n = activation.shape[0]
+        m = np.amax(activation, axis=1, keepdims=True)
+        probs = activation - m
+        exp = np.exp(probs)
+        loss = -np.sum(probs * one_hot - np.log(
+            np.sum(exp, axis=1, keepdims=True))) / n
+        g = -1 / n * (np.ones_like(activation) * one_hot - np.broadcast_to(
+            1 / np.sum(exp, axis=1, keepdims=True), activation.shape) * exp)
+        g = g * (1 - (np.broadcast_to(m, activation.shape) == activation))
+        return g
+    else:
+        probs = activation - np.amax(activation, axis=1, keepdims=True)
+        e = np.exp(probs)
+        p = e / np.sum(e, axis=1, keepdims=True)
+        q = p - one_hot
+        return q
 
 
 def main(args):
@@ -67,22 +82,24 @@ def main(args):
         assert magic_nr == 2049
         assert size == 60000
         label = np.fromfile(f, dtype=np.int8)
-        label = label[:10000]
     with open(img_fname, 'rb') as f:
         magic_nr, size, rows, cols = struct.unpack('>IIII', f.read(16))
         assert magic_nr == 2051
         assert size == 60000
         assert rows == cols == 28
         img = np.fromfile(f, dtype=np.uint8).reshape(size, rows * cols)
-        img = img[:10000, ...]
     for epoch in range(num_epochs):
         print('Epoch {}.'.format(epoch))
         indices = list(range(len(label)))
         random.shuffle(indices)
-        img_mini_batches = [img[indices[k:k + mini_batch_size]]
-                            for k in range(0, len(img), mini_batch_size)]
-        label_mini_batches = [label[indices[k:k + mini_batch_size]]
-                              for k in range(0, len(img), mini_batch_size)]
+        img_mini_batches = [
+            img[indices[k:k + mini_batch_size]]
+            for k in range(0, len(img), mini_batch_size)
+        ]
+        label_mini_batches = [
+            label[indices[k:k + mini_batch_size]]
+            for k in range(0, len(img), mini_batch_size)
+        ]
         start = time.time()
         for img_mini_batch, label_mini_batch in zip(img_mini_batches,
                                                     label_mini_batches):

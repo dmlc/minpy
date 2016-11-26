@@ -31,18 +31,21 @@ class TwoLayerNet(ModelBase):
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=hidden_size)
         net = mx.sym.Activation(data=net, act_type='relu')
         net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=num_classes)
+        net = mx.sym.SoftmaxOutput(data=net, name='softmax', normalization='batch')
         # Wrap the final symbol into a function.
         # ATTENTION: when using mxnet symbols, input shape (including batch size) should be fixed
-        self.fwd_fn = core.Function(
-                net, input_shapes={'X': (batch_size,) + input_size})
+        input_shapes = {'X': (batch_size,) + input_size, 'softmax_label': (batch_size,)}
+        self.fwd_fn = core.Function(net, input_shapes=input_shapes)
         # Add parameters.
         self.add_params(self.fwd_fn.get_params())
 
-    def forward(self, X, mode):
-        return self.fwd_fn(X=X, **self.params)
+    def forward_batch(self, batch, mode):
+        return self.fwd_fn(X=batch.data[0],
+                           softmax_label=batch.label[0],
+                           **self.params)
 
     def loss(self, predict, y):
-        return layers.softmax_loss(predict, y)
+        return layers.softmax_cross_entropy(predict, y)
 
 def main(args):
     # Create model.

@@ -10,6 +10,7 @@ import collections
 
 import mxnet
 import numpy
+import minpy
 
 from .array_variants import ArrayType
 from .array_variants import array_types
@@ -33,7 +34,9 @@ class Value(object):
     _ns = None
 
     def __init__(self, marked, context):
-        self._marked_for_bp = marked
+        self._bp_timestamp = -1
+        if marked:
+            self.set_bp()
         if context is None:
             self._context = current_context()
         else:
@@ -42,7 +45,12 @@ class Value(object):
     @property
     def marked_for_bp(self):
         """Return whether the current `Value` will be used for autograd."""
-        return self._marked_for_bp
+        return minpy.tape.global_tape() is not None and self._bp_timestamp == minpy.tape.global_tape().timestamp
+
+    def set_bp(self):
+        """Set flag to record gradient information."""
+        assert minpy.tape.global_tape is not None, "No active Tape found."
+        self._bp_timestamp = minpy.tape.global_tape().timestamp
 
     @property
     def context(self):
@@ -307,6 +315,7 @@ class Array(Value):
         atype = Array.to_array_type(data)
         self._data[atype] = data
         self._latest_version = atype
+        self._dtype = data.dtype
 
     @staticmethod
     def to_array_type(arr):
@@ -378,14 +387,14 @@ class Array(Value):
         return Value._ns.reshape(self, new_shape)
 
     def dot(self, other, out=None):
-        """ Function for dot production. """
+        """Function for dot production. """
         if out is not None:
             # TODO: Support out argument
             raise ValueError('Out option is not supported.')
         return Value._ns.dot(self, other)
 
     def argmax(self, axis=None, out=None):
-        """ Returns the indices of the maximum values along an axis
+        """Returns the indices of the maximum values along an axis
 
         Parameters
         ----------
@@ -407,17 +416,17 @@ class Array(Value):
         return Value._ns.argmax(self, axis)
 
     def _synchronize_data(self):
-        """ Synchronize the data of different array types. """
+        """Synchronize the data of different array types. """
         if self._latest_version == ArrayType.MXNET:
             _logger.info(
-                'Copy from MXNet array to NumPy array for Array "{}".'.format(
-                    id(self)))
+                'Copy from MXNet array to NumPy array for Array "{}" of shape {}.'
+                .format(id(self), self.shape))
             mxarray = self._data[ArrayType.MXNET]
             self._data[ArrayType.NUMPY] = mxarray.asnumpy()
         elif self._latest_version == ArrayType.NUMPY:
             _logger.info(
-                'Copy from NumPy array to MXNet array for Array "{}".'.format(
-                    id(self)))
+                'Copy from NumPy array to MXNet array for Array "{}" of shape {}.'
+                .format(id(self), self.shape))
             nparray = self._data[ArrayType.NUMPY]
             self._data[ArrayType.MXNET] = mxnet.ndarray.array(
                 nparray, ctx=self._context.as_mxnet_context())
@@ -432,6 +441,11 @@ class Array(Value):
         """Get array data of given type."""
         self.enforce_data(dtype)
         return self._data[dtype]
+
+    @property
+    def dtype(self):
+        """Return contained dtype, in NumPy's dtype object"""
+        return self._dtype
 
     def _get_latest_data(self):
         """Return the latest version of the raw data"""

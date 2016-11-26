@@ -1,5 +1,4 @@
 """ Model base class codes. Adapted from cs231n lab codes. """
-import abc
 import functools
 import minpy
 import numpy
@@ -14,8 +13,7 @@ class UnknownAccessModeError(ValueError):
     pass
 
 class ModelBase(object):
-    __metaclass__ = abc.ABCMeta
-
+    """Base class for describing a neural network model."""
     def __init__(self):
         self.params = {}
         self.param_configs = {}
@@ -49,19 +47,75 @@ class ModelBase(object):
         self.aux_param_configs[name] = value
         return self
 
-    @abc.abstractmethod
+    def forward_batch(self, batch, mode):
+        """Do forward propagation.
+
+        This is a more general interface than `forward` which only uses one input data.
+
+        Parameters
+        ---------
+        batch
+            A dictionary containing data/labels of the current batch.
+            `batch.data` will return a list of arrays representing all the input data.
+            `batch.label` will return a list of arrays representing all the input labels.
+        mode
+            A mode string that is either 'train' or 'test'.
+
+        Returns
+        ------
+        Array
+            Output of the model. TODO(minjie): support multiple outputs.
+        """
+        # Default implementation is to use only the first input data.
+        return self.forward(batch.data[0], mode)
+
+    def loss_batch(self, batch, forward_outputs):
+        """Calculate the loss value of the current batch.
+
+        This is a more general interface than `loss` which only uses one label.
+
+        Parameters
+        ---------
+        batch
+            A dictionary containing data/labels of the current batch.
+            `batch.data` will return a list of arrays representing all the input data.
+            `batch.label` will return a list of arrays representing all the input labels.
+        forward_outputs
+            An array representing the output of the model. TODO(minjie): support multiple outputs.
+
+        Returns
+        ------
+        Value
+            Loss value.
+        """
+        # Default implementation is to use only the first label.
+        return self.loss(forward_outputs, batch.label[0])
+
     def forward(self, X, mode):
-        """  do forward and output the loss
+        """Do forward propagation.
 
         :param X: input vector
         :param mode: a mode string either 'train' or 'test'
         :return: output vector
         """
-        return
+        raise NotImplementedError()
 
-    @abc.abstractmethod
     def loss(self, predict, y):
-        return
+        """Return the loss value given the output of the model.
+
+        Parameters
+        ----------
+        predict
+            An array representing the output of the model (return by `forward`).
+        y
+            Label of the current batch.
+
+        Returns
+        -------
+        Value
+            Loss value.
+        """
+        raise NotImplementedError()
 
     def save(self, prefix):
         """Save model params into file.

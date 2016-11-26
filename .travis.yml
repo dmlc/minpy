@@ -1,15 +1,69 @@
+sudo: required
+
+language: python
+
+os:
+  - linux
+
+env:
+  # code style
+  - TASK=lint
+  # run examples/
+  - TASK=example_test
+
+
+python:
+  - 2.7
+  - 3.5
+
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
     packages:
-    - libblas-dev
-    - liblapack-dev
-    - gfortran
-language: python
-python:
-- "2.7"
-- "3.5"
+      - doxygen
+      - wget
+      - git
+      - libcurl4-openssl-dev
+      - unzip
+      - libatlas-dev
+      - libopencv-dev
+      - gcc-4.8
+      - g++-4.8
+      - python-numpy
+      - python-nose
+      - python3-numpy
+      - python3-dev
+      - python3-nose
+      - graphviz
+      - libatlas-base-dev
+      - libblas-dev
+      - libatlas3gf-base
+      - gfortran
+
+before_install:
+  - git clone --recursive https://github.com/dmlc/mxnet.git
+  # set up travis path & nnvm settings
+  - source mxnet/dmlc-core/scripts/travis/travis_setup_env.sh
+  - export PYTHONPATH=${PYTHONPATH}:${PWD}/mxnet/python
+  - export MAVEN_SKIP_RC=true
+  - export MAVEN_OPTS="-Xmx512m -XX:MaxPermSize=256m -XX:-UseGCOverheadLimit -XX:+CMSClassUnloadingEnabled -XX:+UseConcMarkSweepGC"
+
+install:
+  - sudo pip install --upgrade pip
+  - pip install cpplint pylint PyYAML h5py scipy Pillow
+  - pip3 install cpplint pylint PyYAML h5py scipy Pillow
+  # Temporary fix libdc1394 error
+  - sudo ln /dev/null /dev/raw1394
+  - cd mxnet
+  - source tests/travis/setup.sh
+  - cd ..
+  - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-4.8 /usr/bin/gcc
+  - sudo unlink /usr/bin/g++ && sudo ln -s /usr/bin/g++-4.8 /usr/bin/g++
+
 script:
-- python ./dmlc-core/scripts/lint.py python minpy
+  - travis/run_test.sh
+
 deploy:
   provider: pypi
   user: hotpxl

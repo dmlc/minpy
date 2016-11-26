@@ -6,7 +6,7 @@ import time
 
 from minpy.nn import optim, init
 from minpy import core
-import numpy as np
+import minpy.numpy as np
 
 
 class Solver(object):
@@ -52,36 +52,38 @@ class Solver(object):
                     num_epochs=10,
                     print_every=100)
     solver.train()
+
+    Parameters
+    ----------
+    model
+        A model object conforming to the API described above.
+    train_dataiter
+        A data iterator for training data, we can get batch from it
+        'batch.data': Array of shape (N_train, d_1, ..., d_k) giving training images
+        'batch.label': Array of shape (N_val, d_1, ..., d_k) giving validation images
+    test_dataiter
+        A data iterator for training data, we can retrieve batch from it
+    update_rule : optional
+        A string giving the name of an update rule in optim.py. Default is 'sgd'.
+    optim_config : optional
+        A dictionary containing hyperparameters that will be
+        passed to the chosen update rule. Each update rule requires different
+        hyperparameters (see optim.py) but all update rules require a
+        'learning_rate' parameter so that should always be present.
+    lr_decay : optional
+        A scalar for learning rate decay; after each epoch the learning
+        rate is multiplied by this value.
+    num_epochs : optional
+        The number of epochs to run for during training.
+    train_acc_num_samples : optional
+        The number of samples for evaluating training accuracy after each iteration.
+    print_every : int, optional
+        Training losses will be printed every print_every iterations.
+    verbose : bool, optional
+        If false, no output will be printed during training.
     """
 
     def __init__(self, model, train_dataiter, test_dataiter, **kwargs):
-        """
-        Construct a new Solver instance.
-
-        Required arguments:
-        - model: A model object conforming to the API described above
-        - train_dataiter: A data iterator for training data, we can get batch from it
-          'batch.data': Array of shape (N_train, d_1, ..., d_k) giving training images
-          'batch.label': Array of shape (N_val, d_1, ..., d_k) giving validation images
-        - test_dataiter: A data iterator for training data, we can get batch from it
-
-        Optional arguments:
-        - update_rule: A string giving the name of an update rule in optim.py.
-          Default is 'sgd'.
-        - optim_config: A dictionary containing hyperparameters that will be
-          passed to the chosen update rule. Each update rule requires different
-          hyperparameters (see optim.py) but all update rules require a
-          'learning_rate' parameter so that should always be present.
-        - lr_decay: A scalar for learning rate decay; after each epoch the learning
-          rate is multiplied by this value.
-        - num_epochs: The number of epochs to run for during training.
-        - train_acc_num_samples: The number of samples used to evaluate
-          training accuracy after each iteration.
-        - print_every: Integer; training losses will be printed every print_every
-          iterations.
-        - verbose: Boolean; if set to false then no output will be printed during
-          training.
-        """
         self.model = model
         self.train_dataiter = train_dataiter
         self.test_dataiter = test_dataiter
@@ -160,16 +162,12 @@ class Solver(object):
         Make a single gradient update. This is called by train() and should not
         be called manually.
         """
-        # Get a minibatch of training data
-        X_batch = batch.data[0]
-        y_batch = batch.label[0]
-
         # Compute loss and gradient
         def loss_func(*params):
             # It seems that params are not used in forward function. But since we will pass
             # model.params as arguments, we are ok here.
-            predict = self.model.forward(X_batch, mode='train')
-            return self.model.loss(predict, y_batch)
+            predict = self.model.forward_batch(batch, mode='train')
+            return self.model.loss_batch(batch, predict)
 
         param_arrays = list(self.model.params.values())
         param_keys = list(self.model.params.keys())
@@ -215,13 +213,14 @@ class Solver(object):
         acc_count = 0
         num_samples = 0
         for each_batch in check_dataiter:
-            predict = self.model.forward(
-                each_batch.data[0], mode='test').asnumpy()
+            predict = self.model.forward_batch(
+                each_batch, mode='test').asnumpy()
+            # TODO(minjie): multiple labels.
             acc_count += np.sum(
                 np.argmax(
                     predict, axis=1) == each_batch.label[0])
             num_samples += check_dataiter.batch_size
-        return float(acc_count) / num_samples
+        return float(acc_count.asnumpy()) / num_samples
 
     def init(self):
         """

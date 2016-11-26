@@ -5,15 +5,10 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from minpy.utils import log
-from minpy.dispatch import policy
-
-_logger = log.get_logger(__name__)
-
 
 class PrimitiveSelector(object):
     """Primitive selector class that behaves like normal function but instead pass all the
-    arguments to the policy to choose appropriate primitive.
+    arguments to the policy to choose appropriate primitive call.
     """
     __slots__ = ['_name', '_registry', '_policy']
 
@@ -34,8 +29,5 @@ class PrimitiveSelector(object):
         """Call policy to choose the real primitive and then call the returned function with
         the given arguments.
         """
-        prim = policy.resolve_name(self._name, self._registry, self._policy,
-                                   args, kwargs)
-        _logger.debug('Found primitive "{}" with type {}.'.format(
-            self._name, prim.typestr))
-        return prim(*args, **kwargs)
+        return self._policy.resolve_call(self._name, self._registry, args,
+                                         kwargs)
