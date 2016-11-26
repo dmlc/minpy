@@ -1,1 +1,0 @@
-../../../examples/nn/model_gallery.py

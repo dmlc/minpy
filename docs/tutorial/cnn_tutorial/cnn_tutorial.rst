@@ -36,7 +36,7 @@ Build Your Network with ``minpy.model_builder``
 Model builder generates models compatible with Minpy's solver. You only need to specify basic layer configurations of your model and model builder is going to handle the rest.
 Below is a model builder implementation of CNN. Please refer to :ref:`model_builder_tutorial` for details.
 
-.. literalinclude:: model_gallery.py
+.. literalinclude:: model_builder_example.py
   :language: python
   :linenos:
   :lines: 1-35
