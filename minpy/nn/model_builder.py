@@ -518,6 +518,7 @@ class Model(ModelBase):
             return self._loss_function(prediction, labels)
 
     def _initialize_layer_by_layer(self, container, inputs):
+        """ Unstable, not recommended to use. """
         input_shape = inputs.shape[1:]
         for module in container._modules:
             if isinstance(module, Container):
