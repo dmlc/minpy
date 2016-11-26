@@ -5,10 +5,17 @@ import struct
 import numpy as real_numpy
 
 import minpy.numpy as np
-from minpy.nn.io import NDArrayIter
+from minpy.nn import io
 from minpy.nn import layers
-from minpy.nn.model import ModelBase
-from minpy.nn.solver import Solver
+import minpy.nn.model
+import minpy.nn.solver
+import minpy.dispatch.policy
+np.set_policy(minpy.dispatch.policy.OnlyNumPyPolicy())
+
+# import logging
+# logging.getLogger('minpy.array').setLevel(logging.DEBUG)
+# logging.getLogger('minpy.core').setLevel(logging.DEBUG)
+# logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 
 batch_size = 256
 flattened_input_size = 784
@@ -16,7 +23,7 @@ hidden_size = 256
 num_classes = 10
 
 
-class TwoLayerNet(ModelBase):
+class TwoLayerNet(minpy.nn.model.ModelBase):
     def __init__(self):
         super(TwoLayerNet, self).__init__()
         self.add_param(name='w1', shape=(flattened_input_size, hidden_size)) \
@@ -51,7 +58,6 @@ def main(args):
         assert magic_nr == 2049
         assert size == 60000
         label = real_numpy.fromfile(f, dtype=real_numpy.int8)
-        label = label[:10000]
     with open(img_fname, 'rb') as f:
         magic_nr, size, rows, cols = struct.unpack('>IIII', f.read(16))
         assert magic_nr == 2051
@@ -59,26 +65,21 @@ def main(args):
         assert rows == cols == 28
         img = real_numpy.fromfile(
             f, dtype=real_numpy.uint8).reshape(size, rows * cols)
-        img = img[:10000, ...]
 
-    train_dataiter = NDArrayIter(
+    train_dataiter = io.NDArrayIter(
         data=img, label=label, batch_size=batch_size, shuffle=True)
 
     # Create solver.
-    solver = Solver(
+    solver = minpy.nn.solver.Solver(
         model,
         train_dataiter,
         train_dataiter,
         num_epochs=10,
         init_rule='gaussian',
-        init_config={
-            'stdvar': 0.001
-        },
+        init_config={'stdvar': 0.001},
         update_rule='sgd_momentum',
-        optim_config={
-            'learning_rate': 1e-4,
-            'momentum': 0.9
-        },
+        optim_config={'learning_rate': 1e-4,
+                      'momentum': 0.9},
         verbose=True,
         print_every=20)
     # Initialize model parameters.

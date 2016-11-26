@@ -20,6 +20,12 @@ setuptools.setup(
         'semantic-version',
         'six',
         'h5py',
+        'PyYAML',
     ],
     data_files=[('', ['VERSION'])],
     url='https://github.com/dmlc/minpy')
+
+# print('\nGenerating default blacklist...')
+# from minpy.utils.blacklist_generator import generate_default_blacklist
+# generate_default_blacklist()
+# print('Generating default blacklist successfully!')

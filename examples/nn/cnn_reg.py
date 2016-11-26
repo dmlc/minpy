@@ -45,23 +45,23 @@ class ConvolutionNet(ModelBase):
         net = mx.sym.FullyConnected(
                 data=net, name='fc2', num_hidden=num_classes)
         net = mx.sym.SoftmaxOutput(
-                data=net, name='output')
+                data=net, name='softmax', normalization='batch')
         # Create forward function and add parameters to this model.
-        self.cnn = Function(
-                net, input_shapes={'X': (batch_size,) + input_size},
-                name='cnn')
+        input_shapes = {'X': (batch_size,) + input_size, 'softmax_label': (batch_size,)}
+        self.cnn = Function(net, input_shapes=input_shapes, name='cnn')
         self.add_params(self.cnn.get_params())
 
-    def forward(self, X, mode):
-        out = self.cnn(X=X, **self.params)
-        return out
+    def forward_batch(self, batch, mode):
+        return self.cnn(X=batch.data[0],
+                        softmax_label=batch.label[0],
+                        **self.params)
 
     def loss(self, predict, y):
         # Add L2 regularization for all the weights.
         reg_loss = 0.0
         for name, weight in self.params.items():
-            reg_loss += np.sum(weight ** 2) * 0.5
-        return layers.softmax_cross_entropy(predict, y) + weight_decay * reg_loss
+            reg_loss += np.sum(weight ** 2)
+        return layers.softmax_cross_entropy(predict, y) + 0.5 * weight_decay * reg_loss
 
 def main(args):
     # Create model.

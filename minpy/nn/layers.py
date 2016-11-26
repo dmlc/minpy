@@ -216,14 +216,20 @@ def softmax_cross_entropy(prob, label):
         onehot_label = label
     return -np.sum(np.log(prob) * onehot_label) / N
 
-
 @convert_args
-def l2_loss(x, y):
+def l2_loss(x, label):
     """
     The Mean Square Error loss for regression.
     """
     N = x.shape[0]
-    return np.sum((x - y) ** 2) / N
+    C = x.shape[1]
+    if len(label.shape) == 1:
+        #convert it to one hot encoding
+        onehot_label = np.zeros([N, C])
+        np.onehot_encode(label, onehot_label)
+    else:
+        onehot_label = label
+    return np.sum((x - onehot_label) ** 2) / N
 
 
 @convert_args
