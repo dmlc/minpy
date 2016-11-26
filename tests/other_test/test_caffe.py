@@ -26,3 +26,6 @@ def test_caffe_concat():
 
     x_0 = rng.randn(*xshape_0) - 0.5
     gradient_checker.quick_grad_check(check_fn, x_0, rs=rng)
+
+if __name__ == "__main__":
+    test_caffe_concat()
