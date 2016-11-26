@@ -39,4 +39,3 @@ Below is a model builder implementation of CNN. Please refer to :ref:`model_buil
 .. literalinclude:: model_builder_example.py
   :language: python
   :linenos:
-  :lines: 1-35
