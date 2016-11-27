@@ -1,3 +1,5 @@
+.. _model_builder_tutorial:
+
 Complete model builder guide
 ============================
 

@@ -33,8 +33,9 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
 
     feature/policy.rst
     feature/context.rst
-    feature/diff_policy_context.rst
     feature/*
+
+    tutorial/visualization_tutorial/minpy_visualization.ipynb
 
 .. toctree::
     :maxdepth: 2

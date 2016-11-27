@@ -5,7 +5,6 @@ import minpy.dispatch.policy as policy
 
 #np.set_policy(policy.OnlyNumPyPolicy())
 
-
 def test_logistic():
 
     def sigmoid(x):
@@ -47,3 +46,6 @@ def test_logistic():
                                                                       inputs)))
         gr = training_gradient_fun(weights, inputs)
         weights -= gr * 0.01
+
+if __name__ == "__main__":
+    test_logistic()
