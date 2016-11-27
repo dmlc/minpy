@@ -26,7 +26,7 @@ def main(args):
         builder.Convolution((7, 7), 32),
         builder.ReLU(),
         builder.Pooling('max', (2, 2), (2, 2)),
-        builder.Reshape((flattened_input_size,))
+        builder.Flatten(),
         builder.Affine(hidden_size),
         builder.Affine(num_classes),
     )
