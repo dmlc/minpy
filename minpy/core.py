@@ -44,7 +44,7 @@ def grad_and_loss(func, argnum=0):
             result_array = func(*arrays)
             _logger.debug('Forward pass finished. Start backward pass.')
             current_tape.set_gradient_target(result_array)
-            grad_vals = [current_tape.get_gradient(arrays[i]) for i in argnums]
+            grad_vals = tuple(current_tape.get_gradient(arrays[i]) for i in argnums)
             if len(grad_vals) == 1:
                 grad_vals = grad_vals[0]
         return grad_vals, result_array

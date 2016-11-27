@@ -145,7 +145,11 @@ class Primitive(object):
         else:
             result = array.wrap(result_value)
         if need_bp[0]:
-            result.mark_for_bp(current_tape)
+            if isinstance(result, tuple):
+                for r in result:
+                    r.mark_for_bp(current_tape)
+            else:
+                result.mark_for_bp(current_tape)
             # Record partial derivative paths, only for `array.Value` type values.
             # If no gradient function is defined, also omit it
             visited_arg_indices = set()
