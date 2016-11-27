@@ -44,16 +44,29 @@ class Tape(object):
         result
             Result of previous forward execution.
         """
+        grad_rec = GradRecord(grad_func=grad_func, result=result, owner=owner)
         if isinstance(owner, array.Value):
-            self._array_grad_records[owner].append(
-                GradRecord(
-                    grad_func=grad_func,
-                    result=result,
-                    owner=owner))
+            self._array_grad_records[owner].append(grad_rec)
         elif owner is not None:
             # None means a placeholder for an array that needs no gradient.
             for sub_owner in owner:
-                self.add_partial_derivative(grad_func, sub_owner, result)
+                self._add_gradient_record(sub_owner, grad_rec)
+
+    def _add_gradient_record(self, owner, grad_rec):
+        """Internal function for adding gradient record.
+
+        Parameters
+        ----------
+        owner
+            Owner(s) of the gradient. Usually it is just one array, but a lit is also allowed.
+        grad_rec
+            The gradient record to be added.
+        """
+        if isinstance(owner, array.Value):
+            self._array_grad_records[owner].append(grad_rec)
+        elif owner is not None:
+            for sub_owner in owner:
+                self._add_gradient_record(sub_owner, grad_rec)
 
     def set_gradient_target(self, target):
         """Set gradient targets to ones."""

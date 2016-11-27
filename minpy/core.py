@@ -155,7 +155,7 @@ class Function(object):
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
                         for name in self._symbol.list_arguments()]
-        return self._prim(*ordered_args)
+        return self._prim(args=ordered_args, kwargs={})
 
     def get_params(self):
         param_configs = {}
