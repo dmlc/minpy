@@ -60,7 +60,7 @@ class Module(object):
                 len(self._registry._reg) - before, modname))
             primitive_getter = lambda name: self._registry.get(name, variants[vname])
             # Define gradients of primitives.
-            mod.def_grads(self._registry, primitive_getter)
+            mod.def_grads(primitive_getter)
         self._logger.info('Import {} primitives'.format(
             len(self._registry._reg)))
 
