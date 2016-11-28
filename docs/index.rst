@@ -1,7 +1,12 @@
 Welcome to MinPy's documentation!
 =================================
 
-MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface above `MXNet <https://github.com/dmlc/mxnet>`_ backend.
+MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface above `MXNet <https://github.com/dmlc/mxnet>`_ backend. This document describes its main features: 
+
+* Auto-differentiation 
+* Transparent CPU/GPU acceleration
+* Visualization using TensorBoard
+* Learning deep learning using MinPy
 
 .. toctree::
     :maxdepth: 2
@@ -25,6 +30,7 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     tutorial/rnn_mnist.ipynb
     tutorial/rl_policy_gradient_tutorial/rl_policy_gradient.rst
     tutorial/model_builder_tutorial/model_builder.rst
+    tutorial/dl_learn.rst
 
 .. toctree::
     :maxdepth: 2
@@ -35,7 +41,13 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     feature/context.rst
     feature/*
 
+.. toctree::
+    :maxdepth: 2
+    :caption: Visualization
+    :glob:
+    
     tutorial/visualization_tutorial/minpy_visualization.ipynb
+    tutorial/visualization_tutorial/minpy_visualization_adv.ipynb
 
 .. toctree::
     :maxdepth: 2
@@ -45,6 +57,12 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     how-to/*
     api/modules.rst
 
+.. toctree:: 
+    :maxdepth: 2
+    :caption: History and Acknowledgement
+    :glob:
+    
+    misc/credits.rst
 
 Indices and tables
 ==================
