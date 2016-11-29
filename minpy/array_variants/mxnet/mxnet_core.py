@@ -5,14 +5,16 @@
 from __future__ import absolute_import
 
 import operator
+import numpy
 import mxnet
 from mxnet import ndarray
+from mxnet import _ndarray_internal as _in
 from mxnet.ndarray import NDArray
 from . import mxnet_wrapper
 
 
 def _unbroadcast(ans, x, gradfun):
-    """ Append the gradient function with an unbroadcast function """
+    """Append the gradient function with an unbroadcast function."""
     #pylint: disable= missing-docstring
     if isinstance(ans, NDArray) and isinstance(x, NDArray):
         padded_shape = (1,) * (len(ans.shape) - len(x.shape)) + x.shape
@@ -32,6 +34,14 @@ def _unbroadcast(ans, x, gradfun):
     else:  # both ans and x are numerical value
         return gradfun
     #pylint: enable= missing-docstring
+
+def _maximum_grad_gen0(ans, x, y):
+    """Generate gradient function of maximum on lhs."""
+    return _unbroadcast(ans, x, lambda g: g * _in._equal(x, ans))
+
+def _maximum_grad_gen1(ans, x, y):
+    """Generate gradient function of maximum on rhs."""
+    return _unbroadcast(ans, y, lambda g: g * _in._equal(y, ans))
 
 def _sum_grad(ans, x, axis=None, keepdims=False):
     """ Generate gradient function of sum """
@@ -96,11 +106,8 @@ def def_grads(reg, prims):
     prims('true_divide').def_grad(
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: -g * x / (y * y)),
         argnum=1)
-    prims('maximum').def_grad(
-        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * (x == ans)))
-    prims('maximum').def_grad(
-        lambda ans, x, y: _unbroadcast(ans, y, lambda g: g * (y == ans)),
-        argnum=1)
+    prims('maximum').def_grad(_maximum_grad_gen0)
+    prims('maximum').def_grad(_maximum_grad_gen1, argnum=1)
     # TODO: minjie
     prims('max').def_grad_zero()
     # negate
