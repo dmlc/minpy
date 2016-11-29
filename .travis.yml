@@ -42,7 +42,7 @@ addons:
       - gfortran
 
 before_install:
-  - git clone --recursive https://github.com/dmlc/mxnet.git
+  - git clone -b nnvm --recursive https://github.com/dmlc/mxnet.git
   # set up travis path & nnvm settings
   - source mxnet/dmlc-core/scripts/travis/travis_setup_env.sh
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/mxnet/python
