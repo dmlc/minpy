@@ -147,7 +147,7 @@ def _unbroadcast(ans, x, gradfun):
     #pylint: enable= missing-docstring
 
 
-def _sum_grad(_0, x, axis=None, _1=False):
+def _sum_grad(_0, x, axis=None, keepdims=False):  # pylint: disable=unused-argument
     """ Generate gradient function of sum """
     if axis is None:
         return lambda g: np.full(x.shape, g)
