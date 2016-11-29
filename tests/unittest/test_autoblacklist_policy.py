@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import minpy
 import minpy.numpy as np
-from minpy.dispatch.policy import AutoBlacklistPolicy
+from minpy.dispatch.policy import AutoBlacklistPolicy, PreferMXNetPolicy
 
 def test_autoblocklist_policy():
     p = AutoBlacklistPolicy(gen_rule=True, append_rule=True)
@@ -18,6 +18,8 @@ def test_autoblocklist_policy():
     np.add(a, b, out=c)
     np.add(a, b, out=c)
     print(c)
+
+    minpy.set_global_policy(PreferMXNetPolicy())
 
 if __name__ == "__main__":
     test_autoblocklist_policy()

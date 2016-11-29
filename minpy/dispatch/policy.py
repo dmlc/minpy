@@ -165,7 +165,7 @@ class AutoBlacklistPolicy(Policy):
     def resolve_call(self, name, reg, args, kwargs):
         def get_result(impl_type):
             prim = reg.get(name, impl_type)
-            return prim(*args, **kwargs)
+            return prim(args, kwargs)
 
         available = self._available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)
