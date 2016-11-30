@@ -48,25 +48,11 @@ class Tape(object):
         if isinstance(owner, array.Value):
             self._array_grad_records[owner].append(grad_rec)
         elif owner is not None:
+            for sub_owner in owner:
+                self._array_grad_records[sub_owner].append(grad_rec)
+        else:
             # None means a placeholder for an array that needs no gradient.
-            for sub_owner in owner:
-                self._add_gradient_record(sub_owner, grad_rec)
-
-    def _add_gradient_record(self, owner, grad_rec):
-        """Internal function for adding gradient record.
-
-        Parameters
-        ----------
-        owner
-            Owner(s) of the gradient. Usually it is just one array, but a lit is also allowed.
-        grad_rec
-            The gradient record to be added.
-        """
-        if isinstance(owner, array.Value):
-            self._array_grad_records[owner].append(grad_rec)
-        elif owner is not None:
-            for sub_owner in owner:
-                self._add_gradient_record(sub_owner, grad_rec)
+            pass
 
     def set_gradient_target(self, target):
         """Set gradient targets to ones."""
