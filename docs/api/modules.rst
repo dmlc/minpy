@@ -1,5 +1,5 @@
-MinPy
-=====
+MinPy API
+=========
 
 .. toctree::
    :maxdepth: 4

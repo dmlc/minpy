@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable= no-member, invalid-name
+# pylint: disable=no-member, invalid-name, undefined-variable
 """Definition of grads of mxnet core functions"""
 from __future__ import absolute_import
 
@@ -17,7 +17,8 @@ def _unbroadcast(ans, x, gradfun):
     """Append the gradient function with an unbroadcast function."""
     #pylint: disable= missing-docstring
     if isinstance(ans, NDArray) and isinstance(x, NDArray):
-        padded_shape = (1,) * (len(ans.shape) - len(x.shape)) + x.shape
+        padded_shape = (1, ) * (len(ans.shape) - len(x.shape)) + x.shape
+
         def newgradfun(g):
             gg = gradfun(g)
             for axis, (i, j) in enumerate(zip(g.shape, padded_shape)):
@@ -26,8 +27,10 @@ def _unbroadcast(ans, x, gradfun):
             if gg.shape != x.shape:
                 gg = gg.reshape(x.shape)
             return gg
+
         return newgradfun
     elif isinstance(ans, NDArray):  # x is numerical value
+
         def newgradfun(g):
             gg = gradfun(g)
             return ndarray.sum(gg)
@@ -45,12 +48,15 @@ def _maximum_grad_gen1(ans, x, y):
 
 def _sum_grad(ans, x, axis=None, keepdims=False):
     """ Generate gradient function of sum """
+    # pylint: disable=unused-argument
     if axis is None:
         def grad(g):
+            """Gradient for scalar."""
             if isinstance(g, float) or isinstance(g, int):
                 return ndarray.full(x.shape, g, x.context)
             else:
                 return ndarray.full(x.shape, g.asscalar(), x.context)
+
         return grad
     if isinstance(axis, int):
         axis = [axis]
@@ -61,6 +67,7 @@ def _sum_grad(ans, x, axis=None, keepdims=False):
         ans_shape_expanded[a] = 1
     xshape = x.shape  # Only shape is needed, hope array `x` could be GC'ed.
     return lambda g: ndarray.zeros(xshape, ctx=g.context) + g.reshape(tuple(ans_shape_expanded))
+    # pylint: enable=unused-argument
 
 ################################################################
 # Functions exposed for primitive & gradient registry
@@ -70,13 +77,14 @@ def register_primitives(reg, prim_wrapper):
     # Additional primitives due to naming issues in MXNet.
     reg.register('reshape', prim_wrapper(NDArray.reshape))
 
-def def_grads(reg, prims):
+
+def def_grads(prims):
     """ Define gradient function for primitives """
     identity = lambda x: x
     # dot
     prims('dot').def_grad(lambda ans, a, b: lambda g: ndarray.dot(g, b.T))
-    prims('dot').def_grad(lambda ans, a, b: lambda g: ndarray.dot(a.T, g),
-                          argnum=1)
+    prims('dot').def_grad(
+        lambda ans, a, b: lambda g: ndarray.dot(a.T, g), argnum=1)
     # non-linear
     #prims.tanh.def_grad(lambda ans, x: lambda g: g / np.cosh(x) ** 2)
     prims('exp').def_grad(lambda ans, x: lambda g: g * ans)
@@ -87,15 +95,14 @@ def def_grads(reg, prims):
     prims('multiply').def_grad(
         lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y))
     prims('multiply').def_grad(
-        lambda ans, x, y: _unbroadcast(ans, y, lambda g: x * g),
-        argnum=1)
+        lambda ans, x, y: _unbroadcast(ans, y, lambda g: x * g), argnum=1)
     prims('add').def_grad(lambda ans, x, y: _unbroadcast(ans, x, identity))
-    prims('add').def_grad(lambda ans, x, y: _unbroadcast(ans, y, identity),
-                          argnum=1)
-    prims('subtract').def_grad(lambda ans, x, y: _unbroadcast(ans, x, identity))
+    prims('add').def_grad(
+        lambda ans, x, y: _unbroadcast(ans, y, identity), argnum=1)
     prims('subtract').def_grad(
-        lambda ans, x, y: _unbroadcast(ans, y, operator.neg),
-        argnum=1)
+        lambda ans, x, y: _unbroadcast(ans, x, identity))
+    prims('subtract').def_grad(
+        lambda ans, x, y: _unbroadcast(ans, y, operator.neg), argnum=1)
     prims('divide').def_grad(
         lambda ans, x, y: _unbroadcast(ans, x, lambda g: g / y))
     prims('divide').def_grad(
@@ -122,12 +129,12 @@ def def_grads(reg, prims):
     prims('sin').def_grad(lambda ans, x: lambda g: g * mxnet.nd.cos(x))
     prims('cos').def_grad(lambda ans, x: lambda g: -g * mxnet.nd.sin(x))
     prims('power').def_grad(
-        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y * mxnet.nd.power(x, y - 1)))
+        lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y * mxnet.nd.power(x, y - 1))
+    )
     prims('power').def_grad(
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: g * mxnet.nd.log(x) * ans),
         argnum=1)
     prims('reshape').def_grad(
         lambda _0, x, _1: lambda g: NDArray.reshape(g, x.shape))
     prims('expand_dims').def_grad(
-        lambda ans, x, axis: lambda g: NDArray.reshape(g, x.shape)
-    )
+        lambda ans, x, axis: lambda g: NDArray.reshape(g, x.shape))

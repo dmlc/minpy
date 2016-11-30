@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# pylint: disable=cell-var-from-loop
 """Wrapper for MXNet namespace."""
 import types
+
 
 def wrap_namespace(nspace, reg, prim_wrapper):
     """Register all functions in a given namespace in the primitive registry.
