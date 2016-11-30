@@ -10,28 +10,33 @@ from minpy.nn import optim, init
 from minpy import core
 import minpy.numpy as np
 
-from minpy.visualization.writer import LegacySummaryWriter as SummaryWriter
-import minpy.visualization.summaryOps as summaryOps
+from minpy.visualize.writer import LegacySummaryWriter as SummaryWriter
+import minpy.visualize.summaryOps as summaryOps
 
 class Solver(object):
     """
     A Solver encapsulates all the logic necessary for training classification
     models. The Solver performs stochastic gradient descent using different
     update rules defined in optim.py.
+    
     The solver accepts both training and validataion data and labels so it can
     periodically check classification accuracy on both training and validation
     data to watch out for overfitting.
+    
     To train a model, you will first construct a Solver instance, passing the
     model, dataset, and various optoins (learning rate, batch size, etc) to the
     constructor. You will then call the train() method to run the optimization
     procedure and train the model.
+    
     After the train() method returns, model.params will contain the parameters
     that performed best on the validation set over the course of training.
     In addition, the instance variable solver.loss_history will contain a list
     of all losses encountered during training and the instance variables
     solver.train_acc_history and solver.val_acc_history will be lists containing
     the accuracies of the model on the training and validation set at each epoch.
+    
     Example usage might look something like this:
+    
     train_dataiter = NDArrayIter(data['X_train'],
                            data['y_train'],
                            batch_size=100,
@@ -40,6 +45,7 @@ class Solver(object):
                            data['y_val'],
                            batch_size=100,
                            shuffle=False)
+                           
     model = MyAwesomeModel(hidden_size=100, reg=10)
     solver = Solver(model, train_dataiter, test_dataiter,
                     update_rule='sgd',
@@ -50,6 +56,7 @@ class Solver(object):
                     num_epochs=10,
                     print_every=100)
     solver.train()
+    
     Parameters
     ----------
     model
@@ -209,10 +216,12 @@ class Solver(object):
     def check_accuracy(self, dataiter, num_samples=None):
         """
         Check accuracy of the model on the provided data.
+        
         Inputs:
         - dataiter: data iterator that can produce batches.
         - num_samples: If not None and dataiter has more than num_samples datapoints,
           subsample the data and only test the model on num_samples datapoints.
+        
         Returns:
         - acc: Scalar giving the fraction of instances that were correctly
           classified by the model.
@@ -270,7 +279,7 @@ class Solver(object):
                     # Add scalar summaries of training loss.
                     loss_summary = summaryOps.scalarSummary('loss', self.loss_history[-1])
                     self.train_writer.add_summary(loss_summary, t + 1)
-                
+
                 t += 1
 
             # evaluate after each epoch
