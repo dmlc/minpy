@@ -63,6 +63,9 @@ class Module(object):
             mod.def_grads(primitive_getter)
         self._logger.info('Import {} primitives'.format(
             len(self._registry._reg)))
+        self._keys = self._registry._reg.keys() + self._old.keys()
+        if len(name_injector) != 0:
+            self._keys += self._name_injector._name_dict.keys()
 
     def set_policy(self, plc):
         """Set name dispatch policy.
@@ -80,6 +83,9 @@ class Module(object):
     def policy(self):
         """Get policy of current module"""
         return self._policy
+
+    def __dir__(self):
+        return self._keys
 
     def __getattr__(self, name):
         """Fetch attributes from this module.
