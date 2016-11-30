@@ -23,7 +23,6 @@ _logger = log.get_logger(__name__)
 
 # pylint: enable= invalid-name
 
-
 class Value(object):
     # pylint: disable= no-self-use
     """Class for all possible values in MinPy.
@@ -32,67 +31,30 @@ class Value(object):
     It also defines common operators and redirects the call to the namespace dispatcher.
     """
     _ns = None
+    _ids = itertools.count(0)
 
-    def __init__(self, marked, context):
+    def __init__(self, context):
         self._bp_timestamp = -1
-        if marked:
-            self.set_bp()
+        self._minpy_value_id = next(self._ids)
         if context is None:
             self._context = current_context()
         else:
             self._context = context
 
-    @property
-    def marked_for_bp(self):
+    def is_marked_for_bp(self, tape):
         """Return whether the current `Value` will be used for autograd."""
-        return minpy.tape.global_tape() is not None and self._bp_timestamp == minpy.tape.global_tape().timestamp
+        return tape != None and self._bp_timestamp == tape.timestamp
 
-    def set_bp(self):
+    def mark_for_bp(self, tape):
         """Set flag to record gradient information."""
-        assert minpy.tape.global_tape is not None, "No active Tape found."
-        self._bp_timestamp = minpy.tape.global_tape().timestamp
+        self._bp_timestamp = tape.timestamp
 
     @property
     def context(self):
         """Return context of current `Value`."""
         return self._context
 
-    @staticmethod
-    def wrap(data, *args, **kwargs):
-        """Wrap given data into its corresponding wrapper class.
-
-        For example, :class:`numpy.ndarray` will be converted to
-        :class:`Array` while float number will become
-        :class:`Number`. The allowed array types are defined in
-        :class:`minpy.array_variants.array_types`; the allowed number
-        types are defined in
-        :class:`minpy.array_variants.number_types`.
-        """
-        if data is None:
-            return None
-        dtype = type(data)
-
-        def check_isinstance(data, iterable):
-            """Check whether data type against an iterable."""
-            return next(
-                iter(filter(lambda i: isinstance(data, i), iterable)),
-                None) is not None
-
-        if isinstance(data, Value):
-            return data
-        elif check_isinstance(data, array_types.values()):
-            return Array(data, *args, **kwargs)
-        elif check_isinstance(data, itertools.chain(*number_types.values())):
-            return Number(data, *args, **kwargs)
-        elif isinstance(data, list):
-            return list(map(Value.wrap, data))
-        elif isinstance(data, tuple):
-            return tuple(map(Value.wrap, data))
-        elif isinstance(data, dict):
-            return {k: Value.wrap(v) for k, v in data.items()}
-        else:
-            raise TypeError('Cannot wrap type of "{}".'.format(dtype))
-
+    
     def __hash__(self):
         return id(self)
 
@@ -270,11 +232,11 @@ class Number(Value, float):
     """Class for numbers with derivative information"""
     __slots__ = ['_val']
 
-    def __new__(cls, val, marked=False):
+    def __new__(cls, val):
         return float.__new__(cls, val)
 
-    def __init__(self, val, marked=False, context=None):
-        super(Number, self).__init__(marked=marked, context=context)
+    def __init__(self, val, context=None):
+        super(Number, self).__init__(context=context)
         self._val = val
 
     def __str__(self):
@@ -309,8 +271,8 @@ class Array(Value):
     __slots__ = ['_data', '_latest_version']
     __array_priority__ = 100.0  # Highest priority when compute with numpy.ndarray.
 
-    def __init__(self, data, marked=False, context=None):
-        super(Array, self).__init__(marked, context)
+    def __init__(self, data, context=None):
+        super(Array, self).__init__(context)
         self._data = {}
         atype = Array.to_array_type(data)
         self._data[atype] = data
@@ -483,7 +445,7 @@ class Array(Value):
         conversion to NumPy array.
         """
         np_index = None
-        to_np = lambda x: x if isinstance(x, slice) else Value.wrap(x).get_data(ArrayType.NUMPY)
+        to_np = lambda x: x if isinstance(x, slice) else wrap(x).get_data(ArrayType.NUMPY)
         if isinstance(index, tuple):
             np_index = tuple(to_np(i) for i in index)
         else:
@@ -497,8 +459,8 @@ class Array(Value):
         conversion to NumPy array. Also note that this operation breaks gradient chain.
         """
         np_index = None
-        np_val = Value.wrap(val).get_data(ArrayType.NUMPY)
-        to_np = lambda x: x if isinstance(x, slice) else Value.wrap(x).get_data(ArrayType.NUMPY)
+        np_val = wrap(val).get_data(ArrayType.NUMPY)
+        to_np = lambda x: x if isinstance(x, slice) else wrap(x).get_data(ArrayType.NUMPY)
         if isinstance(index, tuple):
             np_index = tuple(to_np(i) for i in index)
         else:
@@ -525,3 +487,46 @@ class Array(Value):
     def size(self):
         """Get number of elements in the array."""
         return self._get_latest_data().size
+
+def _make_wrapper_types():
+    """Create dictionary from underlying data type to its wrapper type.
+    
+    For types that have no corresponding wrapper type, just return the input type.
+    """
+    ret = collections.defaultdict(lambda : lambda x: x)
+    for ty in array_types.values():
+        ret[ty] = Array
+    for ty_list in number_types.values():
+        for ty in ty_list:
+            ret[ty] = Number
+    return ret;
+
+_wrapper_types = _make_wrapper_types()
+
+def wrap(data):
+    """Wrap given data into its corresponding wrapper class.
+
+    For example, :class:`numpy.ndarray` will be converted to
+    :class:`Array` while float number will become
+    :class:`Number`. The allowed array types are defined in
+    :class:`minpy.array_variants.array_types`; the allowed number
+    types are defined in
+    :class:`minpy.array_variants.number_types`.
+    """
+    if data is None:
+        return None
+    if hasattr(data, '_minpy_value_id'):
+        return data
+    else:
+        dtype = type(data)
+        return _wrapper_types[dtype](data)
+    '''
+    elif isinstance(data, list):
+        return [wrap(d) for d in data]
+    elif isinstance(data, tuple):
+        return tuple(wrap(d) for d in data)
+    elif isinstance(data, dict):
+        return {k: wrap(v) for k, v in data.items()}
+    else:
+        raise TypeError('Cannot wrap type of "{}".'.format(dtype))
+    '''

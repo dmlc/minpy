@@ -6,7 +6,7 @@ from minpy.context import Context, cpu, gpu, set_context
 #np.set_policy(policy.OnlyNumpyPolicy())
 
 def test_context():
-    set_context(gpu(1)) # set the global context as gpu(1)
+    #set_context(gpu(1)) # set the global context as gpu(1)
     
     def sigmoid(x):
         return 0.5 * (np.tanh(x / 2) + 1)

@@ -7,9 +7,10 @@ from __future__ import print_function
 
 import functools
 import minpy
-from minpy.array import Value
-from minpy.array_variants import ArrayType
-from minpy.utils import log
+from .. import tape
+from ..array import Value
+from ..array_variants import ArrayType
+from ..utils import log
 from .rule import Blacklist
 
 # pylint: disable= invalid-name
@@ -94,18 +95,14 @@ class Policy(object):
     def _available_prims(name, reg, args, kwargs):
         """Return a list of available primitives"""
 
-        def fst(t):
-            x, _ = t
-            return x
+        current_tape = tape.global_tape()
 
-        bp_args = tuple(
-            map(fst, filter(
-                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                enumerate(args))))
-        bp_kwargs = tuple(
-            map(fst, filter(
-                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                kwargs.items())))
+        bp_args = tuple(i for i, arg in enumerate(args)
+                        if (hasattr(arg, 'is_marked_for_bp') and
+                            arg.is_marked_for_bp(current_tape)))
+        bp_kwargs = tuple(k for k, arg in kwargs.items()
+                          if (hasattr(arg, 'is_marked_for_bp') and
+                              arg.is_marked_for_bp(current_tape)))
         available = reg.iter_available_types(name, bp_args, bp_kwargs)
         return available
 
@@ -138,7 +135,7 @@ class Policy(object):
         prim = reg.get(name, preference)
         _logger.debug('Found primitive "{}" with type {}.'.format(
             name, prim.typestr))
-        return prim(*args, **kwargs)
+        return prim(args, kwargs)
 
 
 class AutoBlacklistPolicy(Policy):
@@ -168,7 +165,7 @@ class AutoBlacklistPolicy(Policy):
     def resolve_call(self, name, reg, args, kwargs):
         def get_result(impl_type):
             prim = reg.get(name, impl_type)
-            return prim(*args, **kwargs)
+            return prim(args, kwargs)
 
         available = self._available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)

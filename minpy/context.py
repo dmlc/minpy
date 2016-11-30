@@ -52,6 +52,8 @@ class Context(object):
         else:
             self.device_typeid = Context.devstr2type[device_type]
             self.device_id = device_id
+        self._mxnet_context = mxnet.Context(self.devtype2str[self.device_typeid],
+                                            self.device_id)
         self._old_ctx = None
 
     @property
@@ -79,8 +81,7 @@ class Context(object):
         """Get MXNet context."""
         _logger.debug('Getting MXNet context with typeid "{}" and id "{}"'.
                       format(self.device_typeid, self.device_id))
-        return mxnet.Context(self.devtype2str[self.device_typeid],
-                             self.device_id)
+        return self._mxnet_context
 
     def __str__(self):
         return '%s(%d)' % (self.device_type, self.device_id)

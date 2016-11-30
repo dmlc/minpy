@@ -18,7 +18,7 @@ np.set_policy(minpy.dispatch.policy.OnlyNumPyPolicy())
 # logging.getLogger('minpy.core').setLevel(logging.DEBUG)
 # logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 
-num_loops = 10
+num_cold = 5
 
 class TwoLayerNet(minpy.nn.model.ModelBase):
     def __init__(self, args):
@@ -62,8 +62,9 @@ def main(args):
     img = np.zeros((args.batch_size, 784))
     label = np.zeros((args.batch_size,), dtype=np.int)
 
-    start = time.time()
-    for l in range(num_loops):
+    for l in range(args.num_loops):
+        if l == num_cold:
+            start = time.time()
         def loss_func(*params):
             f = model.forward(img, 'train')
             return model.loss(f, label)
@@ -76,10 +77,8 @@ def main(args):
             grad_and_loss_func = minpy.core.grad_and_loss(
                 loss_func, argnum=range(len(param_arrays)))
             grad_arrays, loss = grad_and_loss_func(*param_arrays)
-            #for g in grad_arrays:
-                #g.asnumpy()
     dur = time.time() - start
-    print('Per Loop Time: %.6f' % (dur / num_loops))
+    print('Per Loop Time: %.6f' % (dur / (args.num_loops - num_cold)))
 
 
 if __name__ == '__main__':
@@ -88,6 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', default=256, type=int)
     parser.add_argument('--hidden-size', default=256, type=int)
     parser.add_argument('--num-hidden', default=1, type=int)
-    import profile
-    profile.run('main(parser.parse_args())')
-    #main(parser.parse_args())
+    parser.add_argument('--num-loops', default=20, type=int)
+    #import profile
+    #profile.run('main(parser.parse_args())')
+    main(parser.parse_args())
