@@ -63,9 +63,7 @@ class Module(object):
             mod.def_grads(primitive_getter)
         self._logger.info('Import {} primitives'.format(
             len(self._registry._reg)))
-        self._keys = self._registry._reg.keys() + self._old.keys()
-        if len(name_injector) != 0:
-            self._keys += self._name_injector._name_dict.keys()
+        self._set_attrs()
 
     def set_policy(self, plc):
         """Set name dispatch policy.
@@ -84,34 +82,19 @@ class Module(object):
         """Get policy of current module"""
         return self._policy
 
-    def __dir__(self):
-        return self._keys
-
-    def __getattr__(self, name):
-        """Fetch attributes from this module.
-
-        If the name is contained in the primitive registry,
-        it will return a primitive selector for further name dispatching.
-
-        :param name: Name of attribute.
-        :return: Primitive selector.
-        :raises AttributeError: Cannot find attribute.
-        """
-        # Special members for internal use.
-        if name == '__registry__':
-            return self._registry
-        elif name == '__all__':
-            return self._old.__all__
-        elif self._registry.has_name(name):
-            return PrimitiveSelector(name, self._registry, self._policy)
-        elif name in self._name_injector:
-            return self._name_injector[name]
-        elif name in self._old:
-            self._logger.info(
-                'No entry found for "{}" in registry, fallback.'.format(name))
-            return self._old[name]
-        else:
-            raise AttributeError('Cannot find name "{}".'.format(name))
+    def _set_attrs(self):
+        """Set attributes for this module"""
+        # The latter will override the former, so set attributes in reverse priority order
+        for fname in self._old:
+            setattr(self, fname, self._old[fname])
+        for fname in self._name_injector.keys():
+            setattr(self, fname, self._name_injector[fname])
+        for fname in self._registry._reg.keys():
+            fun = PrimitiveSelector(fname, self._registry, self._policy)
+            setattr(self, fname, fun)
+        if '__all__' in dir(self._old):
+            setattr(self, '__all__', self._old.__all__)
+        setattr(self, '__registry__', self._registry)
 
 
 class NameInjector(object):
@@ -165,6 +148,9 @@ class NameInjector(object):
             self._name_dict.update(exception)
         self._logger.info('Import {} objects from {} to Name Injector {}'.
                           format(len(self), dest_mod.__name__, self.__name__))
+
+    def keys(self):
+        return self._name_dict.keys()
 
     def __len__(self):
         return len(self._name_dict)
