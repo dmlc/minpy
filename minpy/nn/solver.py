@@ -10,7 +10,7 @@ from minpy.nn import optim, init
 from minpy import core
 import minpy.numpy as np
 
-from minpy.visualize.writer import LegacySummaryWriter as SummaryWriter
+from minpy.visualize.writer import summary_writer
 import minpy.visualize.summaryOps as summaryOps
 
 class Solver(object):
@@ -112,8 +112,8 @@ class Solver(object):
         if self.visualize:
             # Retrieve the summary directory. Create summary writers for training and test.
             self.summaries_dir = kwargs.pop('summaries_dir', '/private/tmp/newlog')
-            self.train_writer = SummaryWriter(self.summaries_dir + '/train')
-            self.test_writer = SummaryWriter(self.summaries_dir + '/test')
+            self.train_writer = summary_writer(self.summaries_dir + '/train')
+            self.test_writer = summary_writer(self.summaries_dir + '/test')
 
         # Throw an error if there are extra keyword arguments
         if len(kwargs) > 0:
@@ -194,7 +194,7 @@ class Solver(object):
         self.loss_history.append(loss.asnumpy())
 
         if self.visualize:
-            Grad_norm = 0
+            grad_norm = 0
 
         # Perform a parameter update
         for p, w in self.model.params.items():
@@ -203,14 +203,14 @@ class Solver(object):
                 norm = dw ** 2
                 while not isinstance(norm, minpy.array.Number):
                     norm = sum(norm)
-                Grad_norm += norm
+                grad_norm += norm
             config = self.optim_configs[p]
             next_w, next_config = self.update_rule(w, dw, config)
             self.model.params[p] = next_w
             self.optim_configs[p] = next_config
 
         if self.visualize:
-            grad_norm_summary = summaryOps.scalarSummary('squared L2-norm of the gradient', Grad_norm)
+            grad_norm_summary = summaryOps.scalar_summary('squared L2-norm of the gradient', grad_norm)
             self.train_writer.add_summary(grad_norm_summary, iteration)
 
     def check_accuracy(self, dataiter, num_samples=None):
@@ -270,15 +270,15 @@ class Solver(object):
             start = time.time()
             self.epoch = epoch + 1
             for each_batch in self.train_dataiter:
-                self._step(each_batch, t + 1)
+                self._step(each_batch, t)
                 # Maybe print training loss
                 if self.verbose and t % self.print_every == 0:
                     print('(Iteration %d / %d) loss: %f' %
                           (t + 1, num_iterations, self.loss_history[-1]))
                 if self.visualize:
                     # Add scalar summaries of training loss.
-                    loss_summary = summaryOps.scalarSummary('loss', self.loss_history[-1])
-                    self.train_writer.add_summary(loss_summary, t + 1)
+                    loss_summary = summaryOps.scalar_summary('loss', self.loss_history[-1])
+                    self.train_writer.add_summary(loss_summary, t)
 
                 t += 1
 
@@ -299,9 +299,9 @@ class Solver(object):
 
             # Add scalar summaries of accuracy.
             if self.visualize:
-                val_acc_summary = summaryOps.scalarSummary('accuracy', val_acc)
+                val_acc_summary = summaryOps.scalar_summary('accuracy', val_acc)
                 self.test_writer.add_summary(val_acc_summary, self.epoch)
-                train_acc_summary = summaryOps.scalarSummary('accuracy', train_acc)
+                train_acc_summary = summaryOps.scalar_summary('accuracy', train_acc)
                 self.train_writer.add_summary(train_acc_summary, self.epoch)
 
             # Keep track of the best model
