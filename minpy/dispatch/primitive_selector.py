@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#pylint: disable= invalid-name
 """Lazy evaluation of primitive selection."""
 from __future__ import absolute_import
 from __future__ import print_function

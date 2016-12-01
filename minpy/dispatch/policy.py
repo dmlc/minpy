@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable= no-self-use
 """Policy for selecting appropriate function to call."""
 from __future__ import absolute_import
 from __future__ import print_function
@@ -8,15 +7,11 @@ from __future__ import print_function
 import functools
 import minpy
 from .. import tape
-from ..array import Value
 from ..array_variants import ArrayType
 from ..utils import log
 from .rule import Blacklist
 
-# pylint: disable= invalid-name
-_logger = log.get_logger(__name__)
-
-# pylint: enable= invalid-name
+_logger = log.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class PrimitivePolicyError(ValueError):
@@ -43,6 +38,7 @@ class Policy(object):
     def __init__(self):
         self._mxnet_op_cnt = 0
         self._numpy_op_cnt = 0
+        self._old_policy = None
 
     def _decide(self, candidates, args, kwargs):
         """Primitive decision policy interface.
@@ -133,8 +129,7 @@ class Policy(object):
         elif preference is None:
             raise PrimitivePolicyError(name, self.name)
         prim = reg.get(name, preference)
-        _logger.debug('Found primitive "{}" with type {}.'.format(
-            name, prim.typestr))
+        _logger.debug('Found primitive "%s" with type %s.', name, prim.typestr)
         return prim(args, kwargs)
 
 
@@ -155,6 +150,8 @@ class AutoBlacklistPolicy(Policy):
         Path to rule configuration file.
     """
 
+    # pylint: disable=abstract-method
+
     def __init__(self, gen_rule=False, append_rule=True, loc=None):
         super(AutoBlacklistPolicy, self).__init__()
         self._gen_rule = gen_rule
@@ -163,7 +160,7 @@ class AutoBlacklistPolicy(Policy):
             self._rules.reset_rules()
 
     def resolve_call(self, name, reg, args, kwargs):
-        def get_result(impl_type):
+        def _get_result(impl_type):
             prim = reg.get(name, impl_type)
             return prim(args, kwargs)
 
@@ -173,30 +170,31 @@ class AutoBlacklistPolicy(Policy):
                 name, ArrayType.MXNET, args, kwargs):
             if self._gen_rule:
                 try:
-                    _logger.debug('Try primitive {} with MXNet '
-                                  'implementation.'.format(name))
+                    _logger.debug(
+                        'Try primitive %s with MXNet implementation.', name)
                     self._mxnet_op_cnt += 1
-                    return get_result(ArrayType.MXNET)
-                except Exception as err:
+                    return _get_result(ArrayType.MXNET)
+                except Exception as err:  # pylint: disable=broad-except
                     self._mxnet_op_cnt -= 1
                     if ArrayType.NUMPY in possible_impl:
-                        _logger.info('Error occurs. Try primitive {} with '
-                                     'NumPy implementation'.format(name))
+                        _logger.info(
+                            'Error occurs. Try primitive %s with NumPy implementation',
+                            name)
                         self._rules.add(name, ArrayType.MXNET, args, kwargs)
                         self._numpy_op_cnt += 1
-                        return get_result(ArrayType.NUMPY)
+                        return _get_result(ArrayType.NUMPY)
                     else:
                         raise err
             else:
-                _logger.debug('Execute primitive {} with '
-                              'MXNet implementation'.format(name))
+                _logger.debug('Execute primitive %s with MXNet implementation',
+                              name)
                 self._mxnet_op_cnt += 1
-                return get_result(ArrayType.MXNET)
+                return _get_result(ArrayType.MXNET)
         elif ArrayType.NUMPY in possible_impl:
-            _logger.debug('Execute primitive {} with '
-                          'NumPy implementation'.format(name))
+            _logger.debug('Execute primitive %s with NumPy implementation',
+                          name)
             self._numpy_op_cnt += 1
-            return get_result(ArrayType.NUMPY)
+            return _get_result(ArrayType.NUMPY)
         else:
             raise PrimitivePolicyError(name, self.name)
 
@@ -262,6 +260,5 @@ def wrap_policy(policy):
             return result
 
         return policy_wrapper
-        # pylint: enable= missing-docstring
 
     return policy_decorator

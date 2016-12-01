@@ -3,9 +3,7 @@
 """Registry for functions under the same symbol."""
 from minpy.utils import log
 
-# pylint: disable= invalid-name
-_logger = log.get_logger(__name__)
-# pylint: enable= invalid-name
+_logger = log.get_logger(__name__)  # pylint: disable= invalid-name
 
 
 class PrimitiveRegistryError(ValueError):
@@ -35,9 +33,8 @@ class Registry(object):
                 'Type "{}" for name "{}" has already existed'.format(
                     prim.typestr, name))
         else:
-            _logger.debug(
-                'Function "{}" registered with type {}'.format(
-                    name, prim.typestr))
+            _logger.debug('Function "%s" registered with type %s', name,
+                          prim.typestr)
             self._reg[name][prim.type] = prim
 
     def has_name(self, name):
