@@ -3,14 +3,15 @@ from __future__ import division
 from __future__ import absolute_import
 from collections import OrderedDict
 
-import sys, inspect
+import sys
+import inspect
 import numpy as np
-import six.moves.cPickle as pickle
+import six.moves.cPickle as pickle # pylint: disable=import-error, no-name-in-module
 import minpy
 import mxnet.io
 
 
-class DataBatch(object):
+class DataBatch(object): # pylint: disable=too-few-public-methods
     """Default object for holding a mini-batch of data and related information."""
 
     def __init__(self, data, label, pad=None, index=None):
@@ -90,7 +91,7 @@ class DataIter(object):
         index : numpy.array
             The index of current batch
         """
-        return None
+        pass
 
     def getpad(self):
         """Get the number of padding examples in current batch.
@@ -103,7 +104,7 @@ class DataIter(object):
         pass
 
 
-def _init_data(data, allow_empty, default_name):
+def _init_data(data, allow_empty, default_name):# pylint: invalid-name
     """Convert data into canonical form."""
     assert (data is not None) or allow_empty
     if data is None:
@@ -113,7 +114,7 @@ def _init_data(data, allow_empty, default_name):
         data = [data]
     if isinstance(data, list):
         if not allow_empty:
-            assert (len(data) > 0)
+            assert len(data) > 0
         if len(data) == 1:
             data = OrderedDict([(default_name, data[0])])
         else:
@@ -131,7 +132,7 @@ def _init_data(data, allow_empty, default_name):
     return list(data.items())
 
 
-class NDArrayIter(DataIter):
+class NDArrayIter(DataIter): # pylint: 
     """NDArrayIter object in minpy. Taking numpy array to get dataiter.
     Parameters
     ----------
@@ -158,7 +159,7 @@ class NDArrayIter(DataIter):
                  batch_size=1,
                  shuffle=False,
                  last_batch_handle='pad'):
-        # pylint: disable=W0201
+        # pylint: disable=W0201, too-many-arguments
 
         super(NDArrayIter, self).__init__()
 
@@ -214,8 +215,7 @@ class NDArrayIter(DataIter):
 
     def reset(self):
         if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
-            self.cursor = -self.batch_size + (self.cursor % self.num_data
-                                              ) % self.batch_size
+            self.cursor = -self.batch_size + (self.cursor % self.num_data) % self.batch_size
         else:
             self.cursor = -self.batch_size
 
@@ -268,6 +268,9 @@ class NDArrayIter(DataIter):
             return self.cursor + self.batch_size - self.num_data
         else:
             return 0
+
+    def getindex(self):
+        return self.cursor / self.batch_size
 
     def getsubiter(self, num_samples):
         """Create a sub dataiter which samples part of the data in the dataset"""
