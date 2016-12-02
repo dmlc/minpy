@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # pylint: disable=unused-argument, protected-access, logging-format-interpolation, abstract-method
+# pylint: disable=pointless-string-statement
 """Base type for arrays."""
 from __future__ import absolute_import
 from __future__ import print_function
@@ -10,7 +11,6 @@ import collections
 
 import mxnet
 import numpy
-import minpy
 
 from .array_variants import ArrayType
 from .array_variants import array_types
@@ -54,7 +54,6 @@ class Value(object):
         """Return context of current `Value`."""
         return self._context
 
-    
     def __hash__(self):
         return id(self)
 
@@ -303,7 +302,7 @@ class Array(Value):
     @property
     def ndim(self):
         """ Number of array dimensions """
-        # TODO (Yihe) add ndim in MXNet ndarray
+        # TODO(Yihe): add ndim in MXNet ndarray
         # return self._get_latest_data().ndim
         return self.get_data(ArrayType.NUMPY).ndim
 
@@ -490,18 +489,18 @@ class Array(Value):
 
 def _make_wrapper_types():
     """Create dictionary from underlying data type to its wrapper type.
-    
+
     For types that have no corresponding wrapper type, just return the input type.
     """
-    ret = collections.defaultdict(lambda : lambda x: x)
-    for ty in array_types.values():
-        ret[ty] = Array
+    ret = collections.defaultdict(lambda: lambda x: x)
+    for i in array_types.values():
+        ret[i] = Array
     for ty_list in number_types.values():
-        for ty in ty_list:
-            ret[ty] = Number
-    return ret;
+        for i in ty_list:
+            ret[i] = Number
+    return ret
 
-_wrapper_types = _make_wrapper_types()
+_wrapper_types = _make_wrapper_types()  # pylint: disable= invalid-name
 
 def wrap(data):
     """Wrap given data into its corresponding wrapper class.
@@ -520,6 +519,7 @@ def wrap(data):
     else:
         dtype = type(data)
         return _wrapper_types[dtype](data)
+
     '''
     elif isinstance(data, list):
         return [wrap(d) for d in data]
