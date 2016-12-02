@@ -10,33 +10,33 @@ from minpy.nn import optim, init
 from minpy import core
 import minpy.numpy as np
 
-from minpy.visualize.writer import summary_writer
-import minpy.visualize.summaryOps as summaryOps
+from minpy.visualize.writer import SummaryWriter
+import minpy.visualize.summary_ops as summary_ops
 
 class Solver(object):
     """
     A Solver encapsulates all the logic necessary for training classification
     models. The Solver performs stochastic gradient descent using different
     update rules defined in optim.py.
-    
+
     The solver accepts both training and validataion data and labels so it can
     periodically check classification accuracy on both training and validation
     data to watch out for overfitting.
-    
+
     To train a model, you will first construct a Solver instance, passing the
     model, dataset, and various optoins (learning rate, batch size, etc) to the
     constructor. You will then call the train() method to run the optimization
     procedure and train the model.
-    
+
     After the train() method returns, model.params will contain the parameters
     that performed best on the validation set over the course of training.
     In addition, the instance variable solver.loss_history will contain a list
     of all losses encountered during training and the instance variables
     solver.train_acc_history and solver.val_acc_history will be lists containing
     the accuracies of the model on the training and validation set at each epoch.
-    
+
     Example usage might look something like this:
-    
+
     train_dataiter = NDArrayIter(data['X_train'],
                            data['y_train'],
                            batch_size=100,
@@ -45,7 +45,7 @@ class Solver(object):
                            data['y_val'],
                            batch_size=100,
                            shuffle=False)
-                           
+
     model = MyAwesomeModel(hidden_size=100, reg=10)
     solver = Solver(model, train_dataiter, test_dataiter,
                     update_rule='sgd',
@@ -56,7 +56,7 @@ class Solver(object):
                     num_epochs=10,
                     print_every=100)
     solver.train()
-    
+
     Parameters
     ----------
     model
@@ -112,8 +112,8 @@ class Solver(object):
         if self.visualize:
             # Retrieve the summary directory. Create summary writers for training and test.
             self.summaries_dir = kwargs.pop('summaries_dir', '/private/tmp/newlog')
-            self.train_writer = summary_writer(self.summaries_dir + '/train')
-            self.test_writer = summary_writer(self.summaries_dir + '/test')
+            self.train_writer = SummaryWriter(self.summaries_dir + '/train')
+            self.test_writer = SummaryWriter(self.summaries_dir + '/test')
 
         # Throw an error if there are extra keyword arguments
         if len(kwargs) > 0:
@@ -210,18 +210,19 @@ class Solver(object):
             self.optim_configs[p] = next_config
 
         if self.visualize:
-            grad_norm_summary = summaryOps.scalar_summary('squared L2-norm of the gradient', grad_norm)
+            grad_norm_summary = summary_ops.scalar_summary('squared L2-norm of the gradient',
+                                                           grad_norm)
             self.train_writer.add_summary(grad_norm_summary, iteration)
 
     def check_accuracy(self, dataiter, num_samples=None):
         """
         Check accuracy of the model on the provided data.
-        
+
         Inputs:
         - dataiter: data iterator that can produce batches.
         - num_samples: If not None and dataiter has more than num_samples datapoints,
           subsample the data and only test the model on num_samples datapoints.
-        
+
         Returns:
         - acc: Scalar giving the fraction of instances that were correctly
           classified by the model.
@@ -277,7 +278,7 @@ class Solver(object):
                           (t + 1, num_iterations, self.loss_history[-1]))
                 if self.visualize:
                     # Add scalar summaries of training loss.
-                    loss_summary = summaryOps.scalar_summary('loss', self.loss_history[-1])
+                    loss_summary = summary_ops.scalar_summary('loss', self.loss_history[-1])
                     self.train_writer.add_summary(loss_summary, t)
 
                 t += 1
@@ -299,9 +300,9 @@ class Solver(object):
 
             # Add scalar summaries of accuracy.
             if self.visualize:
-                val_acc_summary = summaryOps.scalar_summary('accuracy', val_acc)
+                val_acc_summary = summary_ops.scalar_summary('accuracy', val_acc)
                 self.test_writer.add_summary(val_acc_summary, self.epoch)
-                train_acc_summary = summaryOps.scalar_summary('accuracy', train_acc)
+                train_acc_summary = summary_ops.scalar_summary('accuracy', train_acc)
                 self.train_writer.add_summary(train_acc_summary, self.epoch)
 
             # Keep track of the best model
