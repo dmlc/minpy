@@ -18,14 +18,14 @@ import tensorflow as tf
 def as_bytes(bytes_or_text, encoding='utf-8'):
     """
     Converts either bytes or unicode to `bytes`, using utf-8 encoding for text.
-    
+
     Args:
     - bytes_or_text: A `bytes`, `str`, or `unicode` object.
     - encoding: A string indicating the charset for encoding unicode.
-    
+
     Returns:
     - A `bytes` object.
-    
+
     Raises:
     - TypeError: If `bytes_or_text` is not a binary or unicode string.
     """
@@ -38,17 +38,18 @@ def as_bytes(bytes_or_text, encoding='utf-8'):
                         (bytes_or_text,))
 
 def directory_check(path):
+    '''Initialize the directory for log files.'''
     # If the direcotry does not exist, create it!
     if not os.path.exists(path):
         os.makedirs(path)
     # Else, empty the directory.
     else:
-        fileList = os.listdir(path)
-        for file in fileList:
-            os.remove(path + "/" + file)
+        file_list = os.listdir(path)
+        for files in file_list:
+            os.remove(path + "/" + files)
 
-class events_writer:
-
+class EventsWriter(object):
+    '''Writes `Event` protocol buffers to an event file.'''
     def __init__(self, file_prefix):
         '''
         Events files have a name of the form
@@ -66,13 +67,13 @@ class events_writer:
 
         # Initialize an event instance.
         self._event = event_pb2.Event()
-        
+
         self._event.wall_time = time.time()
 
         self.write_event(self._event)
 
     def write_event(self, event):
-        # Append "event" to the file.
+        '''Append "event" to the file.'''
 
         # Check if event is of type event_pb2.Event proto.
         if not isinstance(event, event_pb2.Event):
@@ -85,14 +86,16 @@ class events_writer:
         self._recordio_writer.write(event_str)
 
     def flush(self):
-        num_outstanding_events_ = 0
+        '''Flushes the event file to disk.'''
+        self._num_outstanding_events = 0
         return True
 
     def close(self):
+        '''Call self.flush().'''
         return_value = self.flush()
         return return_value
 
-class event_file_writer(object):
+class EventFileWriter(object):
     '''
     Writes `Event` protocol buffers to an event file.
 
@@ -114,13 +117,13 @@ class event_file_writer(object):
         Args:
         - logdir: A string. Directory where event file will be written.
         - max_queue: Integer. Size of the queue for pending events and summaries.
-        - flush_secs: Number. How often, in seconds, to flush the 
-                      pending events and summaries to disk.
+        - flush_secs: Number. How often, in seconds, to flush the
+        pending events and summaries to disk.
         """
         self._logdir = logdir
         directory_check(self._logdir)
         self._event_queue = six.moves.queue.Queue(max_queue)
-        self._ev_writer = events_writer(as_bytes(os.path.join(self._logdir, "events")))
+        self._ev_writer = EventsWriter(as_bytes(os.path.join(self._logdir, "events")))
         self._closed = False
         self._worker = _EventLoggerThread(self._event_queue, self._ev_writer, flush_secs)
 
