@@ -6,23 +6,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import functools
-import itertools
 import collections
-import operator
 
 from . import array
 from .array_variants import ArrayType
 from . import context
 from .utils import log
-from .utils.minprof import minprof
 from . import tape
 
-# pylint: disable= invalid-name
-_logger = log.get_logger(__name__)
-# pylint: enable= invalid-name
-
+_logger = log.get_logger(__name__) # pylint: disable= invalid-name
 GradFunc = collections.namedtuple('GradFunc', ['f', 'multi_grad_indices'])
-
 
 class Primitive(object):
     """Class for primitives. It includes both forward function and gradient definition."""
@@ -83,7 +76,7 @@ class Primitive(object):
     def __str__(self):
         return self._func.__name__
 
-    def __call__(self, args, kwargs):
+    def __call__(self, args, kwargs): # pylint: disable= too-many-branches
         """Call wrapped function.
 
         Parameters
@@ -116,7 +109,7 @@ class Primitive(object):
             """Get value of array."""
             xv = array.wrap(x)
             if hasattr(xv, '_minpy_value_id'):
-                # XXX: Use list of only one element to avoid variable assignment.
+                # XXX: Use list of only one element to avoid variable assignment. # pylint: disable= fixme
                 if not need_bp[0] and xv.is_marked_for_bp(current_tape):
                     need_bp[0] = True
                 if mutate:
@@ -149,7 +142,7 @@ class Primitive(object):
                 for r in result:
                     r.mark_for_bp(current_tape)
             else:
-                result.mark_for_bp(current_tape)
+                result.mark_for_bp(current_tape) # pylint: disable= no-member
             # Record partial derivative paths, only for `array.Value` type values.
             # If no gradient function is defined, also omit it
             visited_arg_indices = set()
@@ -166,7 +159,7 @@ class Primitive(object):
                 """
 
                 @functools.wraps(func)
-                def wrapped(result):
+                def wrapped(result): # pylint: disable= missing-docstring
                     with get_context(result).as_mxnet_context():
                         return func(result)
 
@@ -177,11 +170,11 @@ class Primitive(object):
                 """
 
                 @functools.wraps(func)
-                def wrapped(result):
+                def wrapped(result): # pylint: disable= missing-docstring
                     if isinstance(result, (tuple, list)):
                         result = (elm.get_data(self.type) for elm in result)
                     else:
-                        result = result.get_data(self.type)
+                        result = result.get_data(self.type) # pylint: disable= no-member
                     return func(result)
 
                 return wrapped
@@ -214,7 +207,7 @@ class Primitive(object):
                         # in one call.
                         owner = []
                         for grad_index in grad_func_rec.multi_grad_indices:
-                            if (isinstance(args[grad_index], array.Value) and
+                            if (isinstance(args[grad_index], array.Value) and \
                                 args[grad_index].is_marked_for_bp(current_tape)):
                                 owner.append(args[grad_index])
                             else:
