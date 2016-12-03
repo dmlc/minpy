@@ -21,6 +21,7 @@ setuptools.setup(
         'six',
         'h5py',
         'PyYAML',
+        'tabulate',
     ],
     data_files=[('', ['VERSION'])],
     url='https://github.com/dmlc/minpy')

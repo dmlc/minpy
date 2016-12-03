@@ -80,9 +80,9 @@ class Rules(object):
         if cls._rules is None or force:
             config = None
             locs = [
-                os.curdir, os.path.expandvars(cls._env_var),
-                os.path.expanduser('~'), os.path.join(
-                    os.path.dirname(__file__), '../utils/blacklist.yml')
+                os.curdir,
+                os.path.expandvars(cls._env_var),
+                os.path.expanduser('~'),
             ]
             locs = [os.path.join(loc, cls._conf_file) for loc in locs]
             if cls._loc is not None:
@@ -137,7 +137,7 @@ class Rules(object):
         cls._rules = {}
         cls._hash = {}
 
-    def allow(self, name, impl_type, args, kwargs):
+    def allow(self, name, nspace, impl_type, args, kwargs):
         """Rule inquiry interface.
 
         Check if implementation is allowed.
@@ -146,6 +146,8 @@ class Rules(object):
         ----------
         name : str
             The dispatch name.
+        nspace : str
+            The namespace the dispatch name belongs to.
         impl_type : ArrayType
             The type of implementation.
         args : list
@@ -158,9 +160,10 @@ class Rules(object):
         bool
             True if implementation is allowed; False otherwize.
         """
+        # pylint: disable=too-many-arguments
         raise NotImplementedError()
 
-    def add(self, name, impl_type, args, kwargs):
+    def add(self, name, nspace, impl_type, args, kwargs):
         """Rule registration interface.
 
         Register a new rule based on given info.
@@ -169,6 +172,8 @@ class Rules(object):
         ----------
         name : str
             The dispatch name.
+        nspace : str
+            The namespace of the dispatch name.
         impl_type : ArrayType
             The type of implementation.
         args : list
@@ -176,15 +181,18 @@ class Rules(object):
         kwargs : dict
             The keyword arguments passed to the primitive.
         """
+        # pylint: disable=too-many-arguments
         raise NotImplementedError()
 
 
 class Blacklist(Rules):
     """Blacklist rules for rule-based policy"""
 
-    def allow(self, name, impl_type, args, kwargs):
+    def allow(self, name, nspace, impl_type, args, kwargs):
+        # pylint: disable=too-many-arguments
         if impl_type != ArrayType.MXNET:
             return True
+        # For simplicity, this applies to all namespaces.
         if name in MXNET_BLACKLIST_OPS:
             _logger.debug(
                 'Rule applies: %s is in internal MXNet op blacklist.', name)
@@ -198,9 +206,9 @@ class Blacklist(Rules):
             else:
                 return True
 
-        if name in self._hash and (
-                self._hash[name] is None or
-                self._get_arg_rule_key(args, kwargs) in self._hash[name]):
+        if nspace in self._hash and name in self._hash[nspace] and (
+                self._hash[nspace][name] is None or self._get_arg_rule_key(
+                    args, kwargs) in self._hash[nspace][name]):
             _logger.debug('Rule applies: block by auto-generated rule on %s.',
                           name)
             return False
@@ -213,32 +221,39 @@ class Blacklist(Rules):
 
         return True
 
-    def add(self, name, impl_type, args, kwargs):
+    def add(self, name, nspace, impl_type, args, kwargs):
+        # pylint: disable=too-many-arguments
         if impl_type != ArrayType.MXNET:
             raise RuleError('This rule only blacklists MXNet ops.')
 
         # Return type sequence
         type_seq = lambda args: [self._get_type_signiture(x) for x in args]
 
-        self._rules.setdefault(name, [])
-        self._hash.setdefault(name, set())
-        if self._get_arg_rule_key(args, kwargs) not in self._hash[name]:
+        self._rules.setdefault(nspace, {})
+        self._rules[nspace].setdefault(name, [])
+        self._hash.setdefault(nspace, {})
+        self._hash[nspace].setdefault(name, set())
+        if self._get_arg_rule_key(args,
+                                  kwargs) not in self._hash[nspace][name]:
             entry = {'args': type_seq(args)}
             if len(kwargs) > 0:
                 entry['kwargs'] = list(kwargs.keys())
-            self._rules[name].append(entry)
+            self._rules[nspace][name].append(entry)
             key = self._get_arg_rule_key(args, kwargs)
-            self._hash[name].add(key)
+            self._hash[nspace][name].add(key)
             _logger.info('New rule %s added.', key)
 
     @classmethod
     def _build_hash(cls):
         cls._hash = {}
-        for key, rules in cls._rules.items():
-            cls._hash[key] = set()
-            for elm in rules:
-                cls._hash[key].add('-'.join(elm['args']) + '+' + '-'.join(
-                    sorted(elm.get('kwargs', []))))
+        for nspace, ns_rules in cls._rules.items():
+            cls._hash[nspace] = {}
+            for key, rules in ns_rules.items():
+                cls._hash[nspace][key] = set()
+                for elm in rules:
+                    cls._hash[nspace][key].add('-'.join(elm[
+                        'args']) + '+' + '-'.join(
+                            sorted(elm.get('kwargs', []))))
 
     @staticmethod
     def _get_type_signiture(var):
@@ -253,3 +268,37 @@ class Blacklist(Rules):
         arg_key = [self._get_type_signiture(x) for x in args]
         kwarg_key = sorted(kwargs.keys())
         return '-'.join(arg_key) + '+' + '-'.join(kwarg_key)
+
+    @classmethod
+    def query(cls, nspace, name):
+        """Query the content of the rule by primitive name.
+
+        Parameters
+        ----------
+        nspace
+            The namespace of the given primitive.
+        name : str
+            Name of the primitive for query
+
+        Returns
+        -------
+        str
+            Return the rule content of primitive name.
+        """
+        ns_path = nspace.__name__
+        if not hasattr(nspace, name):
+            return '{} has no attribute {}.'.format(ns_path, name)
+        if ns_path not in cls._rules or name not in cls._rules[ns_path]:
+            return 'No rule for {} is found in {}.'.format(name, ns_path)
+        else:
+            from tabulate import tabulate
+            rule_list = cls._rules[ns_path][name]
+            rows = [(i + 1, ', '.join(rule.get('args', [])),
+                     ', '.join(rule.get('kwargs', [])))
+                    for i, rule in enumerate(rule_list)]
+            table = tabulate(
+                rows,
+                headers=('No.', 'Type of Positional Args', 'Keyword Args'),
+                tablefmt='grid')
+            return 'Total: {} blacklist rules for primitive [{}]:\n'.format(
+                len(rule_list), name) + table

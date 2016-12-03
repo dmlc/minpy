@@ -27,5 +27,5 @@ class PrimitiveSelector(object):
         """Call policy to choose the real primitive and then call the returned function with
         the given arguments.
         """
-        return self._mod._policy.resolve_call(self._name, self._mod._registry, args,
-                                         kwargs)
+        return self._mod.policy.resolve_call(
+            self._name, self._mod.__registry__, args, kwargs)

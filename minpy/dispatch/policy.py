@@ -167,7 +167,7 @@ class AutoBlacklistPolicy(Policy):
         available = self._available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)
         if ArrayType.MXNET in possible_impl and self._rules.allow(
-                name, ArrayType.MXNET, args, kwargs):
+                name, reg.nspace, ArrayType.MXNET, args, kwargs):
             if self._gen_rule:
                 try:
                     _logger.debug(
@@ -180,7 +180,7 @@ class AutoBlacklistPolicy(Policy):
                         _logger.info(
                             'Error occurs. Try primitive %s with NumPy implementation',
                             name)
-                        self._rules.add(name, ArrayType.MXNET, args, kwargs)
+                        self._rules.add(name, reg.nspace, ArrayType.MXNET, args, kwargs)
                         self._numpy_op_cnt += 1
                         return _get_result(ArrayType.NUMPY)
                     else:
@@ -201,6 +201,23 @@ class AutoBlacklistPolicy(Policy):
     def save_rules(self):
         """Save rules by rule's setting"""
         self._rules.save_rules_config()
+
+    def query(self, nspace, name):
+        """Query the content of the rule by primitive name in blacklist.
+
+        Parameters
+        ----------
+        nspace
+            The namespace of the given primitive. It is not a string.
+        name : str
+            Name of the primitive for query
+
+        Returns
+        -------
+        str
+            Return the rule content of primitive name.
+        """
+        return self._rules.query(nspace, name)
 
 
 class PreferMXNetPolicy(Policy):
