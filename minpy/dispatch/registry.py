@@ -20,11 +20,19 @@ class Registry(object):
         self._reg = {}
 
     def register(self, name, prim):
-        """ Register primitive.
+        """Register primitive.
 
-        :param name: Name of the primitive.
-        :param prim: Primitive.
-        :raises PrimitiveRegistryError: Type already registered under the same name.
+        Parameters
+        ----------
+        name : str
+            Name of the primitive.
+        prim
+            Registered primitive.
+
+        Raises
+        ------
+        PrimitiveRegistryError
+            Type already registered under the same name.
         """
         if name not in self._reg:
             self._reg[name] = {}
@@ -38,26 +46,34 @@ class Registry(object):
             self._reg[name][prim.type] = prim
 
     def has_name(self, name):
-        """ Return whether the given name has been registered """
+        """Return whether the given name has been registered"""
         return name in self._reg
 
     def exists(self, name, ptype):
-        """ Return whether primitive exists under the given name and the given implementation type.
+        """Return whether primitive exists under the given name and the given implementation type.
         """
         return name in self._reg and ptype in self._reg[name]
 
     def get(self, name, ptype):
-        """ Get the primitive registered under the given name and the given implementation type.
+        """Get the primitive registered under the given name and the given implementation type.
         """
         return self._reg[name][ptype]
 
     def iter_available_types(self, name, bp_args, bp_kwargs):
-        """ Find primitives of the given name that have gradients defined for the arguments.
+        """Find primitives of the given name that have gradients defined for the arguments.
 
-        :param str name: Primitive name.
-        :param tuple bp_args: Positional arguments that need back propagation.
-        :param tuple bp_kwargs: Keyword arguments that need back propagation.
-        :return: Primitives that satisfy the requirements above.
+        Parameters
+        ----------
+        name : str
+            Primitive name.
+        bp_args : tuple 
+            Positional arguments that need back propagation.
+        bp_kwargs : tuple
+            Keyword arguments that need back propagation.
+
+        Returns 
+        -------
+        Primitives that satisfy the requirements above.
         """
         # Just a redundant check. name must lay in self._reg by mocking.py.
         if name not in self._reg:
