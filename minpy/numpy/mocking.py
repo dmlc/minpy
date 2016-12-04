@@ -90,7 +90,7 @@ class Module(object):
         for fname in self._name_injector.keys():
             setattr(self, fname, self._name_injector[fname])
         for fname in self._registry._reg.keys():
-            fun = PrimitiveSelector(fname, self._registry, self._policy)
+            fun = PrimitiveSelector(fname, self)
             setattr(self, fname, fun)
         if '__all__' in dir(self._old):
             setattr(self, '__all__', self._old.__all__)
