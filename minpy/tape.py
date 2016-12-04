@@ -16,8 +16,8 @@ from .utils import log
 _logger = log.get_logger(__name__)
 # pylint: enable=invalid-name
 
-GradRecord = collections.namedtuple(
-    'GradRecord', ['grad_func', 'result', 'owner'])
+GradRecord = collections.namedtuple('GradRecord',
+                                    ['grad_func', 'result', 'owner'])
 
 
 class Tape(object):
@@ -125,9 +125,10 @@ class Tape(object):
 
                 for grad_record in grad_records:
                     # TODO: add primitive_type info in debug info later.
-                    _logger.debug(
-                        'Calling derivative func "%s"', grad_record.grad_func)
-                    grad = grad_record.grad_func(self._grads[grad_record.result])
+                    _logger.debug('Calling derivative func "%s"',
+                                  grad_record.grad_func)
+                    grad = grad_record.grad_func(self._grads[
+                        grad_record.result])
                     self._cumulate_gradient(grad_record.owner, grad)
 
                 def remove_grad_record(owner, grad_record):
@@ -173,7 +174,7 @@ def is_paused():
     """Return True if pause flag is set in current tape."""
     current_tape = global_tape()
     if current_tape is not None:
-        return current_tape.pause 
+        return current_tape.pause
     else:
         return False
 
