@@ -8,7 +8,7 @@ USAGE
     - use minprof(<func>) to wrap a function
     - use with(<some info>): ... to wrap a code snippet
 """
-import optparse
+import argparse
 import time
 import os
 import sys
@@ -276,16 +276,18 @@ def main(args=None):
     if args is None:
         args = sys.argv
     usage = "%prog scriptfile [arg] ..."
-    parser = optparse.OptionParser(usage=usage, version="%prog 0.1")
-    parser.add_option('-f',
-                      '--function-call',
-                      action='store_true',
-                      help="Use the function-call profiler")
-    parser.add_option('-o',
-                      '--outfile',
-                      default=None,
-                      help="Save stats to <outfile>")
-    parser.add_option(
+    parser = argparse.ArgumentParser(usage=usage)
+    parser.add_argument(
+        '-f',
+        '--function-call',
+        action='store_true',
+        help="Use the function-call profiler")
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        default=None,
+        help="Save stats to <outfile>")
+    parser.add_argument(
         '-v',
         '--view',
         action='store_true',
@@ -300,7 +302,7 @@ def main(args=None):
     sys.path.insert(0, os.path.dirname(script_file))
     try:
         try:
-            execfile_ = execfile  # pylint: disable= unused-variable
+            execfile_ = execfile  # pylint: disable= unused-variable, undefined-variable
             minprof.runctx('execfile_(%r, globals())' %
                            (script_file, ), globals(), locals())
         except (KeyboardInterrupt, SystemExit):
