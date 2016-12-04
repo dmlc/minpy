@@ -37,7 +37,7 @@ class Module(object):
         # pylint: disable= protected-access, cell-var-from-loop
         # Add module itself into global config
         minpy.Config['modules'].append(self)
-        self._registry = Registry()
+        self._registry = Registry(old['__name__'])
         self._policy = minpy.Config['default_policy']
         self._logger = log.get_logger(old['__name__'])
         self._logger.info('Initialize module: %s.', old['__name__'])

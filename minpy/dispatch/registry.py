@@ -16,8 +16,14 @@ class Registry(object):
     type will be registered in the same entry.
     """
 
-    def __init__(self):
+    def __init__(self, namespace):
         self._reg = {}
+        self._ns = namespace
+
+    @property
+    def nspace(self):
+        """Return the namespace of the registry."""
+        return self._ns
 
     def register(self, name, prim):
         """Register primitive.
@@ -66,12 +72,12 @@ class Registry(object):
         ----------
         name : str
             Primitive name.
-        bp_args : tuple 
+        bp_args : tuple
             Positional arguments that need back propagation.
         bp_kwargs : tuple
             Keyword arguments that need back propagation.
 
-        Returns 
+        Returns
         -------
         Primitives that satisfy the requirements above.
         """
