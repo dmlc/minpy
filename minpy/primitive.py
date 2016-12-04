@@ -14,8 +14,105 @@ from . import context
 from .utils import log
 from . import tape
 
-_logger = log.get_logger(__name__) # pylint: disable= invalid-name
+_logger = log.get_logger(__name__)  # pylint: disable= invalid-name
 GradFunc = collections.namedtuple('GradFunc', ['f', 'multi_grad_indices'])
+
+
+class CustomOp(object):
+    def forward(self):
+        pass
+
+    def backward(self, argnum, ans, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        _logger.debug('Calling customized operator [%s].', self.__class__.__name__)
+
+        # Check whether the result value is on the path of bp phase.
+        # If all the input arguments are not on the bp path, the result value
+        # is not as well.
+        current_tape = tape.global_tape()
+        need_bp = False
+        for arg in args:
+            if hasattr(arg, '_minpy_value_id') and arg.is_marked_for_bp(current_tape):
+                need_bp = True
+                break
+
+        # No need to wrap input and return value. Primitives used are in MinPy domain.
+        tape.pause()  # Disable tape
+        result_value = self.forward(*args, **kwargs)
+        tape.unpause()  # Enable tape
+
+        if need_bp:
+            if isinstance(result, tuple):
+                for r in result:
+                    r.mark_for_bp(current_tape)
+            else:
+                result.mark_for_bp(current_tape) # pylint: disable= no-member
+            # Record partial derivative paths, only for `array.Value` type values.
+            # If no gradient function is defined, also omit it
+
+            def get_context(result):
+                """Get context of result."""
+                if isinstance(result, array.Value):
+                    return result.context
+                else:
+                    return get_context(result[0])
+
+            def context_wrapper(func):
+                """A context wrapper only for gradient function."""
+
+                @functools.wraps(func)
+                def wrapped(result): # pylint: disable= missing-docstring
+                    with get_context(result).as_mxnet_context():
+                        return func(result)
+
+                return wrapped
+
+            def raw_value_wrapper(func):
+                """Unwrap Value for gradient function."""
+
+                @functools.wraps(func)
+                def wrapped(result): # pylint: disable= missing-docstring
+                    if isinstance(result, (tuple, list)):
+                        result = (elm.get_data(self.type) for elm in result)
+                    else:
+                        result = result.get_data(self.type) # pylint: disable= no-member
+                    return func(result)
+
+                return wrapped
+
+            for i, arg in enumerate(args):
+                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(current_tape):
+                    # Save forward results and arguments in the gradient function closure
+                    # for later use.
+                    grad_func = self.backward(i, result_value, *args, **kwargs)
+                    if grad_func is None:
+                        _logger.warning('Partial derivative of customized '
+                                        'operator [%s] on argument %d is not defined.',
+                                        self.__class__.__name__, i)
+                    else:
+                        _logger.debug(
+                            'Adding partial derivative of customized operator [%s] on argument %d.',
+                            self.__class__.__name__, i
+                        )
+                    current_tape.add_partial_derivative(grad_func, arg, result)
+            for k, arg in kwargs.items():
+                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(current_tape):
+                    grad_func = self.backward(k, result_value, *args, **kwargs)
+                    if grad_func is None:
+                        _logger.warning('Partial derivative of customized '
+                                        'operator [%s] on keyword %s is not defined.',
+                                        self.__class__.__name__, k)
+                    else:
+                        _logger.debug(
+                            'Adding partial derivative of customized operator [%s] on keyword %s.',
+                            self.__class__.__name__, k
+                        )
+                    current_tape.add_partial_derivative(grad_func, arg, result)
+        return result
+        # pylint: enable=invalid-name, too-many-locals
+
 
 class Primitive(object):
     """Class for primitives. It includes both forward function and gradient definition."""
@@ -96,7 +193,7 @@ class Primitive(object):
         IndexError, KeyError
             No corresponding gradient function.
         """
-        # pylint: disable=invalid-name, too-many-locals
+        # pylint: disable=too-many-locals
         _logger.debug('Calling "{}" type "{}".'.format(self._func,
                                                        self.typestr))
 
@@ -137,7 +234,7 @@ class Primitive(object):
             result = tuple(array.wrap(ret) for ret in result_value)
         else:
             result = array.wrap(result_value)
-        if need_bp[0]:
+        if need_bp[0] and not tape.is_paused():
             if isinstance(result, tuple):
                 for r in result:
                     r.mark_for_bp(current_tape)
@@ -155,8 +252,7 @@ class Primitive(object):
                     return get_context(result[0])
 
             def context_wrapper(func):
-                """A context wrapper only for gradient function.
-                """
+                """A context wrapper only for gradient function."""
 
                 @functools.wraps(func)
                 def wrapped(result): # pylint: disable= missing-docstring
@@ -166,8 +262,7 @@ class Primitive(object):
                 return wrapped
 
             def raw_value_wrapper(func):
-                """Unwrap Value for gradient function.
-                """
+                """Unwrap Value for gradient function."""
 
                 @functools.wraps(func)
                 def wrapped(result): # pylint: disable= missing-docstring
@@ -219,7 +314,7 @@ class Primitive(object):
                     current_tape.add_partial_derivative(
                         grad_func, owner, result)
             for k, arg in kwargs.items():
-                if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape):
+                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(current_tape):
                     if k not in self._grad_func_kw:
                         _logger.warning(
                             'Partial derivative of func "{}" on keyword argument "{}"'

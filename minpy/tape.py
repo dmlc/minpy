@@ -31,6 +31,7 @@ class Tape(object):
         # Store derivation graph of gradients. Array -> list of grad records (or record tuples)
         self._array_grad_records = collections.defaultdict(list)
         self.__class__.timestamp += 1
+        self.pause = False  # If True, the tape stops recording gradient info.
 
     def add_partial_derivative(self, grad_func, owner, result):
         """Add partial derivative.
@@ -123,7 +124,7 @@ class Tape(object):
                 grad_records = self._array_grad_records[current_array]
 
                 for grad_record in grad_records:
-	            # TODO: add primitive_type info in debug info later.
+                    # TODO: add primitive_type info in debug info later.
                     _logger.debug(
                         'Calling derivative func "%s"', grad_record.grad_func)
                     grad = grad_record.grad_func(self._grads[grad_record.result])
@@ -166,3 +167,26 @@ def tape():
 def global_tape():
     """Returns current global `Tape`."""
     return Tape.global_tape
+
+
+def is_paused():
+    """Return True if pause flag is set in current tape."""
+    current_tape = global_tape()
+    if current_tape is not None:
+        return current_tape.pause 
+    else:
+        return False
+
+
+def pause():
+    """Set pause flag to True if tape is activated."""
+    current_tape = global_tape()
+    if current_tape is not None:
+        current_tape.pause = True
+
+
+def unpause():
+    """Set pause flag to False if tape is activated."""
+    current_tape = global_tape()
+    if current_tape is not None:
+        current_tape.pause = False
