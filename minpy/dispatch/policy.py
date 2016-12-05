@@ -1,21 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable= no-self-use
 """Policy for selecting appropriate function to call."""
 from __future__ import absolute_import
 from __future__ import print_function
 
 import functools
 import minpy
-from minpy.array import Value
-from minpy.array_variants import ArrayType
-from minpy.utils import log
+from .. import tape
+from ..array_variants import ArrayType
+from ..utils import log
 from .rule import Blacklist
 
-# pylint: disable= invalid-name
-_logger = log.get_logger(__name__)
-
-# pylint: enable= invalid-name
+_logger = log.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class PrimitivePolicyError(ValueError):
@@ -42,6 +38,7 @@ class Policy(object):
     def __init__(self):
         self._mxnet_op_cnt = 0
         self._numpy_op_cnt = 0
+        self._old_policy = None
 
     def _decide(self, candidates, args, kwargs):
         """Primitive decision policy interface.
@@ -94,18 +91,14 @@ class Policy(object):
     def _available_prims(name, reg, args, kwargs):
         """Return a list of available primitives"""
 
-        def fst(t):
-            x, _ = t
-            return x
+        current_tape = tape.global_tape()
 
-        bp_args = tuple(
-            map(fst, filter(
-                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                enumerate(args))))
-        bp_kwargs = tuple(
-            map(fst, filter(
-                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                kwargs.items())))
+        bp_args = tuple(i for i, arg in enumerate(args)
+                        if (hasattr(arg, 'is_marked_for_bp') and
+                            arg.is_marked_for_bp(current_tape)))
+        bp_kwargs = tuple(k for k, arg in kwargs.items()
+                          if (hasattr(arg, 'is_marked_for_bp') and
+                              arg.is_marked_for_bp(current_tape)))
         available = reg.iter_available_types(name, bp_args, bp_kwargs)
         return available
 
@@ -136,9 +129,8 @@ class Policy(object):
         elif preference is None:
             raise PrimitivePolicyError(name, self.name)
         prim = reg.get(name, preference)
-        _logger.debug('Found primitive "{}" with type {}.'.format(
-            name, prim.typestr))
-        return prim(*args, **kwargs)
+        _logger.debug('Found primitive "%s" with type %s.', name, prim.typestr)
+        return prim(args, kwargs)
 
 
 class AutoBlacklistPolicy(Policy):
@@ -158,6 +150,8 @@ class AutoBlacklistPolicy(Policy):
         Path to rule configuration file.
     """
 
+    # pylint: disable=abstract-method
+
     def __init__(self, gen_rule=False, append_rule=True, loc=None):
         super(AutoBlacklistPolicy, self).__init__()
         self._gen_rule = gen_rule
@@ -166,9 +160,9 @@ class AutoBlacklistPolicy(Policy):
             self._rules.reset_rules()
 
     def resolve_call(self, name, reg, args, kwargs):
-        def get_result(impl_type):
+        def _get_result(impl_type):
             prim = reg.get(name, impl_type)
-            return prim(*args, **kwargs)
+            return prim(args, kwargs)
 
         available = self._available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)
@@ -176,30 +170,31 @@ class AutoBlacklistPolicy(Policy):
                 name, ArrayType.MXNET, args, kwargs):
             if self._gen_rule:
                 try:
-                    _logger.debug('Try primitive {} with MXNet '
-                                  'implementation.'.format(name))
+                    _logger.debug(
+                        'Try primitive %s with MXNet implementation.', name)
                     self._mxnet_op_cnt += 1
-                    return get_result(ArrayType.MXNET)
-                except Exception as err:
+                    return _get_result(ArrayType.MXNET)
+                except Exception as err:  # pylint: disable=broad-except
                     self._mxnet_op_cnt -= 1
                     if ArrayType.NUMPY in possible_impl:
-                        _logger.info('Error occurs. Try primitive {} with '
-                                     'NumPy implementation'.format(name))
+                        _logger.info(
+                            'Error occurs. Try primitive %s with NumPy implementation',
+                            name)
                         self._rules.add(name, ArrayType.MXNET, args, kwargs)
                         self._numpy_op_cnt += 1
-                        return get_result(ArrayType.NUMPY)
+                        return _get_result(ArrayType.NUMPY)
                     else:
                         raise err
             else:
-                _logger.debug('Execute primitive {} with '
-                              'MXNet implementation'.format(name))
+                _logger.debug('Execute primitive %s with MXNet implementation',
+                              name)
                 self._mxnet_op_cnt += 1
-                return get_result(ArrayType.MXNET)
+                return _get_result(ArrayType.MXNET)
         elif ArrayType.NUMPY in possible_impl:
-            _logger.debug('Execute primitive {} with '
-                          'NumPy implementation'.format(name))
+            _logger.debug('Execute primitive %s with NumPy implementation',
+                          name)
             self._numpy_op_cnt += 1
-            return get_result(ArrayType.NUMPY)
+            return _get_result(ArrayType.NUMPY)
         else:
             raise PrimitivePolicyError(name, self.name)
 
@@ -265,6 +260,5 @@ def wrap_policy(policy):
             return result
 
         return policy_wrapper
-        # pylint: enable= missing-docstring
 
     return policy_decorator

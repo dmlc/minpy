@@ -1,45 +1,37 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-
-# USAGE: - set MINPROF_FLAG to enable the profiler
-#        - add @minprof before the function you want to profiling
-#        - use minprof(<func>) to wrap a function
-#        - use with(<some info>): ... to wrap a code snippet
-
-# TODO: nest, recursive, timeunit, sort
-# TODO: GPU
-
-MINPROF_FLAG = True
-
-import six.moves.cPickle as pickle
-
-import functools
-import optparse
+# pylint: disable= protected-access, invalid-name
+"""A light-weight profiler
+USAGE
+    - set MINPROF_FLAG to enable the profiler
+    - add @minprof before the function you want to profiling
+    - use minprof(<func>) to wrap a function
+    - use with(<some info>): ... to wrap a code snippet
+"""
+import argparse
 import time
 import os
 import sys
-import logging
+from inspect import getframeinfo, stack
+import six.moves.cPickle as pickle  # pylint: disable= import-error, no-name-in-module
 
-from . import log
-logger = log.get_logger(__name__, logging.INFO)
-
-from inspect import getframeinfo, stack, getsource, getfile
-
+MINPROF_FLAG = True
 # Python 2/3 compatibility utils
 # =================================================
 PY3 = sys.version_info[0] == 3
 
 if PY3:
-    import builtins
+    import builtins  # pylint: disable= import-error
     exec_ = getattr(builtins, "exec")
     del builtins
 else:
 
     def exec_(_code_, _globs_=None, _locs_=None):
+        # pylint: disable= exec-used, unused-argument
         """Execute code in a namespaces."""
         if _globs_ is None:
             frame = sys._getframe(1)
-            _globs_ = grame.f_globals
+            _globs_ = frame.f_globals
             if _locs_ is None:
                 _locs_ = frame.f_locals
             del frame
@@ -73,11 +65,10 @@ class FuncCallStats(object):
 
     def __init__(self, timings):
         self.timings = timings
-        # self.unit = unit
 
 
 def read_lines(filename, begin_lineno, end_lineno):
-    # print('read_Lines: %s, %s, %s' % (filename, begin_lineno, end_lineno))
+    """Read lines from file."""
     lines = []
     with open(filename) as f:
         for i, line in enumerate(f):
@@ -87,8 +78,10 @@ def read_lines(filename, begin_lineno, end_lineno):
     return lines
 
 
-class FuncCallProfiler():
-    class Timer():
+class FuncCallProfiler(object):
+    """Profiler for function."""
+    class Timer(object):
+        """Record time class."""
         def __init__(self, profiler, info=None):
             self.profiler = profiler
             self.info = info
@@ -96,16 +89,16 @@ class FuncCallProfiler():
             self.begin_lineno = None
             self.end_lineno = None
             self.code_snippet = None
+            self.begin_time = None
+            self.end_time = None
 
         def __enter__(self):
-            # print 'timer enter'
             x = getframeinfo(stack()[1][0])
             self.filename = x.filename
             self.begin_lineno = x.lineno
             self.begin_time = time.time()
 
-        def __exit__(self, type, value, traceback):
-            # print 'timer exit'
+        def __exit__(self, *exc):
             self.end_time = time.time()
 
             x = getframeinfo(stack()[1][0])
@@ -118,23 +111,18 @@ class FuncCallProfiler():
                         self.code_snippet[0].strip() + '...')
             else:
                 code = (self.filename, self.begin_lineno, self.info)
-            #print(code)
             if code not in self.profiler.code_map:
                 self.profiler.code_map[code] = []
             timing = (1, self.begin_time, self.end_time)
             self.profiler.code_map[code].append(timing)
 
     def __init__(self, *funcs):
-        # logger.info("prof init")
-        # self.functions = []
         self.code_map = {}
         self.enable_count = 0
         for func in funcs:
             self.add_function(func)
 
     def __call__(self, func=None):
-        # logger.info("prof __call__")
-        # decorator don't use info
         if func is None:
             return FuncCallProfiler.Timer(self)
         if isinstance(func, str):
@@ -144,12 +132,12 @@ class FuncCallProfiler():
         return wrapper
 
     def extract_code(self, func, stackdepth):
+        # pylint: disable= no-self-use
+        """Extract code from frame info."""
         try:
             code = func.__code__
         except AttributeError:
             frameinfo = getframeinfo(stack()[stackdepth][0])
-            #print(frameinfo)
-            #print(func.__name__)
             code = (frameinfo.filename, frameinfo.lineno, func.__name__)
         return code
 
@@ -157,7 +145,6 @@ class FuncCallProfiler():
         """ Record function-call profiling information for the
         given Python function.
         """
-        #logger.info("prof add function: %s" % func.__code__)
         code = self.extract_code(func, 3)
         if code not in self.code_map:
             self.code_map[code] = []
@@ -165,11 +152,8 @@ class FuncCallProfiler():
     def wrap_function(self, func):
         """ Wrap a function to profile it.
         """
-
-        #@functools.wraps(func)
+        # pylint: disable= missing-docstring
         def wrapper(*args, **kwargs):
-            #self.functions.append(func.__code__)
-            #logger.info("prof warpper call %s" % func.__code__)
             code = self.extract_code(func, 2)
             begin_time = time.time()
             try:
@@ -196,22 +180,24 @@ class FuncCallProfiler():
         """ Show the gathered statistics.
         """
         pstats = self.get_stats()
-        # print pstats.timings
         show_text(pstats.timings, stream=stream)
 
     def get_stats(self):
+        """ Get a representation of the data to a file as a pickled FuncCallStats
+        object.
+        """
         # stats: {(filename, first_lineno, function_name) : (hits, time)}
         stats = {}
         for code in self.code_map:
             key = label(code)
-            stats[key] = self.code_map[code]  # TODO
+            stats[key] = self.code_map[code]
         return FuncCallStats(stats)
 
-    def runctx(self, cmd, globals, locals):
+    def runctx(self, cmd, globals_env, locals_env):
+        # pylint: disable= no-self-use
         """ Profile a single executable statement in the given namespaces.
         """
-        # logger.info("prof runctx")
-        exec_(cmd, globals, locals)
+        exec_(cmd, globals_env, locals_env)
 
 
 def show_func(filename, first_lineno, func_name, timings, stream=None):
@@ -222,7 +208,7 @@ def show_func(filename, first_lineno, func_name, timings, stream=None):
 
     nhits = 0
     total_time = 0.0
-    for hit, begin_time, end_time in timings:
+    for _, begin_time, end_time in timings:
         nhits += 1
         total_time += end_time - begin_time
     if nhits == 0:
@@ -248,14 +234,12 @@ def show_text(stats, stream=None):
         stream.write('\nFile: %s\n' % __file__)
         stream.write('Timer unit: %g s\n\n' % 1e-03)
         template = '%10.8s %10.8s %10.8s    %-s:%s(%s)::%s'
-        #template = '%10s %10s %10s    %-s:%s(%s)'
         header = template % ('ncalls', 'tottime', 'percall', 'filename',
                              'lineno', 'function', 'info')
         stream.write("\n")
         stream.write(header)
         stream.write("\n")
-        # print stats
-        for (fn, lineno, name), timings in sorted(stats.items()):
+        for (fn, lineno, name), _ in sorted(stats.items()):
             show_func(fn, lineno, name, stats[fn, lineno, name], stream=stream)
         stream.write("\n")
         stream.write("\n")
@@ -267,9 +251,9 @@ def find_script(script_name):
     """
     if os.path.isfile(script_name):
         return script_name
-    path = os.getenv('PATH', os.default).split(os.pathsep)
-    for dir in path:
-        if dir == '':
+    path = os.getenv('PATH').split(os.pathsep)
+    for d in path:
+        if d == '':
             continue
         fn = os.path.join(dir, script_name)
         if os.path.isfile(fn):
@@ -278,56 +262,47 @@ def find_script(script_name):
     sys.stderr.write('Could not find script %s\n' % script_name)
     raise SystemExit(1)
 
-# -p program level
-# -f function-call level
-# -l line-by-line level
 
 minprof = FuncCallProfiler()
 
 
 def main(args=None):
-    # print '%s' % globals()
+    """ Main function as a module tool
+    Usage
+        -p program level
+        -f function-call level
+        -l line-by-line level
+    """
     if args is None:
         args = sys.argv
     usage = "%prog scriptfile [arg] ..."
-    parser = optparse.OptionParser(usage=usage, version="%prog 0.1")
-    parser.add_option('-f',
-                      '--function-call',
-                      action='store_true',
-                      help="Use the function-call profiler")
-    parser.add_option('-o',
-                      '--outfile',
-                      default=None,
-                      help="Save stats to <outfile>")
-    parser.add_option(
+    parser = argparse.ArgumentParser(usage=usage)
+    parser.add_argument(
+        '-f',
+        '--function-call',
+        action='store_true',
+        help="Use the function-call profiler")
+    parser.add_argument(
+        '-o',
+        '--outfile',
+        default=None,
+        help="Save stats to <outfile>")
+    parser.add_argument(
         '-v',
         '--view',
         action='store_true',
         help="View the results of the profile in addition to saving it.")
 
-    #if not args[1:]:
-    #    parser.print_usage()
-    #    sys.exit(2)
-
     options, option_args = parser.parse_args()
-
     if not options.outfile:
         extension = 'fprof'
         options.outfile = '%s.%s' % (os.path.basename(option_args[0]),
                                      extension)
-
-    # if options.function_call:
-    #     prof = FuncCallProfiler()
-
     script_file = find_script(option_args[0])
-    # print 'script:', script_file
-    __file__ = script_file
-
     sys.path.insert(0, os.path.dirname(script_file))
-
     try:
         try:
-            execfile_ = execfile
+            execfile_ = execfile  # pylint: disable= unused-variable, undefined-variable
             minprof.runctx('execfile_(%r, globals())' %
                            (script_file, ), globals(), locals())
         except (KeyboardInterrupt, SystemExit):
@@ -337,7 +312,6 @@ def main(args=None):
         print('Wrote profile results to %s' % options.outfile)
         if options.view:
             minprof.print_stats()
-
 
 if __name__ == '__main__':
     main(sys.argv)

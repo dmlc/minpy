@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# pylint: disable-all
+"""Test Cases for Generating Blacklist"""
 from __future__ import division
 from math import pi
 import minpy

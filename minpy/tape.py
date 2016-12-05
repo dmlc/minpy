@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable=logging-format-interpolation
 """Tape for recording gradient calculation."""
 from __future__ import absolute_import
 from __future__ import print_function
@@ -9,10 +8,8 @@ import contextlib
 import collections
 
 import numpy
-import mxnet
 
 from . import array
-from . import array_variants
 from .utils import log
 
 # pylint: disable=invalid-name
@@ -30,9 +27,9 @@ class Tape(object):
 
     def __init__(self):
         # Stores grad value result from target back to [KEY]. Array -> grad result (Array)
-        self._grads = {}
+        self._grads = collections.defaultdict(lambda: array.wrap(0.0))
         # Store derivation graph of gradients. Array -> list of grad records (or record tuples)
-        self._array_grad_records = {}
+        self._array_grad_records = collections.defaultdict(list)
         self.__class__.timestamp += 1
 
     def add_partial_derivative(self, grad_func, owner, result):
@@ -47,40 +44,26 @@ class Tape(object):
         result
             Result of previous forward execution.
         """
-
-        def add_owner(single_owner):
-            """Add owner.
-
-            Deal with situation when there are multiple owners.
-            """
-            if isinstance(single_owner, array.Value):
-                if single_owner not in self._array_grad_records:
-                    self._array_grad_records[single_owner] = []
-                self._array_grad_records[single_owner].append(
-                    GradRecord(
-                        grad_func=grad_func,
-                        result=result,
-                        owner=owner))
-            elif single_owner is not None:
-                # None means a placeholder for an array that needs no gradient.
-                for sub_owner in single_owner:
-                    add_owner(sub_owner)
-
-        add_owner(owner)
+        grad_rec = GradRecord(grad_func=grad_func, result=result, owner=owner)
+        if isinstance(owner, array.Value):
+            self._array_grad_records[owner].append(grad_rec)
+        elif owner is not None:
+            for sub_owner in owner:
+                self._array_grad_records[sub_owner].append(grad_rec)
+        else:
+            # None means a placeholder for an array that needs no gradient.
+            pass
 
     def set_gradient_target(self, target):
         """Set gradient targets to ones."""
 
-        def set_single_gradient_target(target):
-            """Set gradient target for one."""
-            if isinstance(target, array.Value):
-                self._grads[target] = array.Value.wrap(1.0 if isinstance(
-                    target, array.Number) else numpy.ones(target.shape))
-            else:
-                for sub_target in target:
-                    set_single_gradient_target(sub_target)
-
-        set_single_gradient_target(target)
+        # Set gradient target for one.
+        if isinstance(target, array.Value):
+            self._grads[target] = array.wrap(1.0 if isinstance(
+                target, array.Number) else numpy.ones(target.shape))
+        else:
+            for sub_target in target:
+                self.set_gradient_target(sub_target)
 
     def _is_gradable(self, current_array):
         """Check if the gradient can now be calculated relative to the specified array.
@@ -94,7 +77,7 @@ class Tape(object):
             been calculated.
             """
             if isinstance(arr, array.Value):
-                if len(self._array_grad_records.get(arr, [])) != 0:
+                if len(self._array_grad_records[arr]) != 0:
                     return False
             else:
                 for sub_arr in arr:
@@ -102,47 +85,27 @@ class Tape(object):
                         return False
             return True
 
-        for res in self._array_grad_records.get(current_array, []):
+        for res in self._array_grad_records[current_array]:
             if not check_grad_record_empty(res.result):
                 return False
         return True
 
-    def _get_cached_gradient(self, arr):
-        """Get cached gradient. Initialize if not exist."""
-        if isinstance(arr, (tuple, list)):
-            return (
-                self._get_cached_gradient(sub_result)
-                for sub_result in arr
-            )
-        if arr not in self._grads:
-            if isinstance(arr, array.Number):
-                self._grads[arr] = array.Value.wrap(0.0)
-            elif arr.has_type(array_variants.ArrayType.MXNET):
-                with arr.context.as_mxnet_context():
-                    self._grads[arr] = array.Value.wrap(
-                        mxnet.nd.zeros(arr.shape))
-            else:
-                # TODO(minjie): the initialization may incur memcopy.
-                self._grads[arr] = array.Value.wrap(numpy.zeros(arr.shape))
-        return self._grads[arr]
-
     def _cumulate_gradient(self, arr, grad):
-        def add_gradient(arr, grad):
-            """Add gradient.
+        """Cumulate gradients belonging to the same array.
 
-            Recurse when handle multiple arrays.
-            """
-            if isinstance(arr, array.Value):
-                current_gradient = self._get_cached_gradient(arr)
-                current_gradient += array.Value.wrap(grad)
+        Recurse when handle multiple arrays.
+        """
+        if isinstance(arr, array.Value):
+            current_gradient = array.wrap(grad)
+            if arr in self._grads:
+                self._grads[arr] += current_gradient
+            else:
                 self._grads[arr] = current_gradient
-            elif arr is not None:
-                if len(arr) != len(grad):
-                    _logger.fatal('Number of gradients does not match.')
-                for sub_arr, sub_grad in zip(arr, grad):
-                    add_gradient(sub_arr, sub_grad)
-
-        add_gradient(arr, grad)
+        elif arr is not None:
+            if len(arr) != len(grad):
+                _logger.fatal('Number of gradients does not match.')
+            for sub_arr, sub_grad in zip(arr, grad):
+                self._cumulate_gradient(sub_arr, sub_grad)
 
     def get_gradient(self, origin):
         """Get gradient of the specified array.
@@ -157,14 +120,13 @@ class Tape(object):
             if self._is_gradable(current_array):
                 dfs_stack.pop()
                 # Initialize if necessary.
-                self._get_cached_gradient(current_array)
-                grad_records = self._array_grad_records.get(current_array, [])
+                grad_records = self._array_grad_records[current_array]
 
                 for grad_record in grad_records:
-                     # TODO: add primitive_type info in debug info later.
+	            # TODO: add primitive_type info in debug info later.
                     _logger.debug(
-                        'Calling derivative func "{}"'.format(grad_record.grad_func))
-                    grad = grad_record.grad_func(self._get_cached_gradient(grad_record.result))
+                        'Calling derivative func "%s"', grad_record.grad_func)
+                    grad = grad_record.grad_func(self._grads[grad_record.result])
                     self._cumulate_gradient(grad_record.owner, grad)
 
                 def remove_grad_record(owner, grad_record):
@@ -189,7 +151,8 @@ class Tape(object):
 
                 for rec in self._array_grad_records[current_array]:
                     push_grad_record(rec.result)
-        return self._get_cached_gradient(origin)
+        # TODO: shape
+        return self._grads[origin]
 
 
 @contextlib.contextmanager

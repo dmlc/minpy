@@ -7,12 +7,12 @@ from __future__ import print_function
 
 import functools
 
-from .array import Value
 from .array_variants import ArrayType
 from .context import current_context
 from .primitive import Primitive
 from .utils import log
 from . import tape
+from . import array
 
 _logger = log.get_logger(__name__)
 
@@ -36,15 +36,15 @@ def grad_and_loss(func, argnum=0):
     @functools.wraps(func)
     def wrapped(*args):
         """Wrapped function."""
-        arrays = tuple(Value.wrap(a) for a in args)
+        arrays = tuple(array.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
         with tape.tape() as current_tape:
             for i in argnums:
-                arrays[i].set_bp()
+                arrays[i].mark_for_bp(current_tape)
             result_array = func(*arrays)
             _logger.debug('Forward pass finished. Start backward pass.')
             current_tape.set_gradient_target(result_array)
-            grad_vals = [current_tape.get_gradient(arrays[i]) for i in argnums]
+            grad_vals = tuple(current_tape.get_gradient(arrays[i]) for i in argnums)
             if len(grad_vals) == 1:
                 grad_vals = grad_vals[0]
         return grad_vals, result_array
@@ -80,8 +80,8 @@ class MXNetSymbolError(ValueError):
     """Error class for creating mxnet symbols"""
     pass
 
-
 class Function(object):
+    """Container for MXNet symbol"""
     def __init__(self, symbol, input_shapes, name='mxnet_symbol'):
         """Construct a differentiable function from MXNet symbol.
 
@@ -136,7 +136,7 @@ class Function(object):
         func.__name__ = self._sym_name
 
         # Define gradient function generator.
-        def grad_wrapper(ans, *args):
+        def grad_wrapper(ans, *args): # pylint: disable= unused-argument
             def grad_func(g):
                 executor.backward(out_grads=g)
                 ret = executor.grad_arrays
@@ -155,8 +155,9 @@ class Function(object):
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
                         for name in self._symbol.list_arguments()]
-        return self._prim(*ordered_args)
+        return self._prim(args=ordered_args, kwargs={})
 
+    # pylint: disable= missing-docstring
     def get_params(self):
         param_configs = {}
         for name, shape in self._param_shapes.items():
@@ -169,7 +170,7 @@ class Function(object):
     def get_one_output_shape(self):
         assert (len(self._out_shapes) == 1)
         return list(self._out_shapes.values())[0]
-
+    # pylint: enable= missing-docstring
 
 def numpy_to_minpy(var):
     """Convert NumPy array(s) to MinPy array(s)
@@ -183,7 +184,7 @@ def numpy_to_minpy(var):
     -------
     singular, list, tuple, or dict of MinPy array(s)
     """
-    return Value.wrap(var)
+    return array.wrap(var)
 
 
 def minpy_to_numpy(var):
@@ -203,25 +204,7 @@ def minpy_to_numpy(var):
     elif isinstance(var, dict):
         return {k: minpy_to_numpy(v) for k, v in var.items()}
     else:
-        return Value.wrap(var).get_data(ArrayType.NUMPY)
-
-
-def convert(val):
-    """Convert compatible val into MinPy Value.
-
-    Parameters
-    ----------
-    val
-        A value waiting for convertion if compatible with MinPy Value.
-
-    Returns
-    -------
-    A MinPy Value if val is compatible or return val without modification.
-    """
-    try:
-        return Value.wrap(val)
-    except TypeError:
-        return val
+        return array.wrap(var).get_data(ArrayType.NUMPY)
 
 
 def convert_args(func):
@@ -242,8 +225,8 @@ def convert_args(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         # convert input arguments into Value
-        mpy_args = convert(args)
-        mpy_kwargs = convert(kwargs)
+        mpy_args = tuple(array.wrap(a) for a in args)
+        mpy_kwargs = {k: array.wrap(a) for k, a in kwargs.items()}
         # call func
         return func(*mpy_args, **mpy_kwargs)
     # pylint: enable= missing-docstring

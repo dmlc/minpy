@@ -20,7 +20,7 @@ logging.getLogger('minpy.array').setLevel(logging.DEBUG)
 #logging.getLogger('minpy.core').setLevel(logging.DEBUG)
 #logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
 
-num_loops = 100
+num_cold = 5
 
 class TwoLayerNet(minpy.nn.model.ModelBase):
     def __init__(self, args):
@@ -30,11 +30,12 @@ class TwoLayerNet(minpy.nn.model.ModelBase):
         net = mx.sym.Variable(name='X')
         # Flatten the input data to matrix.
         net = mx.sym.Flatten(net)
-        net = mx.sym.FullyConnected(
-            data=net, name='fc1', num_hidden=args.hidden_size)
+        net = mx.sym.FullyConnected(data=net, num_hidden=args.hidden_size)
         net = mx.sym.Activation(data=net, act_type='relu')
-        net = mx.sym.FullyConnected(
-            data=net, name='fc2', num_hidden=10)
+        for i in range(args.num_hidden - 1):
+            net = mx.symbol.FullyConnected(data=net, num_hidden=args.hidden_size)
+            net = mx.symbol.Activation(data=net, act_type="relu")
+        net = mx.sym.FullyConnected(data=net, num_hidden=10)
         net = mx.sym.SoftmaxOutput(net, name='softmax', normalization='batch')
         # Wrap the final symbol into a function.
         input_shapes={'X': (args.batch_size, 784),
@@ -63,9 +64,9 @@ def main(args):
     label = np.zeros((args.batch_size,))
     batch = minpy.nn.io.DataBatch([img], [label])
 
-    start = time.time()
-    for l in range(num_loops):
-        print('loop', l)
+    for l in range(args.num_loops):
+        if l == num_cold:
+            start = time.time()
         def loss_func(*params):
             f = model.forward_batch(batch, 'train')
             return model.loss(f, label)
@@ -81,11 +82,13 @@ def main(args):
             for g in grad_arrays:
                 g.get_data(minpy.array_variants.ArrayType.MXNET).wait_to_read()
     dur = time.time() - start
-    print('Per Loop Time: %.6f' % (dur / num_loops))
+    print('Per Loop Time: %.6f' % (dur / (args.num_loops - num_cold)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--only-forward', default=False, action='store_true')
     parser.add_argument('--batch-size', default=256, type=int)
     parser.add_argument('--hidden-size', default=256, type=int)
+    parser.add_argument('--num-hidden', default=1, type=int)
+    parser.add_argument('--num-loops', default=20, type=int)
     main(parser.parse_args())

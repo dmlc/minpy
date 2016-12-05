@@ -2,10 +2,7 @@ from __future__ import division
 
 import minpy.numpy as np
 import minpy.numpy.random as random
-from minpy.core import convert_args
 
-
-@convert_args
 def affine(x, w, b):
     """
     Computes the forward pass for an affine (fully-connected) layer.
@@ -27,7 +24,6 @@ def affine(x, w, b):
     return out
 
 
-@convert_args
 def relu(x):
     """
     Computes the forward pass for a layer of rectified linear units (ReLUs).
@@ -42,7 +38,6 @@ def relu(x):
     return out
 
 
-@convert_args
 def batchnorm(x,
               gamma,
               beta,
@@ -119,7 +114,6 @@ def batchnorm(x,
     return out, running_mean, running_var
 
 
-@convert_args
 def dropout(x, prob, mode='train', seed=None):
     """
     Performs the forward pass for (inverted) dropout.
@@ -149,7 +143,6 @@ def dropout(x, prob, mode='train', seed=None):
     return out
 
 
-@convert_args
 def svm_loss(x, y):
     """
     Computes the loss and gradient using for multiclass SVM classification.
@@ -174,7 +167,6 @@ def svm_loss(x, y):
     return loss
 
 
-@convert_args
 def softmax_loss(x, y):
     """
     Computes the loss and gradient for softmax classification.
@@ -204,7 +196,6 @@ def softmax_loss(x, y):
     return loss
 
 
-@convert_args
 def softmax_cross_entropy(prob, label):
     N = prob.shape[0]
     C = prob.shape[1]
@@ -216,7 +207,6 @@ def softmax_cross_entropy(prob, label):
         onehot_label = label
     return -np.sum(np.log(prob) * onehot_label) / N
 
-@convert_args
 def l2_loss(x, label):
     """
     The Mean Square Error loss for regression.
@@ -232,12 +222,10 @@ def l2_loss(x, label):
     return np.sum((x - onehot_label) ** 2) / N
 
 
-@convert_args
 def sigmoid(x):
     return 1/(1+np.exp(-x))
 
 
-@convert_args
 def rnn_step(x, prev_h, Wx, Wh, b):
     """
     Run the forward pass for a single timestep of a vanilla RNN that uses a tanh
@@ -260,7 +248,6 @@ def rnn_step(x, prev_h, Wx, Wh, b):
     return next_h
 
 
-@convert_args
 def rnn_temporal(x, h0, Wx, Wh, b):
     """
     Run a vanilla RNN forward on an entire sequence of data. We assume an input
@@ -287,7 +274,6 @@ def rnn_temporal(x, h0, Wx, Wh, b):
     return h
 
 
-@convert_args
 def gru_step(x, prev_h, Wx, Wh, b, Wxh, Whh, bh):
     """
     Forward pass for a single timestep of an GRU.
@@ -335,7 +321,6 @@ def gru_step(x, prev_h, Wx, Wh, b, Wxh, Whh, bh):
     return next_h
 
 
-@convert_args
 def lstm_step(x, prev_h, prev_c, Wx, Wh, b):
     """
     Forward pass for a single timestep of an LSTM.
@@ -369,7 +354,6 @@ def lstm_step(x, prev_h, prev_c, Wx, Wh, b):
     return next_h, next_c
 
 
-@convert_args
 def lstm_temporal(x, h0, Wx, Wh, b):
     """
     Forward pass for an LSTM over an entire sequence of data. We assume an input
@@ -405,7 +389,6 @@ def lstm_temporal(x, h0, Wx, Wh, b):
     return h
 
 
-@convert_args
 def temporal_affine(x, w, b):
     """
     Forward pass for a temporal affine layer. The input is a set of D-dimensional
@@ -427,7 +410,6 @@ def temporal_affine(x, w, b):
     return out
 
 
-@convert_args
 def temporal_softmax_loss(x, y, mask, verbose=False):
     """
     A temporal version of softmax loss for use in RNNs. We assume that we are

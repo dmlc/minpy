@@ -6,7 +6,7 @@ import random
 import time
 import numpy as np
 
-num_loops = 100
+num_cold = 5
 
 def init(args):
     layers = [784] + [args.hidden_size] * args.num_hidden + [10]
@@ -77,8 +77,9 @@ def main(args):
     weights, biases = init(args)
     img = np.zeros((args.batch_size, 784))
     label = np.zeros((args.batch_size,), dtype=np.int)
-    start = time.time()
-    for l in range(num_loops):
+    for l in range(args.num_loops):
+        if l == num_cold:
+            start = time.time()
         f = forward(img, weights, biases)
         activation = f[-1]
         if args.only_forward:
@@ -93,7 +94,7 @@ def main(args):
         #for w, w_delta in zip(weights, weight_deltas):
             #w -= 0.01 * w_delta / num_samples
     dur = time.time() - start
-    print('Per Loop Time: %.6f' % (dur / num_loops))
+    print('Per Loop Time: %.6f' % (dur / (args.num_loops - num_cold)))
 
 
 if __name__ == '__main__':
@@ -102,4 +103,5 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', default=256, type=int)
     parser.add_argument('--hidden-size', default=256, type=int)
     parser.add_argument('--num-hidden', default=1, type=int)
+    parser.add_argument('--num-loops', default=20, type=int)
     main(parser.parse_args())

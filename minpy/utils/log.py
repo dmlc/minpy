@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# pylint: disable= protected-access, invalid-name
 """Logging utilities."""
 import logging
 import sys
@@ -15,6 +16,7 @@ PY3 = sys.version_info[0] == 3
 
 
 class _Formatter(logging.Formatter):
+    # pylint: disable= no-self-use
     """Customized log formatter."""
 
     def __init__(self):
@@ -50,7 +52,7 @@ class _Formatter(logging.Formatter):
         fmt += ']\x1b[0m'
         fmt += ' %(message)s'
         if PY3:
-            self._style._fmt = fmt
+            self._style._fmt = fmt # pylint: disable= no-member
         else:
             self._fmt = fmt
         return super(_Formatter, self).format(record)

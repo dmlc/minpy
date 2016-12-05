@@ -10,6 +10,7 @@ from minpy.nn import io
 from minpy.nn import layers
 import minpy.nn.model
 import minpy.nn.solver
+from minpy.utils.minprof import minprof
 # Please uncomment following if you have GPU-enabled MXNet installed.
 from minpy.context import set_context, gpu
 set_context(gpu(0)) # set the global context as gpu(0)
@@ -18,8 +19,9 @@ set_context(gpu(0)) # set the global context as gpu(0)
 #logging.getLogger('minpy.array').setLevel(logging.DEBUG)
 #logging.getLogger('minpy.core').setLevel(logging.DEBUG)
 #logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
+#logging.getLogger('minpy.dispatch.policy').setLevel(logging.DEBUG)
 
-num_loops = 100
+num_cold = 5
 
 class TwoLayerNet(minpy.nn.model.ModelBase):
     def __init__(self, args):
@@ -63,13 +65,14 @@ def main(args):
     img = np.zeros((args.batch_size, 784))
     label = np.zeros((args.batch_size,))
 
-    start = time.time()
-    for l in range(num_loops):
+    for l in range(args.num_loops):
+        if l == num_cold:
+            start = time.time()
         def loss_func(*params):
             f = model.forward(img, 'train')
             return model.loss(f, label)
         if args.only_forward:
-            loss_func()
+            loss = loss_func()
             loss.asnumpy()
         else:
             param_arrays = list(model.params.values())
@@ -80,7 +83,7 @@ def main(args):
             for g in grad_arrays:
                 g.get_data(minpy.array_variants.ArrayType.MXNET).wait_to_read()
     dur = time.time() - start
-    print('Per Loop Time: %.6f' % (dur / num_loops))
+    print('Per Loop Time: %.6f' % (dur / (args.num_loops - num_cold)))
 
 
 if __name__ == '__main__':
@@ -89,4 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', default=256, type=int)
     parser.add_argument('--hidden-size', default=256, type=int)
     parser.add_argument('--num-hidden', default=1, type=int)
+    parser.add_argument('--num-loops', default=20, type=int)
+    #import profile
+    #profile.run('main(parser.parse_args())')
     main(parser.parse_args())
