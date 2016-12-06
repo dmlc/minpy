@@ -1,6 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# pylint: disable= invalid-name
+"""Gradient Checker"""
 from __future__ import absolute_import
 
-import itertools as it
 import numpy as np
 from minpy.core import grad
 from minpy.array import Value
@@ -12,6 +15,7 @@ def quick_grad_check(fun,
                      rtol=1e-2,
                      atol=1e-2,
                      rs=None):
+    # pylint: disable= too-many-arguments
     """
     Checks the gradient of a function (w.r.t. to its first arg) in a random direction
 
@@ -43,7 +47,7 @@ def quick_grad_check(fun,
     grad_fun = grad(fun)
     unary_fun = lambda x: fun(arg + x * random_dir).asnumpy()
     numeric_grad = (unary_fun(eps / 2) - unary_fun(-eps / 2)) / eps
-    analytic_grad = np.sum(grad_fun(arg).asnumpy() * random_dir)
+    analytic_grad = np.sum(grad_fun(arg)[0].asnumpy() * random_dir)
 
     passed = np.allclose(numeric_grad, analytic_grad, rtol=rtol, atol=atol)
 
