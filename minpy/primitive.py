@@ -18,6 +18,48 @@ _logger = log.get_logger(__name__)  # pylint: disable= invalid-name
 GradFunc = collections.namedtuple('GradFunc', ['f', 'multi_grad_indices'])
 
 
+class NoGradientFuncError(ValueError):
+    """Error of no required gradient func defined for back propagation.
+    
+    Parameters
+    ----------
+    func_name : str
+        Name of the primitive without gradient definition.
+    arg : str or int
+        If str, arg is the name of a keyword argument. If int, arg is the
+        position of a positional argument.
+    """
+
+    def __init__(self, func_name, arg):
+        if isinstance(arg, str):
+            arg_name = 'keyword argument'
+        else:
+            arg_name = 'argument'
+        msg = "No partial derivative of {} defined on {} {}.".format(
+            func_name, arg_name, arg)
+        super(NoGradientFuncError, self).__init__(msg)
+
+
+class FakeGradFunc(object):
+    """Fake gradient func for raising NoGradientFuncError at proper place.
+
+    Parameters
+    ----------
+    func_name : str
+        Name of the primitive without gradient definition.
+    arg : str or int
+        If str, arg is the name of a keyword argument. If int, arg is the
+        position of a positional argument.
+    """
+
+    def __init__(self, func_name, arg):
+        self.func_name = func_name
+        self.arg = arg
+
+    def __call__(self, grad_value):
+        raise NoGradientFuncError(self.func_name, self.arg)
+
+
 class CustomOp(object):
     def forward(self, *args, **kwargs):
         raise NotImplementedError
@@ -43,7 +85,7 @@ class CustomOp(object):
 
         # No need to wrap input and return value. Primitives used are in MinPy domain.
         tape.pause()  # Disable tape
-        result_value = self.forward(*args, **kwargs)
+        result = self.forward(*args, **kwargs)
         tape.unpause()  # Enable tape
 
         if need_bp:
@@ -60,12 +102,14 @@ class CustomOp(object):
                         current_tape):
                     # Save forward results and arguments in the gradient function closure
                     # for later use.
-                    grad_func = self.backward(i, result_value, *args, **kwargs)
+                    grad_func = self.backward(i, result, *args, **kwargs)
                     if grad_func is None:
-                        _logger.warning(
+                        _logger.debug(
                             'Partial derivative of customized '
                             'operator [%s] on argument %d is not defined.',
                             self.__class__.__name__, i)
+                        grad_func = FakeGradFunc('customized operator [%s]' %
+                                                 self.__class__.__name__, i)
                     else:
                         _logger.debug(
                             'Adding partial derivative of customized operator [%s] on argument %d.',
@@ -74,12 +118,14 @@ class CustomOp(object):
             for k, arg in kwargs.items():
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
-                    grad_func = self.backward(k, result_value, *args, **kwargs)
+                    grad_func = self.backward(k, result, *args, **kwargs)
                     if grad_func is None:
-                        _logger.warning(
+                        _logger.debug(
                             'Partial derivative of customized '
                             'operator [%s] on keyword %s is not defined.',
                             self.__class__.__name__, k)
+                        grad_func = FakeGradFunc('customized operator [%s]' %
+                                                 self.__class__.__name__, k)
                     else:
                         _logger.debug(
                             'Adding partial derivative of customized operator [%s] on keyword %s.',
@@ -260,55 +306,57 @@ class Primitive(object):
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
                     if i not in self._grad_func:
-                        _logger.warning('Partial derivative of func "{}" on'
-                                        'argument {} is not defined.'
-                                        .format(self._func.__name__, i))
-                        continue
-                    _logger.debug(
-                        'Adding partial derivative to func "{}" on argument {}.'.
-                        format(self._func, i))
-                    grad_func_rec = self._grad_func[i]
-                    # Save forward results and arguments in the gradient function closure
-                    # for later use.
-                    grad_func = grad_func_rec.f(result_value, *arg_values,
-                                                **kwargs_values)
-
-                    if grad_func_rec.multi_grad_indices is None:
-                        # Derivative function of each argument is defined separately.
-                        owner = arg
+                        _logger.debug('Partial derivative of func "{}" on'
+                                      'argument {} is not defined.'
+                                      .format(self._func.__name__, i))
+                        grad_func = FakeGradFunc(self._func.__name__, i)
                     else:
-                        # Derivative function could compute gradients of multiple arguments
-                        # in one call.
-                        owner = []
-                        for grad_index in grad_func_rec.multi_grad_indices:
-                            if (isinstance(args[grad_index], array.Value) and \
-                                args[grad_index].is_marked_for_bp(current_tape)):
-                                owner.append(args[grad_index])
-                            else:
-                                owner.append(None)
-                            visited_arg_indices.add(grad_index)
-                    grad_func = raw_value_wrapper(grad_func)
-                    if self.type == ArrayType.MXNET:
-                        grad_func = context_wrapper(grad_func)
+                        _logger.debug(
+                            'Adding partial derivative to func "{}" on argument {}.'.
+                            format(self._func, i))
+                        grad_func_rec = self._grad_func[i]
+                        # Save forward results and arguments in the gradient function closure
+                        # for later use.
+                        grad_func = grad_func_rec.f(result_value, *arg_values,
+                                                    **kwargs_values)
+
+                        if grad_func_rec.multi_grad_indices is None:
+                            # Derivative function of each argument is defined separately.
+                            owner = arg
+                        else:
+                            # Derivative function could compute gradients of multiple arguments
+                            # in one call.
+                            owner = []
+                            for grad_index in grad_func_rec.multi_grad_indices:
+                                if (isinstance(args[grad_index], array.Value) and \
+                                    args[grad_index].is_marked_for_bp(current_tape)):
+                                    owner.append(args[grad_index])
+                                else:
+                                    owner.append(None)
+                                visited_arg_indices.add(grad_index)
+                        grad_func = raw_value_wrapper(grad_func)
+                        if self.type == ArrayType.MXNET:
+                            grad_func = context_wrapper(grad_func)
                     current_tape.add_partial_derivative(grad_func, owner,
                                                         result)
             for k, arg in kwargs.items():
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
                     if k not in self._grad_func_kw:
-                        _logger.warning(
+                        _logger.debug(
                             'Partial derivative of func "{}" on keyword argument "{}"'
                             'is not defined.'.format(self._func.__name__, k))
-                        continue
-                    _logger.debug(
-                        'Adding partial derivative to func "{}" on keyword argument "{}".'.
-                        format(self._func, k))
-                    grad_func_rec = self._grad_func_kw[k]
-                    grad_func = grad_func_rec.f(result_value, *arg_values,
-                                                **kwargs_values)
-                    grad_func = raw_value_wrapper(grad_func)
-                    if self.type == ArrayType.MXNET:
-                        grad_func = context_wrapper(grad_func)
+                        grad_func = FakeGradFunc(self._func.__name__, k)
+                    else:
+                        _logger.debug(
+                            'Adding partial derivative to func "{}" on keyword argument "{}".'.
+                            format(self._func, k))
+                        grad_func_rec = self._grad_func_kw[k]
+                        grad_func = grad_func_rec.f(result_value, *arg_values,
+                                                    **kwargs_values)
+                        grad_func = raw_value_wrapper(grad_func)
+                        if self.type == ArrayType.MXNET:
+                            grad_func = context_wrapper(grad_func)
                     current_tape.add_partial_derivative(grad_func, arg, result)
         return result
         # pylint: enable=invalid-name, too-many-locals
