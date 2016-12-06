@@ -51,8 +51,7 @@ before_install:
 
 install:
   - sudo pip install --upgrade pip
-  - pip install cpplint pylint PyYAML h5py scipy Pillow
-  - pip3 install cpplint pylint PyYAML h5py scipy Pillow
+  - pip install cpplint pylint PyYAML h5py scipy Pillow tabulate
   # Temporary fix libdc1394 error
   - sudo ln /dev/null /dev/raw1394
   - cd mxnet
