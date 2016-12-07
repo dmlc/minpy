@@ -61,10 +61,35 @@ class FakeGradFunc(object):
 
 
 class CustomOp(object):
+    """Abstract class for customized operator. Backpropagation can be
+    customized."""
     def forward(self, *args, **kwargs):
+        """Forward function."""
         raise NotImplementedError
 
-    def backward(self, argnum, ans, *args, **kwargs):
+    def backward(self, arg, ans, *args, **kwargs):
+        """Gradient function generator.
+
+        It returns a gradient function that takes upper gradient as input given
+        w.r.t. chosen positional or keyword argument.
+
+        Parameters
+        ----------
+        arg : int or str
+            The position of the positional argument or the string of keyword
+            argument.
+        ans
+            The result of the forward function.
+        args
+            positional argument of forward function.
+        kwargs
+            keyword argument of forward function.
+
+        Returns
+        -------
+        function
+            A gradient function that takes upper gradient as input.
+        """
         pass
 
     def __call__(self, *args, **kwargs):
