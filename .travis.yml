@@ -51,7 +51,7 @@ before_install:
 
 install:
   - sudo pip install --upgrade pip
-  - pip install cpplint
+  - pip install cpplint pylint
   - pip install -e .
   # Temporary fix libdc1394 error
   - sudo ln /dev/null /dev/raw1394
