@@ -1,3 +1,5 @@
+// Code from tensorflow/tensorflow/core/util/event.proto
+
 syntax = "proto3";
 
 package tensorflow;

@@ -1,4 +1,6 @@
-'''It is for creating and writing summaries.'''
+'''It is for creating and writing summaries.
+Based on the code from tensorflow/tensorflow/python/summary/writer/writer.py.
+'''
 
 from __future__ import absolute_import
 from __future__ import division

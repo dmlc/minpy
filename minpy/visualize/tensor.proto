@@ -1,3 +1,6 @@
+// Code from tensorflow/tensorflow/core/framework/
+// tensor.proto
+
 syntax = "proto3";
 
 package tensorflow;

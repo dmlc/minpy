@@ -1,3 +1,6 @@
+// Code from tensorflow/tensorflow/core/framework/
+// tensor_shape.proto
+
 // Protocol buffer representing the shape of tensors.
 
 syntax = "proto3";

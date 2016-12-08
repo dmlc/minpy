@@ -1,4 +1,5 @@
-"""Writes events to a disk in a logdir."""
+"""Writes events to a disk in a logdir.
+"""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -17,6 +18,8 @@ import tensorflow as tf
 
 def as_bytes(bytes_or_text, encoding='utf-8'):
     """
+    Based on code from tensorflow/python/util/compat.py.
+
     Converts either bytes or unicode to `bytes`, using utf-8 encoding for text.
 
     Args:
@@ -49,7 +52,9 @@ def directory_check(path):
             os.remove(path + "/" + files)
 
 class EventsWriter(object):
-    '''Writes `Event` protocol buffers to an event file.'''
+    '''Based on the code from tensorflow/tensorflow/core/util/events_writer.cc.
+
+    Writes `Event` protocol buffers to an event file.'''
     def __init__(self, file_prefix):
         '''
         Events files have a name of the form
@@ -97,6 +102,8 @@ class EventsWriter(object):
 
 class EventFileWriter(object):
     '''
+    Based on code from tensorflow/tensorflow/python/summary/writer/event_file_writer.py.
+
     Writes `Event` protocol buffers to an event file.
 
     The `event_file_writer` class creates an event file in the specified directory,
