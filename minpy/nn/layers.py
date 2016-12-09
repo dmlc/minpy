@@ -1,7 +1,9 @@
+""" DNN Layers. """
 from __future__ import division
 
 import minpy.numpy as np
 import minpy.numpy.random as random
+# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals
 
 def affine(x, w, b):
     """
@@ -197,6 +199,21 @@ def softmax_loss(x, y):
 
 
 def softmax_cross_entropy(prob, label):
+    """
+    Computes the cross entropy for softmax activation.
+
+    Inputs:
+    - prob: Probability, of shape (N, C) where x[i, j] is the probability for the jth class
+      for the ith input.
+    - label: Either of the followings:
+      - One hot encoding of labels, of shape (N, C)
+      - Label index of shape (N, ), each y[i] is the label of i^th example
+        (0 <= y[i] < C)
+
+    Returns a Value:
+    - cross_entropy
+    """
+
     N = prob.shape[0]
     C = prob.shape[1]
     if len(label.shape) == 1:
@@ -223,6 +240,16 @@ def l2_loss(x, label):
 
 
 def sigmoid(x):
+    """
+    Computes the forward pass for a layer of sigmoid units.
+
+    Input:
+    - x: Inputs, of any shape
+
+    Returns a tuple of:
+    - out: Output, of the same shape as x
+    """
+
     return 1/(1+np.exp(-x))
 
 
@@ -265,7 +292,7 @@ def rnn_temporal(x, h0, Wx, Wh, b):
     Returns a tuple of:
     - h: Hidden states for the entire timeseries, of shape (N, T, H).
     """
-    N, T, D = x.shape
+    N, T, _ = x.shape
     H = h0.shape[1]
     h = np.zeros([N, 0, H])
     for t in xrange(T):
@@ -280,7 +307,7 @@ def gru_step(x, prev_h, Wx, Wh, b, Wxh, Whh, bh):
 
     The input data has dimentsion D, the hidden state has dimension H, and we
     use a minibatch size of N.
-    
+
     Parameters
     ----------
     x
@@ -312,7 +339,7 @@ def gru_step(x, prev_h, Wx, Wh, b, Wxh, Whh, bh):
     Implementation follows
     http://jmlr.org/proceedings/papers/v37/jozefowicz15.pdf
     """
-    N, H = prev_h.shape
+    _, H = prev_h.shape
     a = sigmoid(np.dot(x, Wx) + np.dot(prev_h, Wh) + b)
     r = a[:, 0:H]
     z = a[:, H:2*H]
@@ -340,7 +367,7 @@ def lstm_step(x, prev_h, prev_c, Wx, Wh, b):
     - next_h: Next hidden state, of shape (N, H)
     - next_c: Next cell state, of shape (N, H)
     """
-    N, H = prev_c.shape
+    _, H = prev_c.shape
     # 1. activation vector
     a = np.dot(x, Wx) + np.dot(prev_h, Wh) + b
     # 2. gate fuctions
@@ -375,13 +402,13 @@ def lstm_temporal(x, h0, Wx, Wh, b):
     Returns a tuple of:
     - h: Hidden states for all timesteps of all sequences, of shape (N, T, H)
     """
-    N, T, D = x.shape
+    N, T, _ = x.shape
     _, H = h0.shape
     c = np.zeros([N, 0, H])
     h = np.zeros([N, 0, H])
     for t in xrange(T):
         h_step, c_step = lstm_step(
-          x[:, t, :], h[:, t-1, :] if t > 0 else h0, c[:, t-1, :] if t > 0 else np.zeros((N, H)), Wx, Wh, b)
+            x[:, t, :], h[:, t-1, :] if t > 0 else h0, c[:, t-1, :] if t > 0 else np.zeros((N, H)), Wx, Wh, b) # pylint: disable=line-too-long
         h_step = h_step.reshape(N, 1, H)
         c_step = c_step.reshape(N, 1, H)
         h = np.append(h, h_step, axis=1)
@@ -410,7 +437,7 @@ def temporal_affine(x, w, b):
     return out
 
 
-def temporal_softmax_loss(x, y, mask, verbose=False):
+def temporal_softmax_loss(x, y, mask):
     """
     A temporal version of softmax loss for use in RNNs. We assume that we are
     making predictions over a vocabulary of size V for each timestep of a

@@ -1,10 +1,13 @@
+""" Model Builder for easy model building. """
+import mxnet as mx
 import minpy.numpy as np
 import minpy.core
 import minpy.nn.layers as layers
 from minpy.nn.model import ModelBase
-import mxnet as mx
+# pylint: disable=missing-docstring, invalid-name, no-member, unused-argument, no-self-use
 
 class Module(object):
+    # pylint: disable=too-few-public-methods
     """ The base class of building blocks of neural networks. """
 
     def __init__(self):
@@ -21,6 +24,7 @@ class Module(object):
 
 
 class Parallel(Module):
+    # pylint: disable=too-few-public-methods
     # TODO
     pass
 
@@ -41,14 +45,14 @@ class Sequential(Module):
 
     def forward(self, X, params):
         return reduce(
-            lambda inputs, module : module.forward(inputs, params),
+            lambda inputs, module: module.forward(inputs, params),
             self.__modules,
             X
         )
 
     def output_shape(self, input_shape):
         return reduce(
-            lambda shape, module : module.output_shape(shape),
+            lambda shape, module: module.output_shape(shape),
             self.__modules,
             input_shape
         )
@@ -66,6 +70,7 @@ class Sequential(Module):
         return shapes
 
     def parameter_settings(self):
+        # pylint: disable=bare-except
         settings = {}
         for module in self.__modules:
             try:
@@ -95,14 +100,14 @@ class Sequential(Module):
         assert isinstance(module, Module)
         self.__modules.insert(index, module)
 
-    def remove(index):
+    def remove(self, index):
         """ Remove the module at the specified index.
 
         :param int index: the index at which the module (layer) is removed.
         :return: None.
         """
 
-        assert -1 < index and index < len(self.__modules)
+        assert index > -1 and index < len(self.__modules)
         del self.__modules[index]
 
 class Affine(Module):
@@ -113,9 +118,9 @@ class Affine(Module):
         param int hidden_number: number of hidden units.
         """
         super(Affine, self).__init__()
-        self.hidden_number = hidden_number 
+        self.hidden_number = hidden_number
         self.weight = 'affine%d_weight' % self.__class__.count
-        self.bias   = 'affine%d_bias' % self.__class__.count
+        self.bias = 'affine%d_bias' % self.__class__.count
 
         self.initializer = initializer
 
@@ -126,38 +131,38 @@ class Affine(Module):
 
     def parameter_shape(self, input_shape):
         weight_shape = (input_shape[-1], self.hidden_number)
-        bias_shape   = (self.hidden_number,)
+        bias_shape = (self.hidden_number,)
         return {
-            self.weight : weight_shape, 
-            self.bias   : bias_shape 
+            self.weight : weight_shape,
+            self.bias   : bias_shape
         }
 
-    def output_shape(self, input_shape):
+    def output_shape(self, _):
         return (self.hidden_number,)
-    
+
     def parameter_settings(self):
-      return self.initializer if self.initializer else \
-      {
-          self.weight : {'init_rule' : 'xavier'},
-          self.bias   : {'init_rule' : 'constant'}
-      }
-        
+        return self.initializer if self.initializer else \
+        {
+            self.weight : {'init_rule' : 'xavier'},
+            self.bias   : {'init_rule' : 'constant'}
+        }
+
 
 class BatchNormalization(Module):
     count = 0
     def __init__(self, epsilon=1e-5, momentum=0.9):
+        # pylint: disable=line-too-long
         """ Batch normalization. To perform batch normalization on convolution layer outputs, please use SpatialBatchNormalization.
-        
         param float epsilon: hyperparameter guaranteeing numeric stability. 1e-5 by default.
         param float momentum: hyperparameter controlling the speed at which running mean and running variance change.
         """
         super(BatchNormalization, self).__init__()
-        self.epsilon  = epsilon
+        self.epsilon = epsilon
         self.momentum = momentum
         self.running_mean, self.running_variance = None, None
 
         self.gamma = 'BN%d_gamma' % self.__class__.count
-        self.beta  = 'BN%d_beta' % self.__class__.count
+        self.beta = 'BN%d_beta' % self.__class__.count
 
         self.__class__.count += 1
 
@@ -192,16 +197,17 @@ class BatchNormalization(Module):
 
 
 class SpatialBatchNormalization(BatchNormalization):
+    # pylint: disable=line-too-long
     count = 0
     def __init__(self, epsilon=1e-5, momentum=0.9):
         """ Spatial batch normalization of convolution layer outputs.
-        
+
         param float epsilon: hyperparameter guaranteeing numeric stability. 1e-5 by default.
         param float momentum: hyperparameter controlling the speed at which running mean and running variance change.
         """
         super(SpatialBatchNormalization, self).__init__(epsilon=1e-5, momentum=0.9)
         self.gamma = 'SpatialBN%d_gamma' % self.__class__.count
-        self.beta  = 'SpatialBN%d_beta' % self.__class__.count
+        self.beta = 'SpatialBN%d_beta' % self.__class__.count
 
     def forward(self, inputs, params):
         N, C, W, H = inputs.shape
@@ -220,7 +226,7 @@ class SpatialBatchNormalization(BatchNormalization):
         )
         self.running_mean, self.running_variance = running_mean, running_variance
         outputs = np.reshape(outputs, (N, W, H, C))
-        outputs = transpose(outputs, (0, 3, 1, 2)) 
+        outputs = transpose(outputs, (0, 3, 1, 2))
         return outputs
 
     def output_shape(self, input_shape):
@@ -240,8 +246,10 @@ class SpatialBatchNormalization(BatchNormalization):
 
 
 class Convolution(Module):
+    # pylint: disable=too-many-instance-attributes
     count = 0
     def __init__(self, kernel_shape, kernel_number, stride=(1, 1), pad=(0, 0), initializer=None):
+        # pylint: disable=too-many-arguments
         """ Convolution layer
 
         param tuple kernel_shape: the shape of kernel (x, y).
@@ -251,13 +259,13 @@ class Convolution(Module):
         """
 
         super(Convolution, self).__init__()
-        self.kernel_shape  = kernel_shape
+        self.kernel_shape = kernel_shape
         self.kernel_number = kernel_number
-        self.stride        = stride
-        self.pad           = pad
+        self.stride = stride
+        self.pad = pad
 
         self.weight = 'convolution%d_weight' % self.__class__.count
-        self.bias   = 'convolution%d_bias' % self.__class__.count
+        self.bias = 'convolution%d_bias' % self.__class__.count
 
         self.initializer = initializer
 
@@ -265,12 +273,12 @@ class Convolution(Module):
 
         self.inputs = mx.sym.Variable(name='inputs')
         self.convolution = mx.sym.Convolution(
-            name       = 'convolution',
-            data       = self.inputs,
-            kernel     = self.kernel_shape,
-            num_filter = self.kernel_number,
-            stride     = self.stride,
-            pad        = self.pad
+            name='convolution',
+            data=self.inputs,
+            kernel=self.kernel_shape,
+            num_filter=self.kernel_number,
+            stride=self.stride,
+            pad=self.pad
         )
 
     def forward(self, inputs, params):
@@ -282,24 +290,24 @@ class Convolution(Module):
         return minpy.core.Function(self.convolution, {'inputs':inputs.shape})(**args)
 
     def output_shape(self, input_shape):
-        __, output_shape, __ = self.convolution.infer_shape(inputs=tuple([1] + list(input_shape)))
+        _, output_shape, _ = self.convolution.infer_shape(inputs=tuple([1] + list(input_shape)))
         return normal_shape(output_shape[0][1:])
 
     def parameter_shape(self, input_shape):
         assert len(input_shape) == 3, 'The input tensor should be 4D.'
-        weight_shape = (self.kernel_number, input_shape[0], self.kernel_shape[0], self.kernel_shape[1])
-        bias_shape   = (self.kernel_number,)
+        weight_shape = (self.kernel_number, input_shape[0], self.kernel_shape[0], self.kernel_shape[1]) # pylint: disable=line-too-long
+        bias_shape = (self.kernel_number,)
         return {
-            self.weight : weight_shape, 
-            self.bias   : bias_shape 
+            self.weight : weight_shape,
+            self.bias   : bias_shape
         }
 
     def parameter_settings(self):
-      return self.initializer if self.initializer else \
-      {
-          self.weight : {'init_rule' : 'xavier'},
-          self.bias   : {'init_rule' : 'constant'}
-      }
+        return self.initializer if self.initializer else \
+        {
+            self.weight : {'init_rule' : 'xavier'},
+            self.bias   : {'init_rule' : 'constant'}
+        }
 
 
 class Dropout(Module):
@@ -315,7 +323,7 @@ class Dropout(Module):
         return layers.dropout(inputs, self.probability, params['__training_in_progress__'])
     def output_shape(self, input_shape):
         return input_shape
-      
+
 
 class Pooling(Module):
     count = 0
@@ -324,27 +332,26 @@ class Pooling(Module):
         param tuple kernel_shape: the shape of kernel (x, y).
         param tuple stride: stride (x, y).
         param tuple pad: padding.
+
+        mode: 'avg', 'max', 'sum'
         """
 
-        '''
-          mode: 'avg', 'max', 'sum'
-        '''
         super(Pooling, self).__init__()
-        self.kernel_shape  = kernel_shape
-        self.mode          = mode
-        self.stride        = stride
-        self.pad           = pad
+        self.kernel_shape = kernel_shape
+        self.mode = mode
+        self.stride = stride
+        self.pad = pad
 
         self.__class__.count += 1
 
         self.inputs = mx.sym.Variable(name='inputs')
         self.pooling = mx.sym.Pooling(
-            name       = 'pooling',
-            data       = self.inputs,
-            kernel     = self.kernel_shape,
-            pool_type  = self.mode,
-            stride     = self.stride,
-            pad        = self.pad
+            name='pooling',
+            data=self.inputs,
+            kernel=self.kernel_shape,
+            pool_type=self.mode,
+            stride=self.stride,
+            pad=self.pad
         )
 
     def forward(self, inputs, params):
@@ -352,7 +359,7 @@ class Pooling(Module):
         return minpy.core.Function(self.pooling, {'inputs':inputs.shape})(**args)
 
     def output_shape(self, input_shape):
-        __, output_shape, __ = self.pooling.infer_shape(inputs=tuple([1] + list(input_shape)))
+        _, output_shape, _ = self.pooling.infer_shape(inputs=tuple([1] + list(input_shape)))
         return normal_shape(output_shape[0][1:])
 
 
@@ -374,7 +381,8 @@ class Export(Identity):
         assert label not in storage, 'duplicated label'
         self.label, self.storage = label, storage
         self.storage.update({self.label : None})
-    def forward(self, inputs, params):
+    def forward(self, inputs, *args):
+        # pylint: disable=fixme
         # TODO policy train_only test_only default
         self.storage[self.label] = inputs
         return inputs
@@ -390,7 +398,7 @@ class ReLU(Module):
         return layers.relu(inputs)
     def output_shape(self, input_shape):
         return input_shape
-   
+
 
 class Sigmoid(Module):
     def __init__(self):
@@ -446,10 +454,12 @@ class Flatten(Module):
 
 class Add(Module):
     def __init__(self, *args):
+        # pylint: disable=line-too-long
         """ Perform different operations on the same input and add the results together in an elementwise way.
         param *args: the operations to be performed on inputs in parallel, the outputs of these operations should be of the same shape.
         """
 
+        super(Add, self).__init__()
         assert all(isinstance(arg, Module) for arg in args)
         self.__modules = list(args)
 
@@ -471,8 +481,9 @@ class Add(Module):
 
 
 class Model(ModelBase):
-    """ """
+    """ Model """
     def __init__(self, container, loss, input_shape):
+        # pylint: disable=line-too-long
         """ Create the model from previous classes. The model is compatible with Minpy's solver.
         :param Module container: the network architecture.
         :param str or callable loss: The loss function. Options: 'l2', 'softmax', 'svm' or customized functions receivingpredict and label as parameters.
@@ -482,19 +493,20 @@ class Model(ModelBase):
         self.loss_function = loss
         super(Model, self).__init__()
         self.__container = container
-        
+
         shapes = container.parameter_shape(input_shape)
         settings = container.parameter_settings()
         for key in shapes:
             if key not in settings:
                 settings.update({key : {}})
         reduce(
-            lambda arg, key : arg.add_param(name=key, shape=shapes[key], **settings[key]),
+            lambda arg, key: arg.add_param(name=key, shape=shapes[key], **settings[key]),
             shapes.keys(),
             self
         )
 
     def forward(self, X, mode):
+        # pylint: disable=fixme
         # TODO improve the method to distinguish training and test
         self.params.update({'__training_in_progress__' : mode})
 

@@ -1,8 +1,7 @@
 """ Model base class codes. Adapted from cs231n lab codes. """
-import functools
-import minpy
-import numpy
 import h5py
+import numpy
+# pylint: disable=invalid-name
 
 class ParamsNameNotFoundError(ValueError):
     """ Error of not existed name during accessing model params """
@@ -21,12 +20,34 @@ class ModelBase(object):
         self.aux_param_configs = {}
 
     def add_param(self, name, shape, **kwargs):
+        """ Add parameter.
+
+        Parameters for training. This function
+        will add variable "name" into dictionary self.param_config, which can be accessed by
+        model in a solver.
+
+        :param name: name of the param.
+        :param shape: shape of the param.
+        :param kwargs: contents of the param.
+        :return: model itself
+        """
+
         assert(name not in self.param_configs), 'Duplicate parameter name %s' % name
-        self.param_configs[name] = { 'shape': shape }
+        self.param_configs[name] = {'shape': shape}
         self.param_configs[name].update(kwargs)
         return self
 
     def add_params(self, param_dict):
+        """ Add parameter.
+
+        Parameters for training. This function
+        will add variable "name" into dictionary self.param_config, which can be accessed by
+        model in a solver.
+
+        :param param_dict: dictionary for param_name and value.
+        :return: model itself
+        """
+
         for name, pconfig in param_dict.items():
             assert(name not in self.param_configs), 'Duplicate parameter name %s' % name
             self.param_configs[name] = pconfig
