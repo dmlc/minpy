@@ -1,5 +1,5 @@
+# pylint: disable=invalid-name, pointless-string-statement
 """ Optimizer codes. Adapted from cs231n lab codes. """
-import minpy
 import minpy.numpy as np
 """
 This file implements various first-order update rules that are commonly used for
@@ -29,16 +29,15 @@ for a variety of different problems.
 For efficiency, update rules may perform in-place updates, mutating w and
 setting next_w equal to w.
 """
-
-
 def sgd(w, dw, config=None):
     """
     Performs vanilla stochastic gradient descent.
-  
+
     config format:
     - learning_rate: Scalar learning rate.
     """
-    if config is None: config = {}
+    if config is None:
+        config = {}
     config.setdefault('learning_rate', 1e-2)
 
     w -= config['learning_rate'] * dw
@@ -56,7 +55,8 @@ def sgd_momentum(w, dw, config=None):
     - velocity: A numpy array of the same shape as w and dw used to store a moving
                 average of the gradients.
     """
-    if config is None: config = {}
+    if config is None:
+        config = {}
     config.setdefault('learning_rate', 1e-2)
     config.setdefault('momentum', 0.9)
     v = config.get('velocity', np.zeros_like(w))
@@ -73,7 +73,7 @@ def rmsprop(x, dx, config=None):
     """
     Uses the RMSProp update rule, which uses a moving average of squared gradient
     values to set adaptive per-parameter learning rates.
-  
+
     config format:
     - learning_rate: Scalar learning rate.
     - decay_rate: Scalar between 0 and 1 giving the decay rate for the squared
@@ -81,7 +81,8 @@ def rmsprop(x, dx, config=None):
     - epsilon: Small scalar used for smoothing to avoid dividing by zero.
     - cache: Moving average of second moments of gradients.
     """
-    if config is None: config = {}
+    if config is None:
+        config = {}
     config.setdefault('learning_rate', 1e-2)
     config.setdefault('decay_rate', 0.99)
     config.setdefault('epsilon', 1e-8)
@@ -110,7 +111,8 @@ def adam(x, dx, config=None):
     - v: Moving average of squared gradient.
     - t: Iteration number.
     """
-    if config is None: config = {}
+    if config is None:
+        config = {}
     config.setdefault('learning_rate', 1e-3)
     config.setdefault('beta1', 0.9)
     config.setdefault('beta2', 0.999)

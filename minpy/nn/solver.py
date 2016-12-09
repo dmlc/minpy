@@ -7,7 +7,7 @@ import time
 from minpy.nn import optim, init
 from minpy import core
 import minpy.numpy as np
-
+# pylint: disable=fixme, invalid-name, too-many-instance-attributes, no-member, attribute-defined-outside-init
 
 class Solver(object):
     """
@@ -165,7 +165,11 @@ class Solver(object):
         be called manually.
         """
         # Compute loss and gradient
-        def loss_func(*params):
+        def loss_func(*params): # pylint: disable=unused-argument
+            """
+            Loss function calculate the loss
+            """
+
             # It seems that params are not used in forward function. But since we will pass
             # model.params as arguments, we are ok here.
             predict = self.model.forward_batch(batch, mode='train')
