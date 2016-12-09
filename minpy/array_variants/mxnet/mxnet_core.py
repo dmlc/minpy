@@ -5,7 +5,6 @@
 from __future__ import absolute_import
 
 import operator
-import numpy
 import mxnet
 from mxnet import ndarray
 from mxnet import _ndarray_internal as _in
@@ -38,12 +37,14 @@ def _unbroadcast(ans, x, gradfun):
         return gradfun
     #pylint: enable= missing-docstring
 
-def _maximum_grad_gen0(ans, x, y):
+def _maximum_grad_gen0(ans, x, _):
     """Generate gradient function of maximum on lhs."""
+    # pylint: disable=protected-access
     return _unbroadcast(ans, x, lambda g: g * _in._equal(x, ans))
 
-def _maximum_grad_gen1(ans, x, y):
+def _maximum_grad_gen1(ans, _, y):
     """Generate gradient function of maximum on rhs."""
+    # pylint: disable=protected-access
     return _unbroadcast(ans, y, lambda g: g * _in._equal(y, ans))
 
 def _sum_grad(ans, x, axis=None, keepdims=False):
