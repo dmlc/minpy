@@ -1,8 +1,13 @@
 #!/bin/bash
 
 if [ ${TASK} == "lint" ]; then
-    python ./dmlc-core/scripts/lint.py minpy python minpy || exit -1
-    exit 0
+    if [ $TRAVIS_PYTHON_VERSION == 2.7 ]; then
+        python ./dmlc-core/scripts/lint.py minpy python minpy || exit -1
+        exit 0
+    else
+        python ./dmlc-core/scripts/lint3.py minpy python minpy || exit -1
+        exit 0
+    fi
 fi
 
 if [ ${TASK} == "example_test" ]; then
