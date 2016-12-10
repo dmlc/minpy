@@ -161,4 +161,3 @@ class ModelBase(object):
                 v[:] = numpy.array(hf.get('param_%s' % k))
             for k, v in self.aux_params.items():
                 v[:] = numpy.array(hf.get('aux_param_%s' % k))
-

@@ -3,6 +3,9 @@ import numpy
 import minpy.numpy as np
 import minpy.numpy.random as npr
 
+# pylint: disable=no-member
+
+
 def xavier(shape, _):
     """Initialize weights with xavier initializer.
 

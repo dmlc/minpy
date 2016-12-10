@@ -3,7 +3,9 @@ from __future__ import division
 
 import minpy.numpy as np
 import minpy.numpy.random as random
-# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals
+
+# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, no-member
+
 
 def affine(x, w, b):
     """
@@ -97,7 +99,7 @@ def batchnorm(x,
     if mode == 'train':
         mean = np.sum(x, axis=0) / N
         x_mean = (x - np.expand_dims(mean, axis=0))
-        sqr_x_mean = x_mean ** 2
+        sqr_x_mean = x_mean**2
         var = np.sum(sqr_x_mean, axis=0) / N
         sqrt_var = np.sqrt(var + eps)
         inv_sqrt_var = 1.0 / sqrt_var
@@ -224,6 +226,7 @@ def softmax_cross_entropy(prob, label):
         onehot_label = label
     return -np.sum(np.log(prob) * onehot_label) / N
 
+
 def l2_loss(x, label):
     """
     The Mean Square Error loss for regression.
@@ -236,7 +239,7 @@ def l2_loss(x, label):
         np.onehot_encode(label, onehot_label)
     else:
         onehot_label = label
-    return np.sum((x - onehot_label) ** 2) / N
+    return np.sum((x - onehot_label)**2) / N
 
 
 def sigmoid(x):
@@ -250,7 +253,7 @@ def sigmoid(x):
     - out: Output, of the same shape as x
     """
 
-    return 1/(1+np.exp(-x))
+    return 1 / (1 + np.exp(-x))
 
 
 def rnn_step(x, prev_h, Wx, Wh, b):
@@ -295,8 +298,9 @@ def rnn_temporal(x, h0, Wx, Wh, b):
     N, T, _ = x.shape
     H = h0.shape[1]
     h = np.zeros([N, 0, H])
-    for t in xrange(T):
-        h_step = rnn_step(x[:, t, :], h0 if t == 0 else h[:, t-1, :], Wx, Wh, b).reshape(N, 1, H)
+    for t in range(T):
+        h_step = rnn_step(x[:, t, :], h0 if t == 0 else h[:, t - 1, :], Wx, Wh,
+                          b).reshape(N, 1, H)
         h = np.append(h, h_step, axis=1)
     return h
 
@@ -342,7 +346,7 @@ def gru_step(x, prev_h, Wx, Wh, b, Wxh, Whh, bh):
     _, H = prev_h.shape
     a = sigmoid(np.dot(x, Wx) + np.dot(prev_h, Wh) + b)
     r = a[:, 0:H]
-    z = a[:, H:2*H]
+    z = a[:, H:2 * H]
     h_m = np.tanh(np.dot(x, Wxh) + np.dot(r * prev_h, Whh) + bh)
     next_h = z * prev_h + (1 - z) * h_m
     return next_h
@@ -372,9 +376,9 @@ def lstm_step(x, prev_h, prev_c, Wx, Wh, b):
     a = np.dot(x, Wx) + np.dot(prev_h, Wh) + b
     # 2. gate fuctions
     i = sigmoid(a[:, 0:H])
-    f = sigmoid(a[:, H:2*H])
-    o = sigmoid(a[:, 2*H:3*H])
-    g = np.tanh(a[:, 3*H:4*H])
+    f = sigmoid(a[:, H:2 * H])
+    o = sigmoid(a[:, 2 * H:3 * H])
+    g = np.tanh(a[:, 3 * H:4 * H])
     # 3. next cell state
     next_c = f * prev_c + i * g
     next_h = o * np.tanh(next_c)
@@ -406,9 +410,11 @@ def lstm_temporal(x, h0, Wx, Wh, b):
     _, H = h0.shape
     c = np.zeros([N, 0, H])
     h = np.zeros([N, 0, H])
-    for t in xrange(T):
-        h_step, c_step = lstm_step(
-            x[:, t, :], h[:, t-1, :] if t > 0 else h0, c[:, t-1, :] if t > 0 else np.zeros((N, H)), Wx, Wh, b) # pylint: disable=line-too-long
+    for t in range(T):
+        h_step, c_step = lstm_step(x[:, t, :], h[:, t - 1, :]
+                                   if t > 0 else h0, c[:, t - 1, :]
+                                   if t > 0 else np.zeros((N, H)), Wx, Wh,
+                                   b)  # pylint: disable=line-too-long
         h_step = h_step.reshape(N, 1, H)
         c_step = c_step.reshape(N, 1, H)
         h = np.append(h, h_step, axis=1)

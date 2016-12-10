@@ -9,8 +9,9 @@ from minpy.array_variants import numpy
 from minpy.array_variants import mxnet
 from minpy.utils import common
 
-class ArrayType:
+class ArrayType(object):
     """Enumeration of types of arrays."""
+    # pylint: disable=no-init
     NUMPY = 0
     MXNET = 1
 

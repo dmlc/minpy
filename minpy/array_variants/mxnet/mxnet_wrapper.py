@@ -3,6 +3,7 @@
 # pylint: disable=cell-var-from-loop
 """Wrapper for MXNet namespace."""
 import types
+# pylint: disable=deprecated-lambda
 
 
 def wrap_namespace(nspace, reg, prim_wrapper):

@@ -29,6 +29,7 @@ for a variety of different problems.
 For efficiency, update rules may perform in-place updates, mutating w and
 setting next_w equal to w.
 """
+# pylint: disable=no-member
 def sgd(w, dw, config=None):
     """
     Performs vanilla stochastic gradient descent.

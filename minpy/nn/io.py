@@ -190,8 +190,8 @@ class NDArrayIter(DataIter):
                 data_dict[k] = data_dict[k][:new_n]
             for k, _ in self.label:
                 label_dict[k] = label_dict[k][:new_n]
-            self.data = data_dict.items()
-            self.label = label_dict.items()
+            self.data = list(data_dict.items())
+            self.label = list(label_dict.items())
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data >= batch_size, \
             "batch_size need to be smaller than data size."

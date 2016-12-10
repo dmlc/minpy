@@ -284,7 +284,7 @@ class Solver(object):
                 elif self.task_type is 'regression':
                     target = 'loss'
                 else:
-                    raise TaskError
+                    raise ValueError('task_type is not supported.')
                 print('(Epoch {} / {}) train {}: {}, val {}: {}, time: {}.'.
                       format(self.epoch, self.num_epochs, target, train_acc,
                              target, val_acc, time.time() - start))
