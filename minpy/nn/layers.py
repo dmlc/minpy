@@ -298,7 +298,7 @@ def rnn_temporal(x, h0, Wx, Wh, b):
     N, T, _ = x.shape
     H = h0.shape[1]
     h = np.zeros([N, 0, H])
-    for t in xrange(T):
+    for t in range(T):
         h_step = rnn_step(x[:, t, :], h0 if t == 0 else h[:, t - 1, :], Wx, Wh,
                           b).reshape(N, 1, H)
         h = np.append(h, h_step, axis=1)
@@ -410,7 +410,7 @@ def lstm_temporal(x, h0, Wx, Wh, b):
     _, H = h0.shape
     c = np.zeros([N, 0, H])
     h = np.zeros([N, 0, H])
-    for t in xrange(T):
+    for t in range(T):
         h_step, c_step = lstm_step(x[:, t, :], h[:, t - 1, :]
                                    if t > 0 else h0, c[:, t - 1, :]
                                    if t > 0 else np.zeros((N, H)), Wx, Wh,

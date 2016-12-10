@@ -95,8 +95,8 @@ class Rules(object):
                 except IOError:
                     pass
                 except yaml.YAMLError:
-                    _logger.warn('Find corrupted configuration at %s',
-                                 filename)
+                    _logger.warning('Find corrupted configuration at %s',
+                                    filename)
             if config is None:
                 _logger.error(
                     "Cannot find MinPy's rule configuration %s at %s.",
