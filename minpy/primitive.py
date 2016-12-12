@@ -6,9 +6,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import functools
-import itertools
 import collections
-import operator
 
 from . import array
 from .array_variants import ArrayType
@@ -16,12 +14,8 @@ from . import context
 from .utils import log
 from . import tape
 
-# pylint: disable= invalid-name
-_logger = log.get_logger(__name__)
-# pylint: enable= invalid-name
-
+_logger = log.get_logger(__name__) # pylint: disable= invalid-name
 GradFunc = collections.namedtuple('GradFunc', ['f', 'multi_grad_indices'])
-
 
 class Primitive(object):
     """Class for primitives. It includes both forward function and gradient definition."""
@@ -82,7 +76,7 @@ class Primitive(object):
     def __str__(self):
         return self._func.__name__
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, args, kwargs): # pylint: disable= too-many-branches
         """Call wrapped function.
 
         Parameters
@@ -106,27 +100,28 @@ class Primitive(object):
         _logger.debug('Calling "{}" type "{}".'.format(self._func,
                                                        self.typestr))
 
+        # Check whether the result value is on the path of bp phase.
+        # If all the input arguments are not on the bp path, the result value
+        # is not as well.
+        need_bp = [False]
+        current_tape = tape.global_tape()
         def get_val(x, mutate):
             """Get value of array."""
-            try:
-                xv = array.Value.wrap(x)
-                if isinstance(xv, array.Value):
-                    if mutate:
-                        return xv.get_data_mutable(self._type)
-                    else:
-                        return xv.get_data(self._type)
+            xv = array.wrap(x)
+            if hasattr(xv, '_minpy_value_id'):
+                # XXX: Use list of only one element to avoid variable assignment. # pylint: disable= fixme
+                if not need_bp[0] and xv.is_marked_for_bp(current_tape):
+                    need_bp[0] = True
+                if mutate:
+                    return xv.get_data_mutable(self._type)
                 else:
-                    # Return original input for tuples and lists.
-                    return x
-            # If wrap failed, just return the original value.
-            except TypeError:
-                return x
+                    return xv.get_data(self._type)
+            return xv
         # Get underlying data.
         arg_values = tuple(
-            get_val(args[i], i in self._mutate_args) for i in range(len(args)))
+            get_val(arg, i in self._mutate_args) for i, arg in enumerate(args))
         kwargs_values = {
-            k: get_val(kwargs[k], k in self._mutate_kw)
-            for k in kwargs
+            k: get_val(arg, k in self._mutate_kw) for k, arg in kwargs.items()
         }
         # Call the real function with raw value.
         if self.type == ArrayType.MXNET:
@@ -136,21 +131,18 @@ class Primitive(object):
             result_value = self._func(*arg_values, **kwargs_values)
         # If you want to do profiling, try to use `minprof(func)`.
         # result_value = minprof(self._func)(*arg_values, **kwargs_values)
-
-        def scan(accum, x):
-            """Whether the result is on the bp path."""
-            if isinstance(x, array.Value):
-                return operator.or_(accum, x.marked_for_bp)
-            else:
-                return accum
-        # Check whether the result value is on the path of bp phase.
-        # If all the input arguments are not on the bp path, the result value
-        # is not as well.
-        need_bp = functools.reduce(scan, itertools.chain(
-            args, kwargs.values()), False)
         # Wrap the result raw value with wrapper and node.
-        result = array.Value.wrap(result_value, marked=need_bp)
-        if need_bp:
+        if isinstance(result_value, tuple):
+            # Multiple return values.
+            result = tuple(array.wrap(ret) for ret in result_value)
+        else:
+            result = array.wrap(result_value)
+        if need_bp[0]:
+            if isinstance(result, tuple):
+                for r in result:
+                    r.mark_for_bp(current_tape)
+            else:
+                result.mark_for_bp(current_tape) # pylint: disable= no-member
             # Record partial derivative paths, only for `array.Value` type values.
             # If no gradient function is defined, also omit it
             visited_arg_indices = set()
@@ -167,7 +159,7 @@ class Primitive(object):
                 """
 
                 @functools.wraps(func)
-                def wrapped(result):
+                def wrapped(result): # pylint: disable= missing-docstring
                     with get_context(result).as_mxnet_context():
                         return func(result)
 
@@ -178,11 +170,11 @@ class Primitive(object):
                 """
 
                 @functools.wraps(func)
-                def wrapped(result):
+                def wrapped(result): # pylint: disable= missing-docstring
                     if isinstance(result, (tuple, list)):
                         result = (elm.get_data(self.type) for elm in result)
                     else:
-                        result = result.get_data(self.type)
+                        result = result.get_data(self.type) # pylint: disable= no-member
                     return func(result)
 
                 return wrapped
@@ -192,10 +184,10 @@ class Primitive(object):
                     continue
                 else:
                     visited_arg_indices.add(i)
-                if isinstance(arg, array.Value) and arg.marked_for_bp:
+                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(current_tape):
                     if i not in self._grad_func:
-                        _logger.warning('Partial derivative of func "{}" on \
-                            argument {} is not defined.'
+                        _logger.warning('Partial derivative of func "{}" on'
+                                        'argument {} is not defined.'
                                         .format(self._func.__name__, i))
                         continue
                     _logger.debug(
@@ -215,8 +207,8 @@ class Primitive(object):
                         # in one call.
                         owner = []
                         for grad_index in grad_func_rec.multi_grad_indices:
-                            if (isinstance(args[grad_index], array.Value) and
-                                    args[grad_index].marked_for_bp):
+                            if (isinstance(args[grad_index], array.Value) and \
+                                args[grad_index].is_marked_for_bp(current_tape)):
                                 owner.append(args[grad_index])
                             else:
                                 owner.append(None)
@@ -224,14 +216,14 @@ class Primitive(object):
                     grad_func = raw_value_wrapper(grad_func)
                     if self.type == ArrayType.MXNET:
                         grad_func = context_wrapper(grad_func)
-                    tape.global_tape().add_partial_derivative(
+                    current_tape.add_partial_derivative(
                         grad_func, owner, result)
             for k, arg in kwargs.items():
-                if isinstance(arg, array.Value) and arg.marked_for_bp:
+                if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape):
                     if k not in self._grad_func_kw:
                         _logger.warning(
-                            'Partial derivative of func "{}" on keyword argument "{}"\
-                            is not defined.'.format(self._func.__name__, k))
+                            'Partial derivative of func "{}" on keyword argument "{}"'
+                            'is not defined.'.format(self._func.__name__, k))
                         continue
                     _logger.debug(
                         'Adding partial derivative to func "{}" on keyword argument "{}".'.
@@ -242,7 +234,7 @@ class Primitive(object):
                     grad_func = raw_value_wrapper(grad_func)
                     if self.type == ArrayType.MXNET:
                         grad_func = context_wrapper(grad_func)
-                    tape.global_tape().add_partial_derivative(
+                    current_tape.add_partial_derivative(
                         grad_func, arg, result)
         return result
         # pylint: enable=invalid-name, too-many-locals

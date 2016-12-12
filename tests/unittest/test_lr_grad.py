@@ -1,39 +1,32 @@
-from minpy.core import grad
+import sys
+import numpy
+
 import minpy.numpy as np
-import minpy.numpy.random as random
-import minpy.dispatch.policy as policy
+from minpy.core import grad
 from minpy.utils import gradient_checker
+import minpy.dispatch.policy as policy
 #np.set_policy(policy.OnlyNumPyPolicy())
 
+rng = numpy.random.RandomState(42)
+
 def test_lr_grad():
+    inputs = rng.rand(32, 64) * 0.1
+    targets = np.zeros((32, 10))
+    truth = rng.randint(0, 10, 32)
+    targets[np.arange(32), truth] = 1
+    
     def sigmoid(x):
         return 0.5 * (np.tanh(x / 2) + 1)
     
-    def predict(weights, inputs):
-        return sigmoid(np.dot(inputs, weights))
-    
-    def training_loss(inputs):
-        preds = predict(weights, inputs)
+    def training_loss(weights):
+        preds = sigmoid(np.dot(inputs, weights))
         label_probabilities = preds * targets + (1 - preds) * (1 - targets)
         l = -np.sum(np.log(label_probabilities))
         return l
     
-    def training_accuracy(weights, inputs):
-        preds = predict(weights, inputs)
-        error = np.count_nonzero(np.argmax(preds, axis=1) - np.argmax(targets, axis=1))
-        return (256 - error) * 100 / 256.0
+    weights = rng.rand(64, 10) * 0.01
 
-    wshape = (500, 250)
-    weights = random.rand(*wshape) - 0.5
-
-    xshape = (256, 500)
-    tshape = (256, 250)
-    inputs = random.rand(*xshape) - 0.5
-    targets = np.zeros(tshape)
-    truth = random.randint(0, 250, 256)
-    targets[np.arange(256), truth] = 1
-    
-    gradient_checker.quick_grad_check(training_loss, inputs)
+    return gradient_checker.quick_grad_check(training_loss, weights, rs=rng)
 
 if __name__ == "__main__":
-    test_lr_grad()
+    sys.exit(not test_lr_grad())

@@ -1,11 +1,12 @@
+""" DNN Layers. """
 from __future__ import division
 
 import minpy.numpy as np
 import minpy.numpy.random as random
-from minpy.core import convert_args
+
+# pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, no-member
 
 
-@convert_args
 def affine(x, w, b):
     """
     Computes the forward pass for an affine (fully-connected) layer.
@@ -27,7 +28,6 @@ def affine(x, w, b):
     return out
 
 
-@convert_args
 def relu(x):
     """
     Computes the forward pass for a layer of rectified linear units (ReLUs).
@@ -42,7 +42,6 @@ def relu(x):
     return out
 
 
-@convert_args
 def batchnorm(x,
               gamma,
               beta,
@@ -100,7 +99,7 @@ def batchnorm(x,
     if mode == 'train':
         mean = np.sum(x, axis=0) / N
         x_mean = (x - np.expand_dims(mean, axis=0))
-        sqr_x_mean = x_mean ** 2
+        sqr_x_mean = x_mean**2
         var = np.sum(sqr_x_mean, axis=0) / N
         sqrt_var = np.sqrt(var + eps)
         inv_sqrt_var = 1.0 / sqrt_var
@@ -119,7 +118,6 @@ def batchnorm(x,
     return out, running_mean, running_var
 
 
-@convert_args
 def dropout(x, prob, mode='train', seed=None):
     """
     Performs the forward pass for (inverted) dropout.
@@ -149,7 +147,6 @@ def dropout(x, prob, mode='train', seed=None):
     return out
 
 
-@convert_args
 def svm_loss(x, y):
     """
     Computes the loss and gradient using for multiclass SVM classification.
@@ -174,7 +171,6 @@ def svm_loss(x, y):
     return loss
 
 
-@convert_args
 def softmax_loss(x, y):
     """
     Computes the loss and gradient for softmax classification.
@@ -204,8 +200,22 @@ def softmax_loss(x, y):
     return loss
 
 
-@convert_args
 def softmax_cross_entropy(prob, label):
+    """
+    Computes the cross entropy for softmax activation.
+
+    Inputs:
+    - prob: Probability, of shape (N, C) where x[i, j] is the probability for the jth class
+      for the ith input.
+    - label: Either of the followings:
+      - One hot encoding of labels, of shape (N, C)
+      - Label index of shape (N, ), each y[i] is the label of i^th example
+        (0 <= y[i] < C)
+
+    Returns a Value:
+    - cross_entropy
+    """
+
     N = prob.shape[0]
     C = prob.shape[1]
     if len(label.shape) == 1:
@@ -216,7 +226,7 @@ def softmax_cross_entropy(prob, label):
         onehot_label = label
     return -np.sum(np.log(prob) * onehot_label) / N
 
-@convert_args
+
 def l2_loss(x, label):
     """
     The Mean Square Error loss for regression.
@@ -229,15 +239,23 @@ def l2_loss(x, label):
         np.onehot_encode(label, onehot_label)
     else:
         onehot_label = label
-    return np.sum((x - onehot_label) ** 2) / N
+    return np.sum((x - onehot_label)**2) / N
 
 
-@convert_args
 def sigmoid(x):
-    return 1/(1+np.exp(-x))
+    """
+    Computes the forward pass for a layer of sigmoid units.
+
+    Input:
+    - x: Inputs, of any shape
+
+    Returns a tuple of:
+    - out: Output, of the same shape as x
+    """
+
+    return 1 / (1 + np.exp(-x))
 
 
-@convert_args
 def rnn_step(x, prev_h, Wx, Wh, b):
     """
     Run the forward pass for a single timestep of a vanilla RNN that uses a tanh
@@ -260,7 +278,6 @@ def rnn_step(x, prev_h, Wx, Wh, b):
     return next_h
 
 
-@convert_args
 def rnn_temporal(x, h0, Wx, Wh, b):
     """
     Run a vanilla RNN forward on an entire sequence of data. We assume an input
@@ -278,23 +295,23 @@ def rnn_temporal(x, h0, Wx, Wh, b):
     Returns a tuple of:
     - h: Hidden states for the entire timeseries, of shape (N, T, H).
     """
-    N, T, D = x.shape
+    N, T, _ = x.shape
     H = h0.shape[1]
     h = np.zeros([N, 0, H])
-    for t in xrange(T):
-        h_step = rnn_step(x[:, t, :], h0 if t == 0 else h[:, t-1, :], Wx, Wh, b).reshape(N, 1, H)
+    for t in range(T):
+        h_step = rnn_step(x[:, t, :], h0 if t == 0 else h[:, t - 1, :], Wx, Wh,
+                          b).reshape(N, 1, H)
         h = np.append(h, h_step, axis=1)
     return h
 
 
-@convert_args
 def gru_step(x, prev_h, Wx, Wh, b, Wxh, Whh, bh):
     """
     Forward pass for a single timestep of an GRU.
 
     The input data has dimentsion D, the hidden state has dimension H, and we
     use a minibatch size of N.
-    
+
     Parameters
     ----------
     x
@@ -326,16 +343,15 @@ def gru_step(x, prev_h, Wx, Wh, b, Wxh, Whh, bh):
     Implementation follows
     http://jmlr.org/proceedings/papers/v37/jozefowicz15.pdf
     """
-    N, H = prev_h.shape
+    _, H = prev_h.shape
     a = sigmoid(np.dot(x, Wx) + np.dot(prev_h, Wh) + b)
     r = a[:, 0:H]
-    z = a[:, H:2*H]
+    z = a[:, H:2 * H]
     h_m = np.tanh(np.dot(x, Wxh) + np.dot(r * prev_h, Whh) + bh)
     next_h = z * prev_h + (1 - z) * h_m
     return next_h
 
 
-@convert_args
 def lstm_step(x, prev_h, prev_c, Wx, Wh, b):
     """
     Forward pass for a single timestep of an LSTM.
@@ -355,21 +371,20 @@ def lstm_step(x, prev_h, prev_c, Wx, Wh, b):
     - next_h: Next hidden state, of shape (N, H)
     - next_c: Next cell state, of shape (N, H)
     """
-    N, H = prev_c.shape
+    _, H = prev_c.shape
     # 1. activation vector
     a = np.dot(x, Wx) + np.dot(prev_h, Wh) + b
     # 2. gate fuctions
     i = sigmoid(a[:, 0:H])
-    f = sigmoid(a[:, H:2*H])
-    o = sigmoid(a[:, 2*H:3*H])
-    g = np.tanh(a[:, 3*H:4*H])
+    f = sigmoid(a[:, H:2 * H])
+    o = sigmoid(a[:, 2 * H:3 * H])
+    g = np.tanh(a[:, 3 * H:4 * H])
     # 3. next cell state
     next_c = f * prev_c + i * g
     next_h = o * np.tanh(next_c)
     return next_h, next_c
 
 
-@convert_args
 def lstm_temporal(x, h0, Wx, Wh, b):
     """
     Forward pass for an LSTM over an entire sequence of data. We assume an input
@@ -391,13 +406,15 @@ def lstm_temporal(x, h0, Wx, Wh, b):
     Returns a tuple of:
     - h: Hidden states for all timesteps of all sequences, of shape (N, T, H)
     """
-    N, T, D = x.shape
+    N, T, _ = x.shape
     _, H = h0.shape
     c = np.zeros([N, 0, H])
     h = np.zeros([N, 0, H])
-    for t in xrange(T):
-        h_step, c_step = lstm_step(
-          x[:, t, :], h[:, t-1, :] if t > 0 else h0, c[:, t-1, :] if t > 0 else np.zeros((N, H)), Wx, Wh, b)
+    for t in range(T):
+        h_step, c_step = lstm_step(x[:, t, :], h[:, t - 1, :]
+                                   if t > 0 else h0, c[:, t - 1, :]
+                                   if t > 0 else np.zeros((N, H)), Wx, Wh,
+                                   b)  # pylint: disable=line-too-long
         h_step = h_step.reshape(N, 1, H)
         c_step = c_step.reshape(N, 1, H)
         h = np.append(h, h_step, axis=1)
@@ -405,7 +422,6 @@ def lstm_temporal(x, h0, Wx, Wh, b):
     return h
 
 
-@convert_args
 def temporal_affine(x, w, b):
     """
     Forward pass for a temporal affine layer. The input is a set of D-dimensional
@@ -427,8 +443,7 @@ def temporal_affine(x, w, b):
     return out
 
 
-@convert_args
-def temporal_softmax_loss(x, y, mask, verbose=False):
+def temporal_softmax_loss(x, y, mask):
     """
     A temporal version of softmax loss for use in RNNs. We assume that we are
     making predictions over a vocabulary of size V for each timestep of a

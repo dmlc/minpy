@@ -1,7 +1,6 @@
+# pylint: disable=invalid-name, pointless-string-statement
 """ Optimizer codes. Adapted from cs231n lab codes. """
-import minpy
 import minpy.numpy as np
-from minpy.core import convert_args
 """
 This file implements various first-order update rules that are commonly used for
 training neural networks. Each update rule accepts current weights and the
@@ -30,24 +29,22 @@ for a variety of different problems.
 For efficiency, update rules may perform in-place updates, mutating w and
 setting next_w equal to w.
 """
-
-
-@convert_args
+# pylint: disable=no-member
 def sgd(w, dw, config=None):
     """
     Performs vanilla stochastic gradient descent.
-  
+
     config format:
     - learning_rate: Scalar learning rate.
     """
-    if config is None: config = {}
+    if config is None:
+        config = {}
     config.setdefault('learning_rate', 1e-2)
 
     w -= config['learning_rate'] * dw
     return w, config
 
 
-@convert_args
 def sgd_momentum(w, dw, config=None):
     """
     Performs stochastic gradient descent with momentum.
@@ -59,7 +56,8 @@ def sgd_momentum(w, dw, config=None):
     - velocity: A numpy array of the same shape as w and dw used to store a moving
                 average of the gradients.
     """
-    if config is None: config = {}
+    if config is None:
+        config = {}
     config.setdefault('learning_rate', 1e-2)
     config.setdefault('momentum', 0.9)
     v = config.get('velocity', np.zeros_like(w))
@@ -72,12 +70,11 @@ def sgd_momentum(w, dw, config=None):
     return next_w, config
 
 
-@convert_args
 def rmsprop(x, dx, config=None):
     """
     Uses the RMSProp update rule, which uses a moving average of squared gradient
     values to set adaptive per-parameter learning rates.
-  
+
     config format:
     - learning_rate: Scalar learning rate.
     - decay_rate: Scalar between 0 and 1 giving the decay rate for the squared
@@ -85,7 +82,8 @@ def rmsprop(x, dx, config=None):
     - epsilon: Small scalar used for smoothing to avoid dividing by zero.
     - cache: Moving average of second moments of gradients.
     """
-    if config is None: config = {}
+    if config is None:
+        config = {}
     config.setdefault('learning_rate', 1e-2)
     config.setdefault('decay_rate', 0.99)
     config.setdefault('epsilon', 1e-8)
@@ -100,7 +98,6 @@ def rmsprop(x, dx, config=None):
     return next_x, config
 
 
-@convert_args
 def adam(x, dx, config=None):
     """
     Uses the Adam update rule, which incorporates moving averages of both the
@@ -115,7 +112,8 @@ def adam(x, dx, config=None):
     - v: Moving average of squared gradient.
     - t: Iteration number.
     """
-    if config is None: config = {}
+    if config is None:
+        config = {}
     config.setdefault('learning_rate', 1e-3)
     config.setdefault('beta1', 0.9)
     config.setdefault('beta2', 0.999)

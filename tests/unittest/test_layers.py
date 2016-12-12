@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import mxnet as mx
 from minpy import core
@@ -19,7 +20,7 @@ def test_layers():
             return layers.softmax_loss(layers.affine(x, w, b), fake_y)
     
         w = rng.randn(10, 5)
-        gradient_checker.quick_grad_check(check_fn, w, rs=rng)
+        return gradient_checker.quick_grad_check(check_fn, w, rs=rng)
     
     
     def test_relu():
@@ -30,7 +31,7 @@ def test_layers():
             return layers.softmax_loss(layers.relu(x), fake_y)
     
         x = rng.randn(2, 5)
-        gradient_checker.quick_grad_check(check_fn, x, rs=rng)
+        return gradient_checker.quick_grad_check(check_fn, x, rs=rng)
     
     
     def test_batchnorm():
@@ -44,13 +45,12 @@ def test_layers():
             y, _, _ = layers.batchnorm(x, g, beta)
             return layers.softmax_loss(y, fake_y)
     
-        gradient_checker.quick_grad_check(check_gamma, gamma, rs=rng)
-    
         def check_beta(b):
             y, _, _ = layers.batchnorm(x, gamma, b)
             return layers.softmax_loss(y, fake_y)
     
-        gradient_checker.quick_grad_check(check_beta, beta, rs=rng)
+        return (gradient_checker.quick_grad_check(check_gamma, gamma, rs=rng)
+                and gradient_checker.quick_grad_check(check_beta, beta, rs=rng))
     
     
     def test_softmax():
@@ -60,7 +60,7 @@ def test_layers():
             return layers.softmax_loss(x, lbl)
     
         x = rng.randn(20, 10)
-        gradient_checker.quick_grad_check(check_fn, x, rs=rng)
+        return gradient_checker.quick_grad_check(check_fn, x, rs=rng)
     
     
     def test_mxnet_affine():
@@ -77,7 +77,7 @@ def test_layers():
             return layers.softmax_loss(f(x=x, fc_weight=weights), fake_y)
         weights = rng.randn(20, 40) * 0.01
     
-        gradient_checker.quick_grad_check(check_fn, weights, rs=rng)
+        return gradient_checker.quick_grad_check(check_fn, weights, rs=rng)
     
     
     def test_mxnet_softmax():
@@ -96,14 +96,14 @@ def test_layers():
                     fake_y)
         weights = rng.randn(20, 40) * 0.01
     
-        gradient_checker.quick_grad_check(check_fn, weights, rs=rng)
+        return gradient_checker.quick_grad_check(check_fn, weights, rs=rng)
 
-    test_affine()
-    test_relu()
-    test_batchnorm()
-    #test_softmax()
-    #test_mxnet_affine()
-    #test_mxnet_softmax()
+    return (test_affine()
+            and test_relu()
+            and test_batchnorm()
+            and test_softmax()
+            and test_mxnet_affine()
+            and test_mxnet_softmax())
 
 if __name__ == '__main__':
-    test_layers()
+    sys.exit(not test_layers())

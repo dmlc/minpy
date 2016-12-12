@@ -1,21 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable= no-self-use
 """Policy for selecting appropriate function to call."""
 from __future__ import absolute_import
 from __future__ import print_function
 
 import functools
+from collections import defaultdict
 import minpy
-from minpy.array import Value
-from minpy.array_variants import ArrayType
-from minpy.utils import log
+from .. import tape
+from ..array_variants import ArrayType
+from ..utils import log
 from .rule import Blacklist
 
-# pylint: disable= invalid-name
-_logger = log.get_logger(__name__)
-
-# pylint: enable= invalid-name
+_logger = log.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class PrimitivePolicyError(ValueError):
@@ -40,8 +37,9 @@ class Policy(object):
     """Policy interface."""
 
     def __init__(self):
-        self._mxnet_op_cnt = 0
-        self._numpy_op_cnt = 0
+        self._mxnet_op_stat = defaultdict(int)
+        self._numpy_op_stat = defaultdict(int)
+        self._old_policy = None
 
     def _decide(self, candidates, args, kwargs):
         """Primitive decision policy interface.
@@ -64,15 +62,26 @@ class Policy(object):
         """
         raise NotImplementedError()
 
-    def op_stat(self):
+    def show_op_stat(self):
         """Print policy dispatch statistics."""
-        total_cnt = self._mxnet_op_cnt + self._numpy_op_cnt
-        if total_cnt == 0:
-            return 'No operator statistics available.'
-        else:
-            return 'Operator Dispatch Statistics: {:.1%} in MXNet, {:.1%} in NumPy'.format(
-                float(self._mxnet_op_cnt) / total_cnt,
-                float(self._numpy_op_cnt) / total_cnt)
+        mxnet_op_cnt = 0
+        numpy_op_cnt = 0
+
+        print('--------Op Dispatch Statistics Start--------')
+        print('MXNET op called times:')
+        for k, val in self._mxnet_op_stat.items():
+            print(' {} : {}'.format(k, val))
+            mxnet_op_cnt += val
+        print('NUMPY op called times:')
+        for k, val in self._numpy_op_stat.items():
+            print(' {} : {}'.format(k, val))
+            numpy_op_cnt += val
+        total_cnt = mxnet_op_cnt + numpy_op_cnt
+        if total_cnt > 0:
+            print('Total Dispatch Proportion: {:.1%} in MXNet, {:.1%} in NumPy'.format(
+                float(mxnet_op_cnt) / total_cnt,
+                float(numpy_op_cnt) / total_cnt))
+        print('--------Op Dispatch Statistics End--------')
 
     @property
     def name(self):
@@ -94,18 +103,14 @@ class Policy(object):
     def _available_prims(name, reg, args, kwargs):
         """Return a list of available primitives"""
 
-        def fst(t):
-            x, _ = t
-            return x
+        current_tape = tape.global_tape()
 
-        bp_args = tuple(
-            map(fst, filter(
-                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                enumerate(args))))
-        bp_kwargs = tuple(
-            map(fst, filter(
-                lambda x: isinstance(x[1], Value) and x[1].marked_for_bp,
-                kwargs.items())))
+        bp_args = tuple(i for i, arg in enumerate(args)
+                        if (hasattr(arg, 'is_marked_for_bp') and
+                            arg.is_marked_for_bp(current_tape)))
+        bp_kwargs = tuple(k for k, arg in kwargs.items()
+                          if (hasattr(arg, 'is_marked_for_bp') and
+                              arg.is_marked_for_bp(current_tape)))
         available = reg.iter_available_types(name, bp_args, bp_kwargs)
         return available
 
@@ -130,15 +135,14 @@ class Policy(object):
         available = self._available_prims(name, reg, args, kwargs)
         preference = self._decide(available, args, kwargs)
         if preference == ArrayType.MXNET:
-            self._mxnet_op_cnt += 1
+            self._mxnet_op_stat[name] += 1
         elif preference == ArrayType.NUMPY:
-            self._numpy_op_cnt += 1
+            self._numpy_op_stat[name] += 1
         elif preference is None:
             raise PrimitivePolicyError(name, self.name)
         prim = reg.get(name, preference)
-        _logger.debug('Found primitive "{}" with type {}.'.format(
-            name, prim.typestr))
-        return prim(*args, **kwargs)
+        _logger.debug('Found primitive "%s" with type %s.', name, prim.typestr)
+        return prim(args, kwargs)
 
 
 class AutoBlacklistPolicy(Policy):
@@ -158,6 +162,8 @@ class AutoBlacklistPolicy(Policy):
         Path to rule configuration file.
     """
 
+    # pylint: disable=abstract-method
+
     def __init__(self, gen_rule=False, append_rule=True, loc=None):
         super(AutoBlacklistPolicy, self).__init__()
         self._gen_rule = gen_rule
@@ -166,46 +172,64 @@ class AutoBlacklistPolicy(Policy):
             self._rules.reset_rules()
 
     def resolve_call(self, name, reg, args, kwargs):
-        def get_result(impl_type):
+        def _get_result(impl_type):
             prim = reg.get(name, impl_type)
-            return prim(*args, **kwargs)
+            return prim(args, kwargs)
 
         available = self._available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)
         if ArrayType.MXNET in possible_impl and self._rules.allow(
-                name, ArrayType.MXNET, args, kwargs):
+                name, reg.nspace, ArrayType.MXNET, args, kwargs):
             if self._gen_rule:
                 try:
-                    _logger.debug('Try primitive {} with MXNet '
-                                  'implementation.'.format(name))
-                    self._mxnet_op_cnt += 1
-                    return get_result(ArrayType.MXNET)
-                except Exception as err:
-                    self._mxnet_op_cnt -= 1
+                    _logger.debug(
+                        'Try primitive %s with MXNet implementation.', name)
+                    res = _get_result(ArrayType.MXNET)
+                    self._mxnet_op_stat[name] += 1
+                    return res
+                except Exception as err:  # pylint: disable=broad-except
                     if ArrayType.NUMPY in possible_impl:
-                        _logger.info('Error occurs. Try primitive {} with '
-                                     'NumPy implementation'.format(name))
-                        self._rules.add(name, ArrayType.MXNET, args, kwargs)
-                        self._numpy_op_cnt += 1
-                        return get_result(ArrayType.NUMPY)
+                        _logger.info(
+                            'Error occurs. Try primitive %s with NumPy implementation',
+                            name)
+                        self._rules.add(name, reg.nspace, ArrayType.MXNET, args, kwargs)
+                        self._numpy_op_stat[name] += 1
+                        return _get_result(ArrayType.NUMPY)
                     else:
                         raise err
             else:
-                _logger.debug('Execute primitive {} with '
-                              'MXNet implementation'.format(name))
-                self._mxnet_op_cnt += 1
-                return get_result(ArrayType.MXNET)
+                _logger.debug('Execute primitive %s with MXNet implementation',
+                              name)
+                self._mxnet_op_stat[name] += 1
+                return _get_result(ArrayType.MXNET)
         elif ArrayType.NUMPY in possible_impl:
-            _logger.debug('Execute primitive {} with '
-                          'NumPy implementation'.format(name))
-            self._numpy_op_cnt += 1
-            return get_result(ArrayType.NUMPY)
+            _logger.debug('Execute primitive %s with NumPy implementation',
+                          name)
+            self._numpy_op_stat[name] += 1
+            return _get_result(ArrayType.NUMPY)
         else:
             raise PrimitivePolicyError(name, self.name)
 
     def save_rules(self):
         """Save rules by rule's setting"""
         self._rules.save_rules_config()
+
+    def query(self, nspace, name):
+        """Query the content of the rule by primitive name in blacklist.
+
+        Parameters
+        ----------
+        nspace
+            The namespace of the given primitive. It is not a string.
+        name : str
+            Name of the primitive for query
+
+        Returns
+        -------
+        str
+            Return the rule content of primitive name.
+        """
+        return self._rules.query(nspace, name)
 
 
 class PreferMXNetPolicy(Policy):
@@ -265,6 +289,5 @@ def wrap_policy(policy):
             return result
 
         return policy_wrapper
-        # pylint: enable= missing-docstring
 
     return policy_decorator

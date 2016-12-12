@@ -20,5 +20,5 @@ _mod = Module(
     _old,
     name_injector=NameInjector(
         numpy, name='numpy injector', injected_type={float, int, type(None), type}))
-Value._ns = _mod
+Value._ns = _mod # pylint: disable= protected-access
 sys.modules[__name__] = _mod

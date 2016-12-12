@@ -4,10 +4,11 @@
 import functools
 
 def enforce_type(T, method=False):
+    # pylint: disable= missing-docstring, invalid-name
     """Enforce argument types.
 
     Args:
-        t: Type expected.
+        T: Type expected.
         method: Whether it is a method, skip first argument `self`.
 
     Returns:
