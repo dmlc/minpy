@@ -15,7 +15,7 @@ This repository aims at prototyping a pure [NumPy](http://www.numpy.org/) interf
 
 Currently both MXNet and MinPy are going through rapid development. MinPy is not guaranteed to work with all MXNet versions.
 
-This version of MinPy is tested to work with MXNet at b7ab768 on `nnvm` branch.
+This version of MinPy is tested to work with MXNet at `962271410059156180ab1d5e79b805e687512be9` on `nnvm` branch. Latest MXNet on `nnvm` branch is likely to work too.
 
 ## How to get started
 
