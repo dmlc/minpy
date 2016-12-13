@@ -53,6 +53,7 @@ def main():
                     num_epochs=10,
                     init_rule='xavier',
                     update_rule='adam',
+                    task_type='regression',
                     verbose=True,
                     print_every=20)
     solver.init()

@@ -7,7 +7,7 @@ import time
 from minpy.nn import optim, init
 from minpy import core
 import minpy.numpy as np
-
+# pylint: disable=fixme, invalid-name, too-many-instance-attributes, no-member, attribute-defined-outside-init
 
 class Solver(object):
     """
@@ -58,11 +58,13 @@ class Solver(object):
     model
         A model object conforming to the API described above.
     train_dataiter
-        A data iterator for training data, we can get batch from it
+        A data iterator for training data, we can get batch from it.
         'batch.data': Array of shape (N_train, d_1, ..., d_k) giving training images
         'batch.label': Array of shape (N_val, d_1, ..., d_k) giving validation images
     test_dataiter
-        A data iterator for training data, we can retrieve batch from it
+        A data iterator for training data, we can retrieve batch from it.
+    task_type : {'regression', 'classification'}
+        Set the type of the task.
     update_rule : optional
         A string giving the name of an update rule in optim.py. Default is 'sgd'.
     optim_config : optional
@@ -88,7 +90,8 @@ class Solver(object):
         self.train_dataiter = train_dataiter
         self.test_dataiter = test_dataiter
 
-        # Unpack keyword arguments
+        # Unpack keyword arguments and set defaults
+        self.task_type = kwargs.pop('task_type', 'classification')
         self.init_rule = kwargs.pop('init_rule', 'xavier')
         self.init_config = kwargs.pop('init_config', {})
         self.update_rule = kwargs.pop('update_rule', 'sgd')
@@ -96,7 +99,6 @@ class Solver(object):
         self.lr_decay = kwargs.pop('lr_decay', 1.0)
         self.num_epochs = kwargs.pop('num_epochs', 10)
         self.train_acc_num_samples = kwargs.pop('train_acc_num_samples', 1000)
-
         self.print_every = kwargs.pop('print_every', 10)
         self.verbose = kwargs.pop('verbose', True)
 
@@ -163,7 +165,11 @@ class Solver(object):
         be called manually.
         """
         # Compute loss and gradient
-        def loss_func(*params):
+        def loss_func(*params): # pylint: disable=unused-argument
+            """
+            Loss function calculate the loss
+            """
+
             # It seems that params are not used in forward function. But since we will pass
             # model.params as arguments, we are ok here.
             predict = self.model.forward_batch(batch, mode='train')
@@ -190,16 +196,20 @@ class Solver(object):
         """
         Check accuracy of the model on the provided data.
 
-        Inputs:
-        - dataiter: data iterator that can produce batches.
-        - num_samples: If not None and dataiter has more than num_samples datapoints,
-          subsample the data and only test the model on num_samples datapoints.
+        Parameters
+        ----------
+        dataiter
+            data iterator that can produce batches.
+        num_samples
+            If not None and dataiter has more than num_samples datapoints,
+            subsample the data and only test the model on num_samples datapoints.
 
-        Returns:
-        - acc: Scalar giving the fraction of instances that were correctly
-          classified by the model.
+        Returns
+        -------
+        acc
+            Scalar giving the fraction of instances that were correctly
+            classified by the model.
         """
-
         # Maybe subsample the data
         N = dataiter.num_data
         check_dataiter = dataiter
@@ -210,17 +220,25 @@ class Solver(object):
             # Use the entire dataiter otherwise.
             check_dataiter.reset()
 
-        acc_count = 0
-        num_samples = 0
-        for each_batch in check_dataiter:
-            predict = self.model.forward_batch(
-                each_batch, mode='test').asnumpy()
-            # TODO(minjie): multiple labels.
-            acc_count += np.sum(
-                np.argmax(
-                    predict, axis=1) == each_batch.label[0])
-            num_samples += check_dataiter.batch_size
-        return float(acc_count.asnumpy()) / num_samples
+        if self.task_type is 'classification':
+            acc_count = 0
+            num_samples = 0
+            for each_batch in check_dataiter:
+                predict = self.model.forward_batch(each_batch, mode='test').asnumpy()
+                # TODO(minjie): multiple labels.
+                acc_count += np.sum(np.argmax(predict, axis=1) == each_batch.label[0])
+                num_samples += check_dataiter.batch_size
+            return float(acc_count.asnumpy()) / num_samples
+        elif self.task_type is 'regression':
+            loss = 0
+            batch_count = 0
+            for each_batch in check_dataiter:
+                predict = self.model.forward_batch(each_batch, mode='test').asnumpy()
+                loss += self.model.loss(predict, each_batch.label[0])
+                batch_count += 1
+            return float(loss.asnumpy()) / batch_count
+        else:
+            raise ValueError('Task type is either classification or regression.')
 
     def init(self):
         """
@@ -261,9 +279,15 @@ class Solver(object):
             self._reset_data_iterators()
 
             if self.verbose:
-                print('(Epoch {} / {}) train acc: {}, val_acc: {}, time: {}.'.
-                      format(self.epoch, self.num_epochs, train_acc, val_acc,
-                             time.time() - start))
+                if self.task_type is 'classification':
+                    target = 'acc'
+                elif self.task_type is 'regression':
+                    target = 'loss'
+                else:
+                    raise ValueError('task_type is not supported.')
+                print('(Epoch {} / {}) train {}: {}, val {}: {}, time: {}.'.
+                      format(self.epoch, self.num_epochs, target, train_acc,
+                             target, val_acc, time.time() - start))
 
             # Keep track of the best model
             if val_acc > self.best_val_acc:

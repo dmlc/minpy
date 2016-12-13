@@ -1,9 +1,29 @@
 """ Initializer codes """
+import numpy
 import minpy.numpy as np
 import minpy.numpy.random as npr
-import numpy
 
-def xavier(shape, config):
+# pylint: disable=no-member
+
+
+def xavier(shape, _):
+    """Initialize weights with xavier initializer.
+
+    Xavier initializer init matrix based on fan_in and fan_out
+
+    Parameters
+    ----------
+    shape : tuple
+        Shape of the array to be initialized.
+    _ : placeholder
+
+    Returns
+    -------
+    Array
+        Initialized array of size `shape`.
+
+    """
+
     fan_out = shape[0]
     if len(shape) > 1:
         fan_in = numpy.prod(shape[1:])
@@ -15,17 +35,47 @@ def xavier(shape, config):
 
 
 def constant(shape, config):
+    """Initialize weights with constant value.
+
+    Parameters
+    ----------
+    shape : tuple
+        Shape of the array to be initialized.
+    config : dict
+        The value to initailize the array
+
+    Returns
+    -------
+    Array
+        Initialized array of size `shape` and with the value `value`
+
+    """
     config.setdefault('value', 0.0)
     val = config['value']
     return np.ones(shape) * val
 
 
 def gaussian(shape, config):
+    """Initialize weights with gaussian distribution.
+
+    Parameters
+    ----------
+    shape : tuple
+        Shape of the array to be initialized.
+    config : dict
+        Mean and standard variance of the distribution
+
+    Returns
+    -------
+    Array
+        Initialized array of size `shape`
+
+    """
     config.setdefault('mu', 0.0)
     config.setdefault('stdvar', 0.001)
     stdvar = config['stdvar']
-    mu = config['mu']
-    return npr.randn(*shape) * stdvar + mu
+    meanvar = config['mu']
+    return npr.randn(*shape) * stdvar + meanvar
 
 
 def custom(shape, config):
@@ -48,6 +98,6 @@ def custom(shape, config):
         Initialized array of size `shape`, or an array of zeros if no function was provided.
 
     """
-    f = config.setdefault('function', np.zeros)
-    ret = f(shape)
+    func = config.setdefault('function', np.zeros)
+    ret = func(shape)
     return ret

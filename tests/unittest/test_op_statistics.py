@@ -47,7 +47,7 @@ def test_op_statistics():
         weights -= gr * 0.01
     
     # Print Op Statistics Info
-    print(np.policy.op_stat())
+    np.policy.show_op_stat()
 
 if __name__ == "__main__":
     test_op_statistics()

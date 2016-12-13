@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import functools
+from collections import defaultdict
 import minpy
 from .. import tape
 from ..array_variants import ArrayType
@@ -36,8 +37,8 @@ class Policy(object):
     """Policy interface."""
 
     def __init__(self):
-        self._mxnet_op_cnt = 0
-        self._numpy_op_cnt = 0
+        self._mxnet_op_stat = defaultdict(int)
+        self._numpy_op_stat = defaultdict(int)
         self._old_policy = None
 
     def _decide(self, candidates, args, kwargs):
@@ -61,15 +62,26 @@ class Policy(object):
         """
         raise NotImplementedError()
 
-    def op_stat(self):
+    def show_op_stat(self):
         """Print policy dispatch statistics."""
-        total_cnt = self._mxnet_op_cnt + self._numpy_op_cnt
-        if total_cnt == 0:
-            return 'No operator statistics available.'
-        else:
-            return 'Operator Dispatch Statistics: {:.1%} in MXNet, {:.1%} in NumPy'.format(
-                float(self._mxnet_op_cnt) / total_cnt,
-                float(self._numpy_op_cnt) / total_cnt)
+        mxnet_op_cnt = 0
+        numpy_op_cnt = 0
+
+        print('--------Op Dispatch Statistics Start--------')
+        print('MXNET op called times:')
+        for k, val in self._mxnet_op_stat.items():
+            print(' {} : {}'.format(k, val))
+            mxnet_op_cnt += val
+        print('NUMPY op called times:')
+        for k, val in self._numpy_op_stat.items():
+            print(' {} : {}'.format(k, val))
+            numpy_op_cnt += val
+        total_cnt = mxnet_op_cnt + numpy_op_cnt
+        if total_cnt > 0:
+            print('Total Dispatch Proportion: {:.1%} in MXNet, {:.1%} in NumPy'.format(
+                float(mxnet_op_cnt) / total_cnt,
+                float(numpy_op_cnt) / total_cnt))
+        print('--------Op Dispatch Statistics End--------')
 
     @property
     def name(self):
@@ -123,9 +135,9 @@ class Policy(object):
         available = self._available_prims(name, reg, args, kwargs)
         preference = self._decide(available, args, kwargs)
         if preference == ArrayType.MXNET:
-            self._mxnet_op_cnt += 1
+            self._mxnet_op_stat[name] += 1
         elif preference == ArrayType.NUMPY:
-            self._numpy_op_cnt += 1
+            self._numpy_op_stat[name] += 1
         elif preference is None:
             raise PrimitivePolicyError(name, self.name)
         prim = reg.get(name, preference)
@@ -172,28 +184,28 @@ class AutoBlacklistPolicy(Policy):
                 try:
                     _logger.debug(
                         'Try primitive %s with MXNet implementation.', name)
-                    self._mxnet_op_cnt += 1
-                    return _get_result(ArrayType.MXNET)
+                    res = _get_result(ArrayType.MXNET)
+                    self._mxnet_op_stat[name] += 1
+                    return res
                 except Exception as err:  # pylint: disable=broad-except
-                    self._mxnet_op_cnt -= 1
                     if ArrayType.NUMPY in possible_impl:
                         _logger.info(
                             'Error occurs. Try primitive %s with NumPy implementation',
                             name)
                         self._rules.add(name, reg.nspace, ArrayType.MXNET, args, kwargs)
-                        self._numpy_op_cnt += 1
+                        self._numpy_op_stat[name] += 1
                         return _get_result(ArrayType.NUMPY)
                     else:
                         raise err
             else:
                 _logger.debug('Execute primitive %s with MXNet implementation',
                               name)
-                self._mxnet_op_cnt += 1
+                self._mxnet_op_stat[name] += 1
                 return _get_result(ArrayType.MXNET)
         elif ArrayType.NUMPY in possible_impl:
             _logger.debug('Execute primitive %s with NumPy implementation',
                           name)
-            self._numpy_op_cnt += 1
+            self._numpy_op_stat[name] += 1
             return _get_result(ArrayType.NUMPY)
         else:
             raise PrimitivePolicyError(name, self.name)
