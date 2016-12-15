@@ -1,15 +1,15 @@
-"""Simple multi-layer perception neural network on MNIST."""
+"""Benchmark multi-layer perception neural network using MinPy CPU."""
 import argparse
 import os.path
 import struct
 import time
 import numpy as real_numpy
 
+import minpy.core as core
 import minpy.numpy as np
 from minpy.nn import io
 from minpy.nn import layers
 import minpy.nn.model
-import minpy.nn.solver
 import minpy.dispatch.policy
 np.set_policy(minpy.dispatch.policy.OnlyNumPyPolicy())
 
@@ -74,7 +74,7 @@ def main(args):
         else:
             param_arrays = list(model.params.values())
             param_keys = list(model.params.keys())
-            grad_and_loss_func = minpy.core.grad_and_loss(
+            grad_and_loss_func = core.grad_and_loss(
                 loss_func, argnum=range(len(param_arrays)))
             grad_arrays, loss = grad_and_loss_func(*param_arrays)
     dur = time.time() - start

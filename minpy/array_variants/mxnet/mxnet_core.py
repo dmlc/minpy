@@ -87,7 +87,7 @@ def def_grads(prims):
     prims('dot').def_grad(
         lambda ans, a, b: lambda g: ndarray.dot(a.T, g), argnum=1)
     # non-linear
-    #prims.tanh.def_grad(lambda ans, x: lambda g: g / np.cosh(x) ** 2)
+    prims('tanh').def_grad(lambda ans, x: lambda g: g * (1 - ans ** 2))
     prims('exp').def_grad(lambda ans, x: lambda g: g * ans)
     prims('log').def_grad(lambda ans, x: lambda g: g / x)
     # reduce
