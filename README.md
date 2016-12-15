@@ -17,6 +17,10 @@ Currently both MXNet and MinPy are going through rapid development. MinPy is not
 
 This version of MinPy is tested to work with MXNet at `962271410059156180ab1d5e79b805e687512be9` on `nnvm` branch. Latest MXNet on `nnvm` branch is likely to work too.
 
+## Numpy version
+
+Minpy prototypes a pure Numpy interface. To make the interface consistent, please make sure Numpy version >= 1.10.0 before install Minpy.
+
 ## How to get started
 
 The project is still a work-in-progress. You could look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents are hosted [here](https://minpy.readthedocs.io/en/latest/).
