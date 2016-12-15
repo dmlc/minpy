@@ -38,6 +38,7 @@ MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface abov
     :glob:
 
     feature/policy.rst
+    feature/op_stat.rst
     feature/context.rst
     feature/*
 
