@@ -1,4 +1,4 @@
-"""Benchmark vanilla RNN using MinPy CPU."""
+"""Benchmark vanilla RNN using MinPy GPU."""
 import argparse
 import time
 
