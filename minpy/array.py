@@ -85,7 +85,7 @@ class Value(object):
         return Value._ns.negative(self)
 
     def __abs__(self):
-        raise NotImplementedError()
+        return Value._ns.abs(self)
 
     def __invert__(self):
         raise NotImplementedError()

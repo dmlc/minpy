@@ -5,18 +5,22 @@ import struct
 import time
 import numpy as real_numpy
 
+import minpy.core as core
 import minpy.numpy as np
 from minpy.nn import io
 from minpy.nn import layers
 import minpy.nn.model
 import minpy.nn.solver
-import minpy.dispatch.policy
-np.set_policy(minpy.dispatch.policy.OnlyNumPyPolicy())
+from minpy.utils.minprof import minprof
+# Please uncomment following if you have GPU-enabled MXNet installed.
+from minpy.context import set_context, gpu
+set_context(gpu(0)) # set the global context as gpu(0)
 
-# import logging
-# logging.getLogger('minpy.array').setLevel(logging.DEBUG)
-# logging.getLogger('minpy.core').setLevel(logging.DEBUG)
-# logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
+#import logging
+#logging.getLogger('minpy.array').setLevel(logging.DEBUG)
+#logging.getLogger('minpy.core').setLevel(logging.DEBUG)
+#logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
+#logging.getLogger('minpy.dispatch.policy').setLevel(logging.DEBUG)
 
 num_cold = 5
 
@@ -60,7 +64,7 @@ def main(args):
         model.params[k] = np.zeros(v['shape'])
 
     img = np.zeros((args.batch_size, 784))
-    label = np.zeros((args.batch_size,), dtype=np.int)
+    label = np.zeros((args.batch_size,))
 
     for l in range(args.num_loops):
         if l == num_cold:
@@ -74,9 +78,11 @@ def main(args):
         else:
             param_arrays = list(model.params.values())
             param_keys = list(model.params.keys())
-            grad_and_loss_func = minpy.core.grad_and_loss(
+            grad_and_loss_func = core.grad_and_loss(
                 loss_func, argnum=range(len(param_arrays)))
             grad_arrays, loss = grad_and_loss_func(*param_arrays)
+            for g in grad_arrays:
+                g.get_data(minpy.array_variants.ArrayType.MXNET).wait_to_read()
     dur = time.time() - start
     print('Per Loop Time: %.6f' % (dur / (args.num_loops - num_cold)))
 

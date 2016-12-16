@@ -1,6 +1,6 @@
 #!/bin/sh
 RST=bench_depth_result.txt
-HS=1024
+HS=512
 
 echo "Multiple Layers Test" > $RST
 

@@ -1,4 +1,3 @@
-"""Simple multi-layer perception neural network on MNIST."""
 import argparse
 import os.path
 import struct
@@ -6,6 +5,7 @@ import time
 
 import mxnet as mx
 
+import minpy.core as core
 import minpy.numpy as np
 from minpy.nn import io
 from minpy.nn import layers
@@ -59,6 +59,7 @@ def main(args):
     model = TwoLayerNet(args)
     for k, v in model.param_configs.items():
         model.params[k] = np.zeros(v['shape'])
+    param_keys = list(model.params.keys())
 
     img = np.zeros((args.batch_size, 784))
     label = np.zeros((args.batch_size,))
@@ -72,11 +73,10 @@ def main(args):
             return model.loss(f, label)
         if args.only_forward:
             loss = loss_func()
-            loss.asnumpy()
+            loss.get_data(minpy.array_variants.ArrayType.MXNET).wait_to_read()
         else:
             param_arrays = list(model.params.values())
-            param_keys = list(model.params.keys())
-            grad_and_loss_func = minpy.core.grad_and_loss(
+            grad_and_loss_func = core.grad_and_loss(
                 loss_func, argnum=range(len(param_arrays)))
             grad_arrays, loss = grad_and_loss_func(*param_arrays)
             for g in grad_arrays:
@@ -91,4 +91,6 @@ if __name__ == '__main__':
     parser.add_argument('--hidden-size', default=256, type=int)
     parser.add_argument('--num-hidden', default=1, type=int)
     parser.add_argument('--num-loops', default=20, type=int)
+    #import profile
+    #profile.run('main(parser.parse_args())')
     main(parser.parse_args())
