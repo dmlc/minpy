@@ -16,31 +16,41 @@ from examples.utils.data_utils import get_CIFAR10_data
 from minpy.primitive import CustomOp
 
 # Please uncomment following if you have GPU-enabled MXNet installed.
-#from minpy.context import set_context, gpu
-#set_context(gpu(0)) # set the global context as gpu(0)
+# from minpy.context import set_context, gpu
+# set_context(gpu(0))  # set the global context as gpu(0)
 
-batch_size=128
-input_size=(3, 32, 32)
-flattened_input_size=3 * 32 * 32
-hidden_size=512
-num_classes=10
+batch_size = 128
+input_size = (3, 32, 32)
+flattened_input_size = 3 * 32 * 32
+hidden_size = 512
+num_classes = 10
 
-class softmax_loss(CustomOp):
-    def forward(self, x, y):
+
+@CustomOp('numpy')
+def softmax(x, y):
+    import numpy as np
+    probs = np.exp(x - np.max(x, axis=1, keepdims=True))
+    probs /= np.sum(probs, axis=1, keepdims=True)
+    N = x.shape[0]
+    loss = -np.sum(np.log(probs[np.arange(N), y])) / N
+    return loss
+
+
+def softmax_grad(ans, x, y):
+    def grad(g):
+        import numpy as np
+        probs = np.exp(x - np.max(x, axis=1, keepdims=True))
+        probs /= np.sum(probs, axis=1, keepdims=True)
         N = x.shape[0]
-        C = x.shape[1]
-        if len(y.shape) == 1:
-            #convert it to one hot encoding
-            onehot_y = np.zeros([N, C])
-            np.onehot_encode(y, onehot_y)
-        else:
-            onehot_y = y
-        probs = x - np.max(x, axis=1, keepdims=True)
-        loss = -np.sum(probs * onehot_y) / N
-        loss += np.sum(np.log(np.sum(np.exp(probs), axis=1, keepdims=True))) / N
-        return loss
+        dx = probs.copy()
+        dx[np.arange(N), y] -= 1
+        dx /= N
+        return dx
 
-softmax = softmax_loss()
+    return grad
+
+
+softmax.def_grad(softmax_grad)
 
 
 class ConvolutionNet(ModelBase):
@@ -50,17 +60,18 @@ class ConvolutionNet(ModelBase):
         # from input image.
         net = mx.sym.Variable(name='X')
         net = mx.sym.Convolution(
-                data=net, name='conv', kernel=(7, 7), num_filter=32)
-        net = mx.sym.Activation(
-                data=net, act_type='relu')
+            data=net, name='conv', kernel=(7, 7), num_filter=32)
+        net = mx.sym.Activation(data=net, act_type='relu')
         net = mx.sym.Pooling(
-                data=net, name='pool', pool_type='max', kernel=(2, 2),
-                stride=(2, 2))
+            data=net,
+            name='pool',
+            pool_type='max',
+            kernel=(2, 2),
+            stride=(2, 2))
         net = mx.sym.Flatten(data=net)
         # Create forward function and add parameters to this model.
         self.conv = Function(
-                net, input_shapes={'X': (batch_size,) + input_size},
-                name='conv')
+            net, input_shapes={'X': (batch_size, ) + input_size}, name='conv')
         self.add_params(self.conv.get_params())
         # Define ndarray parameters used for classification part.
         output_shape = self.conv.get_one_output_shape()
@@ -80,35 +91,35 @@ class ConvolutionNet(ModelBase):
     def loss(self, predict, y):
         return softmax(predict, y)
 
+
 def main(args):
     # Create model.
     model = ConvolutionNet()
     # Create data iterators for training and testing sets.
     data = get_CIFAR10_data(args.data_dir)
-    train_dataiter = NDArrayIter(data=data['X_train'],
-                                 label=data['y_train'],
-                                 batch_size=batch_size,
-                                 shuffle=True)
-    test_dataiter = NDArrayIter(data=data['X_test'],
-                                label=data['y_test'],
-                                batch_size=batch_size,
-                                shuffle=False)
+    train_dataiter = NDArrayIter(
+        data=data['X_train'],
+        label=data['y_train'],
+        batch_size=batch_size,
+        shuffle=True)
+    test_dataiter = NDArrayIter(
+        data=data['X_test'],
+        label=data['y_test'],
+        batch_size=batch_size,
+        shuffle=False)
     # Create solver.
-    solver = Solver(model,
-                    train_dataiter,
-                    test_dataiter,
-                    num_epochs=10,
-                    init_rule='gaussian',
-                    init_config={
-                        'stdvar': 0.001
-                    },
-                    update_rule='sgd_momentum',
-                    optim_config={
-                        'learning_rate': 1e-3,
-                        'momentum': 0.9
-                    },
-                    verbose=True,
-                    print_every=20)
+    solver = Solver(
+        model,
+        train_dataiter,
+        test_dataiter,
+        num_epochs=10,
+        init_rule='gaussian',
+        init_config={'stdvar': 0.001},
+        update_rule='sgd_momentum',
+        optim_config={'learning_rate': 1e-3,
+                      'momentum': 0.9},
+        verbose=True,
+        print_every=20)
     # Initialize model parameters.
     solver.init()
     # Train!
@@ -116,9 +127,11 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Multi-layer perceptron example using minpy operators")
-    parser.add_argument('--data_dir',
-                        type=str,
-                        required=True,
-                        help='Directory that contains cifar10 data')
+    parser = argparse.ArgumentParser(
+        description="Multi-layer perceptron example using minpy operators")
+    parser.add_argument(
+        '--data_dir',
+        type=str,
+        required=True,
+        help='Directory that contains cifar10 data')
     main(parser.parse_args())

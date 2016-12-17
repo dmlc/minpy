@@ -10,6 +10,7 @@ import collections
 
 from . import array
 from .array_variants import ArrayType
+from .array_variants import variants
 from . import context
 from .utils import log
 from . import tape
@@ -20,7 +21,7 @@ GradFunc = collections.namedtuple('GradFunc', ['f', 'multi_grad_indices'])
 
 class NoGradientFuncError(ValueError):
     """Error of no required gradient func defined for back propagation.
-    
+
     Parameters
     ----------
     func_name : str
@@ -60,104 +61,30 @@ class FakeGradFunc(object):
         raise NoGradientFuncError(self.func_name, self.arg)
 
 
-class CustomOp(object):
-    """Abstract class for customized operator. Backpropagation can be
-    customized."""
-    def forward(self, *args, **kwargs):
-        """Forward function."""
-        raise NotImplementedError
+def CustomOp(op_type):
+    """Wrapper for CustomOp.
 
-    def backward(self, arg, ans, *args, **kwargs):
-        """Gradient function generator.
+    Parameters
+    ----------
+    type : str
+        Type of the custom op. Input vars are converted to the given type. 'minpy' or 'mxnet'.
 
-        It returns a gradient function that takes upper gradient as input given
-        w.r.t. chosen positional or keyword argument.
+    Returns
+    -------
+    Returns the proper wrapper by given type.
+    """
+    def customop_wrapper(func):
+        """Real wrapper"""
+        class ArgWrappedPrimitive(Primitive):
+            """Wrapped func in __call__ method."""
+            def __call__(self, *args, **kwargs):
+                return super(ArgWrappedPrimitive, self).__call__(args, kwargs)
 
-        Parameters
-        ----------
-        arg : int or str
-            The position of the positional argument or the string of keyword
-            argument.
-        ans
-            The result of the forward function.
-        args
-            positional argument of forward function.
-        kwargs
-            keyword argument of forward function.
-
-        Returns
-        -------
-        function
-            A gradient function that takes upper gradient as input.
-        """
-        pass
-
-    def __call__(self, *args, **kwargs):
-        _logger.debug('Calling customized operator [%s].',
-                      self.__class__.__name__)
-
-        # Check whether the result value is on the path of bp phase.
-        # If all the input arguments are not on the bp path, the result value
-        # is not as well.
-        current_tape = tape.global_tape()
-        need_bp = False
-        for arg in args:
-            if hasattr(
-                    arg,
-                    '_minpy_value_id') and arg.is_marked_for_bp(current_tape):
-                need_bp = True
-                break
-
-        # No need to wrap input and return value. Primitives used are in MinPy domain.
-        tape.pause()  # Disable tape
-        result = self.forward(*args, **kwargs)
-        tape.unpause()  # Enable tape
-
-        if need_bp:
-            if isinstance(result, tuple):
-                for r in result:
-                    r.mark_for_bp(current_tape)
-            else:
-                result.mark_for_bp(current_tape)  # pylint: disable= no-member
-
-            # Record partial derivative paths, only for `array.Value` type values.
-            # If no gradient function is defined, also omit it
-            for i, arg in enumerate(args):
-                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
-                        current_tape):
-                    # Save forward results and arguments in the gradient function closure
-                    # for later use.
-                    grad_func = self.backward(i, result, *args, **kwargs)
-                    if grad_func is None:
-                        _logger.debug(
-                            'Partial derivative of customized '
-                            'operator [%s] on argument %d is not defined.',
-                            self.__class__.__name__, i)
-                        grad_func = FakeGradFunc('customized operator [%s]' %
-                                                 self.__class__.__name__, i)
-                    else:
-                        _logger.debug(
-                            'Adding partial derivative of customized operator [%s] on argument %d.',
-                            self.__class__.__name__, i)
-                    current_tape.add_partial_derivative(grad_func, arg, result)
-            for k, arg in kwargs.items():
-                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
-                        current_tape):
-                    grad_func = self.backward(k, result, *args, **kwargs)
-                    if grad_func is None:
-                        _logger.debug(
-                            'Partial derivative of customized '
-                            'operator [%s] on keyword %s is not defined.',
-                            self.__class__.__name__, k)
-                        grad_func = FakeGradFunc('customized operator [%s]' %
-                                                 self.__class__.__name__, k)
-                    else:
-                        _logger.debug(
-                            'Adding partial derivative of customized operator [%s] on keyword %s.',
-                            self.__class__.__name__, k)
-                    current_tape.add_partial_derivative(grad_func, arg, result)
-        return result
-        # pylint: enable=invalid-name, too-many-locals
+        if op_type == 'numpy' or op_type == 'mxnet':
+            return ArgWrappedPrimitive(func, variants[op_type], custom_op=True)
+        else:
+            raise ValueError('Wrong type for CustomOp. Must be either "numpy" or "mxnet"')
+    return customop_wrapper
 
 
 class Primitive(object):
@@ -169,9 +96,10 @@ class Primitive(object):
         '_type',
         '_mutate_args',
         '_mutate_kw',
+        '_custom_op'
     ]
 
-    def __init__(self, func, ty, mutate_args=None, mutate_kw=None):
+    def __init__(self, func, ty, mutate_args=None, mutate_kw=None, custom_op=False):
         """Initialize.
 
         Parameters
@@ -191,6 +119,7 @@ class Primitive(object):
         self._type = ty
         self._mutate_args = [] if mutate_args is None else mutate_args
         self._mutate_kw = [] if mutate_kw is None else mutate_kw
+        self._custom_op = custom_op
 
     @property
     def type(self):
@@ -283,7 +212,7 @@ class Primitive(object):
             result = tuple(array.wrap(ret) for ret in result_value)
         else:
             result = array.wrap(result_value)
-        if need_bp[0] and not tape.is_paused():
+        if need_bp[0]:
             if isinstance(result, tuple):
                 for r in result:
                     r.mark_for_bp(current_tape)
@@ -331,10 +260,15 @@ class Primitive(object):
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
                     if i not in self._grad_func:
-                        _logger.debug('Partial derivative of func "{}" on'
+                        if self._custom_op:
+                            type_str = 'customized op'
+                        else:
+                            type_str = 'op'
+                        _logger.debug('Partial derivative of {} "{}" on'
                                       'argument {} is not defined.'
-                                      .format(self._func.__name__, i))
-                        grad_func = FakeGradFunc(self._func.__name__, i)
+                                      .format(type_str, self._func.__name__, i))
+                        grad_func = FakeGradFunc(type_str + ' ' + self._func.__name__, i)
+                        owner = arg
                     else:
                         _logger.debug(
                             'Adding partial derivative to func "{}" on argument {}.'.
@@ -368,10 +302,14 @@ class Primitive(object):
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
                     if k not in self._grad_func_kw:
+                        if self._custom_op:
+                            type_str = 'customized op'
+                        else:
+                            type_str = 'op'
                         _logger.debug(
-                            'Partial derivative of func "{}" on keyword argument "{}"'
-                            'is not defined.'.format(self._func.__name__, k))
-                        grad_func = FakeGradFunc(self._func.__name__, k)
+                            'Partial derivative of {} "{}" on keyword argument "{}"'
+                            'is not defined.'.format(type_str, self._func.__name__, k))
+                        grad_func = FakeGradFunc(type_str + ' ' + self._func.__name__, k)
                     else:
                         _logger.debug(
                             'Adding partial derivative to func "{}" on keyword argument "{}".'.
