@@ -56,6 +56,8 @@ Refer to MXNet installation document for `Python package installation. <http://m
 Install MinPy
 -------------
 
+Minpy prototypes a pure Numpy interface. To make the interface consistent, please make sure Numpy version >= 1.10.0 before install Minpy.
+
 MinPy releases are uploaded to PyPI. Just use ``pip`` to install after you install MXNet.
 
 ::
