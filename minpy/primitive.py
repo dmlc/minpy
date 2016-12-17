@@ -70,7 +70,8 @@ class Primitive(object):
         '_type',
         '_mutate_args',
         '_mutate_kw',
-        '_custom_op'
+        '_custom_op',
+        '__name__',
     ]
 
     def __init__(self, func, ty, mutate_args=None, mutate_kw=None, custom_op=False):
@@ -94,6 +95,7 @@ class Primitive(object):
         self._mutate_args = [] if mutate_args is None else mutate_args
         self._mutate_kw = [] if mutate_kw is None else mutate_kw
         self._custom_op = custom_op
+        self.__name__ = func.__name__
 
     @property
     def type(self):
