@@ -36,8 +36,7 @@ class NoGradientFuncError(ValueError):
             arg_name = 'keyword argument'
         else:
             arg_name = 'argument'
-        msg = "No partial derivative of {} defined on {} {}.".format(
-            func_name, arg_name, arg)
+        msg = "No partial derivative of {} defined on {} {}.".format(func_name, arg_name, arg)
         super(NoGradientFuncError, self).__init__(msg)
 
 
@@ -73,10 +72,13 @@ def CustomOp(op_type):
     -------
     Returns the proper wrapper by given type.
     """
+
     def customop_wrapper(func):
         """Real wrapper"""
+
         class ArgWrappedPrimitive(Primitive):
             """Wrapped func in __call__ method."""
+
             def __call__(self, *args, **kwargs):
                 return super(ArgWrappedPrimitive, self).__call__(args, kwargs)
 
@@ -84,6 +86,7 @@ def CustomOp(op_type):
             return ArgWrappedPrimitive(func, variants[op_type], custom_op=True)
         else:
             raise ValueError('Wrong type for CustomOp. Must be either "numpy" or "mxnet"')
+
     return customop_wrapper
 
 
