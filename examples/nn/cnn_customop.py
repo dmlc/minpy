@@ -13,11 +13,11 @@ from minpy.nn import layers
 from minpy.nn.model import ModelBase
 from minpy.nn.solver import Solver
 from examples.utils.data_utils import get_CIFAR10_data
-from minpy.primitive import custom_op, def_grad
+from minpy.primitive import customop, defgrad
 
 # Please uncomment following if you have GPU-enabled MXNet installed.
-# from minpy.context import set_context, gpu
-# set_context(gpu(0))  # set the global context as gpu(0)
+from minpy.context import set_context, gpu
+set_context(gpu(0))  # set the global context as gpu(0)
 
 batch_size = 128
 input_size = (3, 32, 32)
@@ -26,7 +26,7 @@ hidden_size = 512
 num_classes = 10
 
 
-@custom_op('numpy')
+@customop('numpy')
 def softmax(x, y):
     import numpy as np
     probs = np.exp(x - np.max(x, axis=1, keepdims=True))
@@ -36,7 +36,7 @@ def softmax(x, y):
     return loss
 
 
-@def_grad(softmax)
+@defgrad(softmax)
 def softmax_grad(ans, x, y):
     def grad(g):
         import numpy as np

@@ -60,65 +60,9 @@ class FakeGradFunc(object):
         raise NoGradientFuncError(self.func_name, self.arg)
 
 
-def custom_op(op_type):
-    """Wrapper for CustomOp.
-
-    Parameters
-    ----------
-    type : str
-        Type of the custom op. Input vars are converted to the given type. 'minpy' or 'mxnet'.
-
-    Returns
-    -------
-    Returns the proper wrapper by given type.
-    """
-
-    def customop_wrapper(func):
-        """Real wrapper"""
-
-        class ArgWrappedPrimitive(Primitive):
-            """Wrapped func in __call__ method."""
-
-            def __call__(self, *args, **kwargs):
-                return super(ArgWrappedPrimitive, self).__call__(args, kwargs)
-
-        if op_type == 'numpy' or op_type == 'mxnet':
-            return ArgWrappedPrimitive(func, variants[op_type], custom_op=True)
-        else:
-            raise ValueError('Wrong type for CustomOp. Must be either "numpy" or "mxnet"')
-
-    return customop_wrapper
-
-
-def def_grad(prim, argnum=0):
-    """Wrapper for gradient func registration.
-
-    Parameters
-    ----------
-    prim : Primitive
-        Primitive object
-    argnum : int
-        Position of the argument the gradient func defined for.
-
-    Returns
-    -------
-    prim with no change. Just register given gradient func to prim.
-    """
-
-    def _wrapper(func):
-        if not hasattr(prim, 'def_grad'):
-            raise TypeError("The first argument of 'def_grad' must be Primitive "
-                            "object. 'custom_op' decorator can change func to "
-                            "Primitive object.")
-        else:
-            prim.def_grad(func, argnum)
-            return func
-
-    return _wrapper
-
-
 class Primitive(object):
     """Class for primitives. It includes both forward function and gradient definition."""
+    # pylint: disable=too-many-arguments
     __slots__ = [
         '_func',
         '_grad_func',
@@ -198,7 +142,7 @@ class Primitive(object):
         IndexError, KeyError
             No corresponding gradient function.
         """
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals, too-many-nested-blocks
         _logger.debug('Calling "{}" type "{}".'.format(self._func,
                                                        self.typestr))
 
@@ -208,18 +152,18 @@ class Primitive(object):
         need_bp = [False]
         current_tape = tape.global_tape()
 
-        def get_val(x, mutate):
+        def get_val(val, mutate):
             """Get value of array."""
-            xv = array.wrap(x)
-            if hasattr(xv, '_minpy_value_id'):
+            wrapped_val = array.wrap(val)
+            if hasattr(wrapped_val, '_minpy_value_id'):
                 # XXX: Use list of only one element to avoid variable assignment. # pylint: disable= fixme
-                if not need_bp[0] and xv.is_marked_for_bp(current_tape):
+                if not need_bp[0] and wrapped_val.is_marked_for_bp(current_tape):
                     need_bp[0] = True
                 if mutate:
-                    return xv.get_data_mutable(self._type)
+                    return wrapped_val.get_data_mutable(self._type)
                 else:
-                    return xv.get_data(self._type)
-            return xv
+                    return wrapped_val.get_data(self._type)
+            return wrapped_val
 
         # Get underlying data.
         arg_values = tuple(
@@ -244,8 +188,8 @@ class Primitive(object):
             result = array.wrap(result_value)
         if need_bp[0]:
             if isinstance(result, tuple):
-                for r in result:
-                    r.mark_for_bp(current_tape)
+                for res in result:
+                    res.mark_for_bp(current_tape)
             else:
                 result.mark_for_bp(current_tape)  # pylint: disable= no-member
             # Record partial derivative paths, only for `array.Value` type values.
@@ -290,10 +234,7 @@ class Primitive(object):
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
                     if i not in self._grad_func:
-                        if self._custom_op:
-                            type_str = 'customized op'
-                        else:
-                            type_str = 'op'
+                        type_str = 'customized op' if self._custom_op else 'op'
                         _logger.debug('Partial derivative of {} "{}" on'
                                       'argument {} is not defined.'
                                       .format(type_str, self._func.__name__, i))
@@ -323,7 +264,7 @@ class Primitive(object):
                                 else:
                                     owner.append(None)
                                 visited_arg_indices.add(grad_index)
-                        grad_func = raw_value_wrapper(grad_func)
+                        grad_func = raw_value_wrapper(grad_func)  # pylint: disable=redefined-variable-type
                         if self.type == ArrayType.MXNET:
                             grad_func = context_wrapper(grad_func)
                     current_tape.add_partial_derivative(grad_func, owner,
@@ -332,10 +273,7 @@ class Primitive(object):
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
                     if k not in self._grad_func_kw:
-                        if self._custom_op:
-                            type_str = 'customized op'
-                        else:
-                            type_str = 'op'
+                        type_str = 'customized op' if self._custom_op else 'op'
                         _logger.debug(
                             'Partial derivative of {} "{}" on keyword argument "{}"'
                             'is not defined.'.format(type_str, self._func.__name__, k))
@@ -434,3 +372,60 @@ class Primitive(object):
         """
         return all(i in self._grad_func for i in bp_args) and \
                all(i in self._grad_func_kw for i in bp_kwargs)
+
+
+def customop(op_type):
+    """Wrapper for CustomOp.
+
+    Parameters
+    ----------
+    type : str
+        Type of the custom op. Input vars are converted to the given type. 'minpy' or 'mxnet'.
+
+    Returns
+    -------
+    Returns the proper wrapper by given type.
+    """
+
+    def customop_wrapper(func):
+        """Real wrapper"""
+
+        class ArgWrappedPrimitive(Primitive):
+            """Wrapped func in __call__ method."""
+
+            def __call__(self, *args, **kwargs):
+                return super(ArgWrappedPrimitive, self).__call__(args, kwargs)
+
+        if op_type == 'numpy' or op_type == 'mxnet':
+            return ArgWrappedPrimitive(func, variants[op_type], custom_op=True)
+        else:
+            raise ValueError('Wrong type for CustomOp. Must be either "numpy" or "mxnet"')
+
+    return customop_wrapper
+
+
+def defgrad(prim, argnum=0):
+    """Wrapper for gradient func registration.
+
+    Parameters
+    ----------
+    prim : Primitive
+        Primitive object
+    argnum : int
+        Position of the argument the gradient func defined for.
+
+    Returns
+    -------
+    prim with no change. Just register given gradient func to prim.
+    """
+
+    def _wrapper(func):
+        if not hasattr(prim, 'def_grad'):
+            raise TypeError("The first argument of 'def_grad' must be Primitive "
+                            "object. 'custom_op' decorator can change func to "
+                            "Primitive object.")
+        else:
+            prim.def_grad(func, argnum)
+            return func
+
+    return _wrapper
