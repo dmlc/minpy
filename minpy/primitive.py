@@ -60,7 +60,7 @@ class FakeGradFunc(object):
         raise NoGradientFuncError(self.func_name, self.arg)
 
 
-def CustomOp(op_type):
+def custom_op(op_type):
     """Wrapper for CustomOp.
 
     Parameters
@@ -88,6 +88,33 @@ def CustomOp(op_type):
             raise ValueError('Wrong type for CustomOp. Must be either "numpy" or "mxnet"')
 
     return customop_wrapper
+
+
+def def_grad(prim, argnum=0):
+    """Wrapper for gradient func registration.
+
+    Parameters
+    ----------
+    prim : Primitive
+        Primitive object
+    argnum : int
+        Position of the argument the gradient func defined for.
+
+    Returns
+    -------
+    prim with no change. Just register given gradient func to prim.
+    """
+
+    def _wrapper(func):
+        if not hasattr(prim, 'def_grad'):
+            raise TypeError("The first argument of 'def_grad' must be Primitive "
+                            "object. 'custom_op' decorator can change func to "
+                            "Primitive object.")
+        else:
+            prim.def_grad(func, argnum)
+            return func
+
+    return _wrapper
 
 
 class Primitive(object):
