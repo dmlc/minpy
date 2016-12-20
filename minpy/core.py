@@ -41,13 +41,14 @@ def grad_and_loss(func, argnum=0):
         with tape.tape() as current_tape:
             for i in argnums:
                 arrays[i].mark_for_bp(current_tape)
-            result_array = func(*arrays)
+            result = func(*arrays)
             _logger.debug('Forward pass finished. Start backward pass.')
-            current_tape.set_gradient_target(result_array)
-            grad_vals = current_tape.get_gradient(tuple(arrays[i] for i in argnums))
+            # Get gradient using result as target.
+            grad_vals = current_tape.get_gradient(
+                tuple(arrays[i] for i in argnums), result)
             if len(grad_vals) == 1:
                 grad_vals = grad_vals[0]
-        return grad_vals, result_array
+        return grad_vals, result
 
     return wrapped
 

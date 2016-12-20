@@ -30,14 +30,12 @@ class Tape(object):
         # Stores grad value result from target back to [KEY]. Array -> grad result (Array)
         #self._grads = collections.defaultdict(lambda: array.wrap(0.0))
         self._grads = {}
-        self._grads_refcount = {}
         # Store derivation path (forward). Array -> list of grad records
         # This maps from arrays to the gradient functions that compute their gradient.
         self._array_grad_records = collections.defaultdict(list)
         # Store derivation path (backward). Array -> list of grad records
         # This maps from arrays to the gradient functions that use them as inputs.
         self._result_grad_records = collections.defaultdict(list)
-
         self.__class__.timestamp += 1
 
     def add_partial_derivative(self, grad_func, owner, result):
@@ -64,13 +62,12 @@ class Tape(object):
             pass
         # Create backward derivation path.
         if isinstance(result, array.Value):
-            if not result in self._grads_refcount:
-                self._grads_refcount[result] = 0
-            self._grads_refcount[result] += 1
             self._result_grad_records[result].append(grad_rec)
         else:
+            for sub_result in result:
+                self._result_grad_records[result].append(grad_rec)
 
-    def set_gradient_target(self, target):
+    def _set_gradient_target(self, target):
         """Set gradient targets to ones."""
         # Set gradient target for one.
         if isinstance(target, array.Value):
@@ -99,7 +96,6 @@ class Tape(object):
 
         Recurse when handle multiple arrays.
         """
-        #TODO(minjie): If arr is a list of arrays, redundant computation may happen.
         if isinstance(arr, array.Value):
             current_gradient = array.wrap(grad)
             if arr in self._grads:
@@ -112,76 +108,111 @@ class Tape(object):
             for sub_arr, sub_grad in zip(arr, grad):
                 self._cumulate_gradient(sub_arr, sub_grad)
 
-    def get_gradient(self, origin):
+    def get_gradient(self, origin, target):
         """Get gradient of the specified array.
+
+        This will first set the gradients of target (using value 1.0) and
+        then compute the gradient using the backward path recorded during
+        forward computation. Currently, we use BFS order if more than one
+        gradient operators could be computed at the same time.
 
         Parameters
         ----------
         origin
-            A tuple of array objects that require gradient computation.
+            A tuple of array objects representing the inputs.
+
+        target 
+            Array or a tuple of array representing the target.
 
         Returns
         -------
         tuple of Array
-            The gradient of origin arrays.
-
-        Target gradients must be set prior to this function call.
+            The gradient of input arrays.
         """
-        # Initialize the dfs stack.
-        dfs_stack = []
-
-        def push_grad_record(grad_record):
-            """Push gradient record into stack."""
-            dfs_stack.append(grad_record)
-
         def remove_grad_record(owner, grad_record):
-            """Remove gradient record from owner."""
-            if isinstance(owner, array.Value):
-                self._array_grad_records[owner].remove(grad_record)
-                if len(self._array_grad_records[owner]) == 0:
-                    self._array_grad_records.pop(owner, None)
-            elif owner is not None:
-                for sub_owner in owner:
-                    remove_grad_record(sub_owner, grad_record)
+            """Remove gradient record from owner.
 
-        for arr in origin:
-            assert isinstance(arr, array.Value), 'Type is not `array.Value`.'
-            for grad_record in self._array_grad_records[arr]:
-                if grad_record.result in self._grads:
-                    # The record could be computed.
-                    grad = grad_record.grad_func(self._grads[grad_record.result])
-                    self._cumulate_gradient(grad_record.owner, grad)
-                else:
-                    push_grad_record(grad_record)
+            Return true if the owner has no other grad records to be resolved
+            (and thus has finished gradient computation).
+            """
+            assert isinstance(owner, array.Value)
+            # TODO(minjie): could be optimized using pop.
+            self._array_grad_records[owner].remove(grad_record)
+            if len(self._array_grad_records[owner]) == 0:
+                self._array_grad_records.pop(owner, None)
+                return True
+            else:
+                return False
 
-        while len(dfs_stack) != 0:
-            current_record = dfs_stack[-1]
-            result_array = current_record.result
-            # TODO(minjie): should not use this, should use _gradable instead
-            if result_array in self._grads:
-                # The record could be computed.
-                dfs_stack.pop()
+        def compute_grad_record(grad_record):
+            """Run the function in the grad record."""
+            if isinstance(grad_record.result, array.Value):
+                return grad_record.grad_func(self._grads[grad_record.result])
+            else:
+                return grad_record.grad_func(
+                        tuple(self._grads[rst] for rst in grad_record.result))
+
+        origin_id = tuple(id(arr) for arr in origin)
+
+        # Set gradient target.
+        self._set_gradient_target(target)
+
+        # Initialize bfs queue.
+        bfs_queue = collections.deque()
+        if isinstance(target, array.Value):
+            bfs_queue.append(target)
+        else:
+            for sub_target in target:
+                bfs_queue.append(sub_target)
+
+        # TODO(minjie): require an extra traversal before this to eliminate
+        # those grad_records that do not contribute to the target.
+        # Example:
+        # def foo(x):
+        #   y = x + 1
+        #   z = print(np.argmax(x))
+        #   return y
+        # The argmax above should not be involed in gradient computation.
+        
+        total = 0.0
+        for arr in self._array_grad_records:
+            total += numpy.prod(arr.shape)
+        print('total', total / 1024.0 / 1024.0)
+
+        #import sys
+
+        while len(bfs_queue) != 0:
+            print(len(self._grads), len(self._array_grad_records), len(self._result_grad_records))
+            #sys.stdout.flush()
+            #input("Press key to continue...")
+            current = bfs_queue.popleft()
+            # Resolve all grad_records that will use gradient of the current array.
+            grad_records = self._result_grad_records[current]
+            while len(grad_records) != 0:
+                grad_record = grad_records.pop()
                 # TODO(minjie): add primitive_type info in debug info later.
                 _logger.debug(
-                    'Calling derivative func "%s"', current_record.grad_func)
-                grad = current_record.grad_func(self._grads[result_array])
-                self._cumulate_gradient(current_record.owner, grad)
-                # Also remove the gradient record from the owner.
-                remove_grad_record(current_record.owner, current_record)
-                # Check reference count of result array.
-                self._grads_refcount[result_array] -= 1
-                rc = self._grads_refcount[result_array]
-                if rc == 0:
-                    print('delete', len(self._grads), id(grad_record.result))
-                    self._grads.pop(result_array, None)
-                    self._grads_refcount.pop(result_array, None)
-                elif rc < 0:
-                    _logger.fatal('Invalid reference count for gradient arrays')
-            else:
-                assert len(self._array_grad_records[result_array]) != 0
-                # Require computing the result of this record.
-                for rec in self._array_grad_records[result_array]:
-                    push_grad_record(rec)
+                    'Calling derivative func "%s"', grad_record.grad_func)
+                # TODO(minjie): this may raise error if the grad_record has multiple
+                # results. We should check the all the result gradients are available
+                # before calling this function.
+                grad = compute_grad_record(grad_record)
+                owner = grad_record.owner
+                self._cumulate_gradient(owner, grad)
+                # Remove grad_record in forward path and trigger those arrays
+                # that all their grad_records in the forward path have been
+                # resolved.
+                if isinstance(owner, array.Value):
+                    if remove_grad_record(owner, grad_record):
+                        bfs_queue.append(owner)
+                elif owner is not None:
+                    for sub_owner in owner:
+                        if remove_grad_record(sub_owner, grad_record):
+                            bfs_queue.append(sub_owner)
+            # Release memory of the gradient of the current array.
+            self._result_grad_records.pop(current, None)
+            if not id(current) in origin_id:
+                self._grads.pop(current, None)
 
         # TODO(minjie): If the gradient cannot be computed, this should return a zero array
         # of proper shape.
