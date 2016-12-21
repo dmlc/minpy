@@ -4,6 +4,7 @@ import argparse
 
 import minpy
 import minpy.numpy as np
+import numpy
 import mxnet as mx
 from minpy.nn.io import NDArrayIter
 # Can also use MXNet IO here
@@ -16,8 +17,8 @@ from examples.utils.data_utils import get_CIFAR10_data
 from minpy.primitive import customop, defgrad
 
 # Please uncomment following if you have GPU-enabled MXNet installed.
-from minpy.context import set_context, gpu
-set_context(gpu(0))  # set the global context as gpu(0)
+# from minpy.context import set_context, gpu
+# set_context(gpu(0))  # set the global context as gpu(0)
 
 batch_size = 128
 input_size = (3, 32, 32)
@@ -28,25 +29,22 @@ num_classes = 10
 
 @customop('numpy')
 def softmax(x, y):
-    import numpy as np
-    probs = np.exp(x - np.max(x, axis=1, keepdims=True))
-    probs /= np.sum(probs, axis=1, keepdims=True)
+    probs = numpy.exp(x - numpy.max(x, axis=1, keepdims=True))
+    probs /= numpy.sum(probs, axis=1, keepdims=True)
     N = x.shape[0]
-    loss = -np.sum(np.log(probs[np.arange(N), y])) / N
+    loss = -numpy.sum(numpy.log(probs[numpy.arange(N), y])) / N
     return loss
 
 
 @defgrad(softmax)
 def softmax_grad(ans, x, y):
     def grad(g):
-        import numpy as np
-        probs = np.exp(x - np.max(x, axis=1, keepdims=True))
-        probs /= np.sum(probs, axis=1, keepdims=True)
         N = x.shape[0]
-        dx = probs.copy()
-        dx[np.arange(N), y] -= 1
-        dx /= N
-        return dx
+        probs = numpy.exp(x - numpy.max(x, axis=1, keepdims=True))
+        probs /= numpy.sum(probs, axis=1, keepdims=True)
+        probs[numpy.arange(N), y] -= 1
+        probs /= N
+        return probs
 
     return grad
 
