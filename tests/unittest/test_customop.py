@@ -2,7 +2,7 @@
 from __future__ import print_function
 import minpy.numpy as np
 from minpy.array import Number
-from minpy.primitive import customop, defgrad
+from minpy.primitive import customop
 from minpy.core import grad
 
 
@@ -27,7 +27,6 @@ def softmax(x, y):
     return loss
 
 
-@defgrad(softmax)
 def softmax_grad(ans, x, label):
     def grad(g):
         import numpy as np
@@ -41,6 +40,8 @@ def softmax_grad(ans, x, label):
         return dx
 
     return grad
+
+softmax.def_grad(softmax_grad)
 
 
 def test_customop():

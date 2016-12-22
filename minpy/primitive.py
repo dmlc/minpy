@@ -11,6 +11,7 @@ import collections
 from . import array
 from .array_variants import ArrayType
 from .array_variants import variants
+from .array_variants import variants_repr
 from . import context
 from .utils import log
 from . import tape
@@ -70,11 +71,11 @@ class Primitive(object):
         '_type',
         '_mutate_args',
         '_mutate_kw',
-        '_custom_op',
+        '_type_str',
         '__name__',
     ]
 
-    def __init__(self, func, ty, mutate_args=None, mutate_kw=None, custom_op=False):
+    def __init__(self, func, ty, mutate_args=None, mutate_kw=None, type_str=None):
         """Initialize.
 
         Parameters
@@ -87,6 +88,8 @@ class Primitive(object):
             The indices of arguments that need to be mutated.
         mutate_kw
             The keywords of arguments that need to be mutated.
+        type_str : None or str
+            Specify type string for debugging. If not specified, infer by `ty`.
         """
         self._func = func
         self._grad_func = {}
@@ -94,7 +97,10 @@ class Primitive(object):
         self._type = ty
         self._mutate_args = [] if mutate_args is None else mutate_args
         self._mutate_kw = [] if mutate_kw is None else mutate_kw
-        self._custom_op = custom_op
+        if type_str is None:
+            self._type_str = variants_repr[ty] + ' op'
+        else:
+            self._type_str = type_str
         self.__name__ = func.__name__
 
     @property
@@ -124,8 +130,12 @@ class Primitive(object):
     def __str__(self):
         return self._func.__name__
 
-    def __call__(self, args, kwargs):  # pylint: disable= too-many-branches
-        """Call wrapped function.
+    def __call__(self, *args, **kwargs):
+        """Wrap args for `call` method."""
+        return self.call(args, kwargs)
+
+    def call(self, args, kwargs):  # pylint: disable= too-many-branches
+        """Call wrapped function -- compact argument ver.
 
         Parameters
         ----------
@@ -145,8 +155,7 @@ class Primitive(object):
             No corresponding gradient function.
         """
         # pylint: disable=too-many-locals, too-many-nested-blocks
-        _logger.debug('Calling "{}" type "{}".'.format(self._func,
-                                                       self.typestr))
+        _logger.debug('Calling "{}" type "{}".'.format(self._func, self.typestr))
 
         # Check whether the result value is on the path of bp phase.
         # If all the input arguments are not on the bp path, the result value
@@ -236,11 +245,10 @@ class Primitive(object):
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
                     if i not in self._grad_func:
-                        type_str = 'customized op' if self._custom_op else 'op'
                         _logger.debug('Partial derivative of {} "{}" on'
                                       'argument {} is not defined.'
-                                      .format(type_str, self._func.__name__, i))
-                        grad_func = FakeGradFunc(type_str + ' ' + self._func.__name__, i)
+                                      .format(self._type_str, self._func.__name__, i))
+                        grad_func = FakeGradFunc(self._type_str + ' ' + self._func.__name__, i)
                         owner = arg
                     else:
                         _logger.debug(
@@ -249,8 +257,7 @@ class Primitive(object):
                         grad_func_rec = self._grad_func[i]
                         # Save forward results and arguments in the gradient function closure
                         # for later use.
-                        grad_func = grad_func_rec.f(result_value, *arg_values,
-                                                    **kwargs_values)
+                        grad_func = grad_func_rec.f(result_value, *arg_values, **kwargs_values)
 
                         if grad_func_rec.multi_grad_indices is None:
                             # Derivative function of each argument is defined separately.
@@ -275,11 +282,10 @@ class Primitive(object):
                 if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
                         current_tape):
                     if k not in self._grad_func_kw:
-                        type_str = 'customized op' if self._custom_op else 'op'
                         _logger.debug(
                             'Partial derivative of {} "{}" on keyword argument "{}"'
-                            'is not defined.'.format(type_str, self._func.__name__, k))
-                        grad_func = FakeGradFunc(type_str + ' ' + self._func.__name__, k)
+                            'is not defined.'.format(self._type_str, self._func.__name__, k))
+                        grad_func = FakeGradFunc(self._type_str + ' ' + self._func.__name__, k)
                     else:
                         _logger.debug(
                             'Adding partial derivative to func "{}" on keyword argument "{}".'.
@@ -391,15 +397,8 @@ def customop(op_type):
 
     def customop_wrapper(func):
         """Real wrapper"""
-
-        class ArgWrappedPrimitive(Primitive):
-            """Wrapped func in __call__ method."""
-
-            def __call__(self, *args, **kwargs):
-                return super(ArgWrappedPrimitive, self).__call__(args, kwargs)
-
         if op_type == 'numpy' or op_type == 'mxnet':
-            return ArgWrappedPrimitive(func, variants[op_type], custom_op=True)
+            return Primitive(func, variants[op_type], type_str='customized op')
         else:
             raise ValueError('Wrong type for CustomOp. Must be either "numpy" or "mxnet"')
 

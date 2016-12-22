@@ -142,7 +142,7 @@ class Policy(object):
             raise PrimitivePolicyError(name, self.name)
         prim = reg.get(name, preference)
         _logger.debug('Found primitive "%s" with type %s.', name, prim.typestr)
-        return prim(args, kwargs)
+        return prim.call(args, kwargs)
 
 
 class AutoBlacklistPolicy(Policy):
@@ -174,7 +174,7 @@ class AutoBlacklistPolicy(Policy):
     def resolve_call(self, name, reg, args, kwargs):
         def _get_result(impl_type):
             prim = reg.get(name, impl_type)
-            return prim(args, kwargs)
+            return prim.call(args, kwargs)
 
         available = self._available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)
