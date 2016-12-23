@@ -1,5 +1,5 @@
 Learning Deep Learning with MinPy
 =================================
 
-`CS231n Homework links <https://github.com/zx0502/cs231-homework-with-MinPy>`_
+`CS231n Homework links <https://github.com/zzlab/cs231n-winter2016-homework-minpy>`_
 
