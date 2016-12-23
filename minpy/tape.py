@@ -174,17 +174,8 @@ class Tape(object):
         #   return y
         # The argmax above should not be involed in gradient computation.
         
-        total = 0.0
-        for arr in self._array_grad_records:
-            total += numpy.prod(arr.shape)
-        print('total', total / 1024.0 / 1024.0)
-
-        #import sys
-
         while len(bfs_queue) != 0:
-            print(len(self._grads), len(self._array_grad_records), len(self._result_grad_records))
-            #sys.stdout.flush()
-            #input("Press key to continue...")
+            #print(len(self._grads), len(self._array_grad_records), len(self._result_grad_records))
             current = bfs_queue.popleft()
             # Resolve all grad_records that will use gradient of the current array.
             grad_records = self._result_grad_records[current]
