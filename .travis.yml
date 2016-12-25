@@ -63,6 +63,8 @@ install:
   - cd ..
   - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-4.8 /usr/bin/gcc
   - sudo unlink /usr/bin/g++ && sudo ln -s /usr/bin/g++-4.8 /usr/bin/g++
+  # Download cifar-10 dataset
+  - . examples/dataset/cifar10/get_datasets.sh
 
 script:
   - travis/run_test.sh
