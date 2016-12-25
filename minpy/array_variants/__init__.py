@@ -17,4 +17,5 @@ class ArrayType(object):
 
 variants = {'numpy': ArrayType.NUMPY, 'mxnet': ArrayType.MXNET}
 array_types = {'numpy': numpy.array_type, 'mxnet': mxnet.array_type}
+variants_repr = {ArrayType.NUMPY: 'NumPy', ArrayType.MXNET: 'MXNet'}
 number_types = {'native': [int, float], 'numpy': numpy.number_type, 'mxnet': mxnet.number_type}

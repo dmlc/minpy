@@ -155,7 +155,7 @@ class Function(object):
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
                         for name in self._symbol.list_arguments()]
-        return self._prim(args=ordered_args, kwargs={})
+        return self._prim.call(args=ordered_args, kwargs={})
 
     # pylint: disable= missing-docstring
     def get_params(self):
