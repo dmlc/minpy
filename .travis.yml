@@ -43,9 +43,6 @@ addons:
 
 before_install:
   - git clone -b nnvm --recursive https://github.com/dmlc/mxnet.git
-  - cd mxnet
-  - git reset --hard a439e05
-  - cd ..
   # set up travis path & nnvm settings
   - source mxnet/dmlc-core/scripts/travis/travis_setup_env.sh
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/mxnet/python
