@@ -4,14 +4,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 import time
 
-import minpy
-
 from minpy.nn import optim, init
 from minpy import core
 import minpy.numpy as np
-
-from minpy.visualize.writer import SummaryWriter
-import minpy.visualize.summary_ops as summary_ops
+from minpy.visualize import visualizer as vis
 
 class Solver(object):
     """
@@ -85,13 +81,14 @@ class Solver(object):
         Training losses will be printed every print_every iterations.
     verbose : bool, optional
         If false, no output will be printed during training.
-    visualize : bool, optional
-        If false, no log files will be created during the training.
+    visualizer : str or Visualizer, optional
+        Name or visualizer object for training.
     summaries_dir : string, optional
-        if visualize is True, log files will be created in the directory declared by summaries_dir.
+        If the visualizer is tensorboard, Log files will be created in the directory
+        declared by summaries_dir.
     """
 
-    def __init__(self, model, train_dataiter, test_dataiter, **kwargs):
+    def __init__(self, model, train_dataiter, test_dataiter, visualizer='NoVisualize', **kwargs):
         self.model = model
         self.train_dataiter = train_dataiter
         self.test_dataiter = test_dataiter
@@ -107,13 +104,15 @@ class Solver(object):
 
         self.print_every = kwargs.pop('print_every', 10)
         self.verbose = kwargs.pop('verbose', True)
-        self.visualize = kwargs.pop('visualize', False)
+        # Retrieve the summary directory. Create summary writers for training and test.
+        self.summaries_dir = kwargs.pop('summaries_dir', '/private/tmp/newlog')
 
-        if self.visualize:
-            # Retrieve the summary directory. Create summary writers for training and test.
-            self.summaries_dir = kwargs.pop('summaries_dir', '/private/tmp/newlog')
-            self.train_writer = SummaryWriter(self.summaries_dir + '/train')
-            self.test_writer = SummaryWriter(self.summaries_dir + '/test')
+        if isinstance(visualizer, str):
+            self.visualizer = vis.create(visualizer, writers=['train', 'test'],
+                                         summaries_dir=self.summaries_dir)
+
+        elif isinstance(visualizer, vis.Visualizer):
+            self.visualizer = visualizer
 
         # Throw an error if there are extra keyword arguments
         if len(kwargs) > 0:
@@ -193,26 +192,16 @@ class Solver(object):
 
         self.loss_history.append(loss.asnumpy())
 
-        if self.visualize:
-            grad_norm = 0
-
         # Perform a parameter update
         for p, w in self.model.params.items():
             dw = grads[p]
-            if self.visualize:
-                norm = dw ** 2
-                while not isinstance(norm, minpy.array.Number):
-                    norm = sum(norm)
-                grad_norm += norm
             config = self.optim_configs[p]
             next_w, next_config = self.update_rule(w, dw, config)
             self.model.params[p] = next_w
             self.optim_configs[p] = next_config
 
-        if self.visualize:
-            grad_norm_summary = summary_ops.scalar_summary('squared L2-norm of the gradient',
-                                                           grad_norm)
-            self.train_writer.add_summary(grad_norm_summary, iteration)
+        self.visualizer.norm_summary('train', 'squared L2-norm of the gradient',
+                                     iteration, grads)
 
     def check_accuracy(self, dataiter, num_samples=None):
         """
@@ -276,10 +265,9 @@ class Solver(object):
                 if self.verbose and t % self.print_every == 0:
                     print('(Iteration %d / %d) loss: %f' %
                           (t + 1, num_iterations, self.loss_history[-1]))
-                if self.visualize:
-                    # Add scalar summaries of training loss.
-                    loss_summary = summary_ops.scalar_summary('loss', self.loss_history[-1])
-                    self.train_writer.add_summary(loss_summary, t)
+
+                # Call the visualizer for visualizing training loss.
+                self.visualizer.single_scalar_summary('train', 'loss', t, self.loss_history[-1])
 
                 t += 1
 
@@ -298,12 +286,9 @@ class Solver(object):
                       format(self.epoch, self.num_epochs, train_acc, val_acc,
                              time.time() - start))
 
-            # Add scalar summaries of accuracy.
-            if self.visualize:
-                val_acc_summary = summary_ops.scalar_summary('accuracy', val_acc)
-                self.test_writer.add_summary(val_acc_summary, self.epoch)
-                train_acc_summary = summary_ops.scalar_summary('accuracy', train_acc)
-                self.train_writer.add_summary(train_acc_summary, self.epoch)
+            # Visualize training accuracies and validation accuracies.
+            self.visualizer.single_scalar_summary('test', 'accuracy', self.epoch, val_acc)
+            self.visualizer.single_scalar_summary('train', 'accuracy', self.epoch, train_acc)
 
             # Keep track of the best model
             if val_acc > self.best_val_acc:
@@ -320,7 +305,5 @@ class Solver(object):
         # At the end of training swap the best params into the model
         self.model.params = self.best_params
 
-        # Close the writers.
-        if self.visualize:
-            self.train_writer.close()
-            self.test_writer.close()
+        # Close the related writers for self.visualizer.
+        self.visualizer.close()
