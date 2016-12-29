@@ -68,6 +68,7 @@ def main(args):
             grad_arrays, loss = grad_and_loss_func(*param_arrays)
             for g in grad_arrays:
                 g.get_data(minpy.array_variants.ArrayType.MXNET).wait_to_read()
+        
     dur = time.time() - start
     print('Per Loop Time: %.6f' % (dur / (args.num_loops - num_cold)))
 

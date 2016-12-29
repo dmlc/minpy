@@ -116,7 +116,7 @@ def def_grads(prims):
         argnum=1)
     prims('maximum').def_grad(_maximum_grad_gen0)
     prims('maximum').def_grad(_maximum_grad_gen1, argnum=1)
-    # TODO: minjie
+    # TODO(minjie): define gradient for max.
     prims('max').def_grad_zero()
     # negate
     prims('negative').def_grad(lambda ans, x: operator.neg)

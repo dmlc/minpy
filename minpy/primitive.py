@@ -184,7 +184,7 @@ class Primitive(object):
                     continue
                 else:
                     visited_arg_indices.add(i)
-                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(current_tape):
+                if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape):
                     if i not in self._grad_func:
                         _logger.warning('Partial derivative of func "{}" on'
                                         'argument {} is not defined.'
@@ -211,6 +211,8 @@ class Primitive(object):
                                 args[grad_index].is_marked_for_bp(current_tape)):
                                 owner.append(args[grad_index])
                             else:
+                                # Use None as placeholder for arguments that do not require
+                                # gradient computation.
                                 owner.append(None)
                             visited_arg_indices.add(grad_index)
                     grad_func = raw_value_wrapper(grad_func)
