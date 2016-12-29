@@ -17,8 +17,8 @@ from .utils import log
 _logger = log.get_logger(__name__)
 # pylint: enable=invalid-name
 
-GradRecord = collections.namedtuple(
-    'GradRecord', ['grad_func', 'result', 'owner'])
+GradRecord = collections.namedtuple('GradRecord',
+                                    ['grad_func', 'result', 'owner'])
 
 
 class Tape(object):

@@ -251,7 +251,7 @@ class Number(Value, float):
         return str(self._val)
 
     def __repr__(self):
-        return self.__str__()
+        return repr(self._val)
 
     def get_data(self, dtype):
         """Get data of given type. Directly return the underlying value here."""
@@ -302,7 +302,7 @@ class Array(Value):
         return str(self.get_data(ArrayType.NUMPY))
 
     def __repr__(self):
-        return self.__str__()
+        return repr(self.get_data(ArrayType.NUMPY))
 
     @property
     def context(self):
