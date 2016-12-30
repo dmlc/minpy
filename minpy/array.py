@@ -59,7 +59,7 @@ class Value(object):
         return self._context
 
     @property
-    def id(self):
+    def id(self): # pylint: disable= invalid-name
         """Return a unique id represents this value."""
         return self._minpy_value_id
 

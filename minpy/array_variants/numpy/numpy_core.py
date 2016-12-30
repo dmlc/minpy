@@ -161,13 +161,15 @@ def _sum_grad(_0, x, axis=None, keepdims=False):  # pylint: disable=unused-argum
     xshape = x.shape  # Only shape is needed, hope array `x` could be GC'ed.
     return lambda g: np.zeros(xshape) + np.reshape(g, ans_shape_expanded)
 
-def _softmax_output(x, y):
+def _softmax_output(x, _1):
+    """Softmax output implementation."""
     probs = np.exp(x - np.max(x, axis=1, keepdims=True))
     probs /= np.sum(probs, axis=1, keepdims=True)
     return probs
 
 def _softmax_output_grad(ans, x, y):
-    def grad(g):
+    """Gradient function for softmax output."""
+    def grad(_0): #pylint: disable= missing-docstring
         N = x.shape[0]
         return (ans - y) / N
     return grad

@@ -10,7 +10,6 @@ import collections
 import copy
 
 import numpy
-import mxnet
 
 from . import array
 from .utils import log
@@ -92,7 +91,7 @@ class Tape(object):
                 target, array.Number) else numpy.ones(target.shape))
         else:
             for sub_target in target:
-                self.set_gradient_target(sub_target)
+                self._set_gradient_target(sub_target)
 
     def _cumulate_gradient(self, arr, grad):
         """Cumulate gradients belonging to the same array.
@@ -111,6 +110,49 @@ class Tape(object):
             for sub_arr, sub_grad in zip(arr, grad):
                 self._cumulate_gradient(sub_arr, sub_grad)
 
+    def _prune_gradient_path(self, target_queue):
+        """Remove gradients that are not required to be computed.
+
+        Traversal from target to eliminate grad_records that do not
+        contribute to the target.
+        Example:
+        def foo(x):
+          y = x + 1
+          z = print(np.argmax(y))
+          return y
+        The argmax above should not be involed in gradient computation.
+        """
+        # pylint: disable= too-many-nested-blocks, too-many-branches
+        touched = set()
+        touch_queue = copy.deepcopy(target_queue)
+        while len(touch_queue) != 0:
+            current_id = touch_queue.popleft()
+            if not current_id in touched:
+                touched.add(current_id)
+            for grad_record in self._result_grad_records[current_id]:
+                owner = grad_record.owner
+                if isinstance(owner, array.Value):
+                    touch_queue.append(owner.id)
+                else:
+                    for sub_owner in owner:
+                        if isinstance(sub_owner, array.Value):
+                            touch_queue.append(sub_owner.id)
+        to_delete = []
+        for arrid, grad_records in self._result_grad_records.items():
+            if not arrid in touched:
+                for grad_record in grad_records:
+                    owner = grad_record.owner
+                    if isinstance(owner, array.Value):
+                        self._array_grad_refcount[owner.id] -= 1
+                    else:
+                        for sub_owner in owner:
+                            if isinstance(sub_owner, array.Value):
+                                self._array_grad_refcount[sub_owner.id] -= 1
+                to_delete.append(arrid)
+        for arrid in to_delete:
+            self._result_grad_records.pop(arrid, None)
+        # pylint: enable= too-many-nested-blocks, too-many-branches
+
     def get_gradient(self, origin, target):
         """Get gradient of the specified array.
 
@@ -124,7 +166,7 @@ class Tape(object):
         origin
             A tuple of array objects representing the inputs.
 
-        target 
+        target
             Array or a tuple of array representing the target.
 
         Returns
@@ -153,7 +195,7 @@ class Tape(object):
                 return grad_record.grad_func(self._grads[grad_record.result.id])
             else:
                 return grad_record.grad_func(
-                        tuple(self._grads[rst.id] for rst in grad_record.result))
+                    tuple(self._grads[rst.id] for rst in grad_record.result))
 
         origin_id = tuple(arr.id for arr in origin)
 
@@ -168,47 +210,12 @@ class Tape(object):
             for sub_target in target:
                 bfs_queue.append(sub_target.id)
 
-        # First do one extra traversal from target to eliminate grad_records that do not
-        # contribute to the target.
-        # Example:
-        # def foo(x):
-        #   y = x + 1
-        #   z = print(np.argmax(y))
-        #   return y
-        # The argmax above should not be involed in gradient computation.
-        touched = set()
-        touch_queue = copy.deepcopy(bfs_queue)
-        while len(touch_queue) != 0:
-            current_id = touch_queue.popleft()
-            if not current_id in touched:
-                touched.add(current_id)
-            for grad_record in self._result_grad_records[current_id]:
-                owner = grad_record.owner
-                if isinstance(owner, array.Value):
-                    touch_queue.append(owner.id)
-                else:
-                    for sub_owner in owner:
-                        if isinstance(sub_owner, array.Value):
-                            touch_queue.append(sub_owner.id)
-        to_delete = []
-        for arrid, grad_records in self._result_grad_records.items():
-            if not arrid in touched:
-                for grad_record in grad_records:
-                    owner = grad_record.owner
-                    if isinstance(owner, array.Value):
-                        self._array_grad_refcount[owner.id] -= 1
-                    else:
-                        for sub_owner in owner:
-                            if isinstance(sub_owner, array.Value):
-                                self._array_grad_refcount[sub_owner.id] -= 1
-                to_delete.append(arrid)
-        for arrid in to_delete:
-            self._result_grad_records.pop(arrid, None)
+        # First do an extra traversal to remove extra gradients.
+        self._prune_gradient_path(bfs_queue)
 
         # Compute gradients from target to origin.
         while len(bfs_queue) != 0:
             current_id = bfs_queue.popleft()
-            #print('pop', current_id)
             # Resolve all grad_records that will use gradient of the current array.
             grad_records = self._result_grad_records[current_id]
             while len(grad_records) != 0:
@@ -221,7 +228,6 @@ class Tape(object):
                 # before calling this function.
                 grad = compute_grad_record(grad_record)
                 owner = grad_record.owner
-                #print('add to', owner.id)
                 self._cumulate_gradient(owner, grad)
                 # Remove grad_record in forward path and trigger those arrays
                 # whose grad_records in the forward path have been resolved.

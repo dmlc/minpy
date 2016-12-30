@@ -52,7 +52,7 @@ def _sum_grad(ans, x, axis=None, keepdims=False):
     if axis is None:
         def grad(g):
             """Gradient for scalar."""
-            if isinstance(g, float) or isinstance(g, int):
+            if isinstance(g, (float, int)):
                 return mx.nd.full(x.shape, g, x.context)
             else:
                 return mx.nd.full(x.shape, g.asscalar(), x.context)
@@ -69,13 +69,15 @@ def _sum_grad(ans, x, axis=None, keepdims=False):
     return lambda g: mx.nd.zeros(xshape, ctx=g.context) + g.reshape(tuple(ans_shape_expanded))
     # pylint: enable=unused-argument
 
-def _softmax_output(x, y):
+def _softmax_output(x, _1):
+    """Softmax output implementation."""
     probs = mx.nd.exp(x - mx.nd.max(x, axis=1, keepdims=True))
     probs /= mx.nd.sum(probs, axis=1, keepdims=True)
     return probs
 
 def _softmax_output_grad(ans, x, y):
-    def grad(g):
+    """Gradient function for softmax output."""
+    def grad(_0): #pylint: disable= missing-docstring
         N = x.shape[0]
         return (ans - y) / N
     return grad
