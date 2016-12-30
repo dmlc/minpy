@@ -232,11 +232,12 @@ class Tape(object):
                 # Remove grad_record in forward path and trigger those arrays
                 # whose grad_records in the forward path have been resolved.
                 if isinstance(owner, array.Value):
-                    decr_refcount(owner) and bfs_queue.append(owner.id)
+                    if decr_refcount(owner):
+                        bfs_queue.append(owner.id)
                 elif owner is not None:
                     for sub_owner in owner:
-                        if isinstance(sub_owner, array.Value):
-                            decr_refcount(sub_owner) and bfs_queue.append(sub_owner.id)
+                        if isinstance(sub_owner, array.Value) and decr_refcount(sub_owner):
+                            bfs_queue.append(sub_owner.id)
             # Release memory of the gradient of the current array.
             self._result_grad_records.pop(current_id, None)
             if not current_id in origin_id:
