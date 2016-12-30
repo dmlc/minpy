@@ -1,3 +1,5 @@
+import sys
+
 from minpy.core import grad
 import minpy.numpy as np
 import minpy.numpy.random as random
@@ -41,11 +43,13 @@ def test_logistic():
     
     training_gradient_fun = grad(training_loss)
     
-    for i in range(200):
-        print('Trained accuracy #{}: {}%'.format(i, training_accuracy(weights,
-                                                                      inputs)))
+    for i in range(50):
+        acc = training_accuracy(weights, inputs)
+        print('Trained accuracy #{}: {}%'.format(i, acc))
         gr = training_gradient_fun(weights, inputs)
         weights -= gr * 0.01
 
+    return acc > 99.0
+
 if __name__ == "__main__":
-    test_logistic()
+    sys.exit(not test_logistic())

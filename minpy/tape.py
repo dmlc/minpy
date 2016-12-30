@@ -4,8 +4,10 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import with_statement
+
 import contextlib
 import collections
+import copy
 
 import numpy
 import mxnet
@@ -69,6 +71,7 @@ class Tape(object):
         grad_rec = GradRecord(grad_func=grad_func, result=result, owner=owner)
         # Create forward derivation path.
         if isinstance(owner, array.Value):
+            #print('add', owner.id)
             self._array_grad_refcount[owner.id] += 1
         elif owner is not None: # None means a placeholder for an array that needs no gradient.
             for sub_owner in owner:
@@ -98,7 +101,7 @@ class Tape(object):
         """
         if isinstance(arr, array.Value):
             current_gradient = array.wrap(grad)
-            if arr in self._grads:
+            if arr.id in self._grads:
                 self._grads[arr.id] += current_gradient
             else:
                 self._grads[arr.id] = current_gradient
@@ -129,8 +132,8 @@ class Tape(object):
         tuple of Array
             The gradient of input arrays.
         """
-        def remove_grad_record(owner, grad_record):
-            """Remove gradient record from owner.
+        def decr_refcount(owner):
+            """Decrement the reference count of the given owner.
 
             Return true if the owner has no other grad records to be resolved
             (and thus has finished gradient computation).
@@ -160,26 +163,54 @@ class Tape(object):
         # Initialize bfs queue.
         bfs_queue = collections.deque()
         if isinstance(target, array.Value):
-            bfs_queue.append(target)
+            bfs_queue.append(target.id)
         else:
             for sub_target in target:
-                bfs_queue.append(sub_target)
+                bfs_queue.append(sub_target.id)
 
-        # TODO(minjie): require an extra traversal before this to eliminate
-        # those grad_records that do not contribute to the target.
+        # First do one extra traversal from target to eliminate grad_records that do not
+        # contribute to the target.
         # Example:
         # def foo(x):
         #   y = x + 1
-        #   z = print(np.argmax(x))
+        #   z = print(np.argmax(y))
         #   return y
         # The argmax above should not be involed in gradient computation.
+        touched = set()
+        touch_queue = copy.deepcopy(bfs_queue)
+        while len(touch_queue) != 0:
+            current_id = touch_queue.popleft()
+            if not current_id in touched:
+                touched.add(current_id)
+            for grad_record in self._result_grad_records[current_id]:
+                owner = grad_record.owner
+                if isinstance(owner, array.Value):
+                    touch_queue.append(owner.id)
+                else:
+                    for sub_owner in owner:
+                        if isinstance(sub_owner, array.Value):
+                            touch_queue.append(sub_owner.id)
+        to_delete = []
+        for arrid, grad_records in self._result_grad_records.items():
+            if not arrid in touched:
+                for grad_record in grad_records:
+                    owner = grad_record.owner
+                    if isinstance(owner, array.Value):
+                        self._array_grad_refcount[owner.id] -= 1
+                    else:
+                        for sub_owner in owner:
+                            if isinstance(sub_owner, array.Value):
+                                self._array_grad_refcount[sub_owner.id] -= 1
+                to_delete.append(arrid)
+        for arrid in to_delete:
+            self._result_grad_records.pop(arrid, None)
 
+        # Compute gradients from target to origin.
         while len(bfs_queue) != 0:
-            #print(len(self._grads), len(self._array_grad_refcount), len(self._result_grad_records))
-            #print(self._grads.keys(), self._array_grad_refcount.keys(), self._result_grad_records.keys())
-            current = bfs_queue.popleft()
+            current_id = bfs_queue.popleft()
+            #print('pop', current_id)
             # Resolve all grad_records that will use gradient of the current array.
-            grad_records = self._result_grad_records[current.id]
+            grad_records = self._result_grad_records[current_id]
             while len(grad_records) != 0:
                 grad_record = grad_records.pop()
                 # TODO(minjie): add primitive_type info in debug info later.
@@ -190,20 +221,20 @@ class Tape(object):
                 # before calling this function.
                 grad = compute_grad_record(grad_record)
                 owner = grad_record.owner
+                #print('add to', owner.id)
                 self._cumulate_gradient(owner, grad)
                 # Remove grad_record in forward path and trigger those arrays
                 # whose grad_records in the forward path have been resolved.
                 if isinstance(owner, array.Value):
-                    remove_grad_record(owner, grad_record) and bfs_queue.append(owner)
+                    decr_refcount(owner) and bfs_queue.append(owner.id)
                 elif owner is not None:
                     for sub_owner in owner:
                         if isinstance(sub_owner, array.Value):
-                            (remove_grad_record(sub_owner, grad_record) and
-                             bfs_queue.append(sub_owner))
+                            decr_refcount(sub_owner) and bfs_queue.append(sub_owner.id)
             # Release memory of the gradient of the current array.
-            self._result_grad_records.pop(current.id, None)
-            if not current.id in origin_id:
-                self._grads.pop(current.id, None)
+            self._result_grad_records.pop(current_id, None)
+            if not current_id in origin_id:
+                self._grads.pop(current_id, None)
 
         # TODO(minjie): If the gradient cannot be computed, this should return a zero array
         # of proper shape.

@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import mxnet as mx
+import minpy.numpy as mp
 from minpy import core
 import minpy.nn.layers as layers
 import minpy.utils.gradient_checker as gradient_checker
@@ -9,6 +10,22 @@ import minpy.dispatch.policy as plc
 rng = np.random.RandomState(42)
 
 def test_layers():
+    
+    def test_basic():
+        @core.convert_args
+        def check_fn(x):
+            return mp.sum(x + x)
+        x = rng.randn(10, 5)
+        return gradient_checker.quick_grad_check(check_fn, x, rs=rng)
+
+    def test_forward_unused():
+        @core.convert_args
+        def check_fn(x):
+            y = x + 1
+            print(mp.exp(y))
+            return mp.sum(2 * y)
+        x = rng.randn(10, 5)
+        return gradient_checker.quick_grad_check(check_fn, x, rs=rng)
 
     def test_affine():
         x = rng.randn(20, 10)
@@ -105,7 +122,9 @@ def test_layers():
     
         return gradient_checker.quick_grad_check(check_fn, weights, rs=rng)
 
-    return (test_affine()
+    return (test_basic()
+            and test_forward_unused()
+            and test_affine()
             and test_relu()
             and test_batchnorm()
             and test_softmax()

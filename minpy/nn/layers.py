@@ -171,35 +171,6 @@ def svm_loss(x, y):
     return loss
 
 
-def softmax_loss(x, y):
-    """
-    Computes the loss and gradient for softmax classification.
-
-    Inputs:
-    - x: Input data, of shape (N, C) where x[i, j] is the score for the jth class
-      for the ith input.
-    - y: Either of the followings:
-      - One hot encoding of labels, of shape (N, C)
-      - Label index of shape (N, ), each y[i] is the label of i^th example
-        (0 <= y[i] < C)
-
-    Returns a tuple of:
-    - loss: Scalar giving the loss
-    """
-    N = x.shape[0]
-    C = x.shape[1]
-    if len(y.shape) == 1:
-        #convert it to one hot encoding
-        onehot_y = np.zeros([N, C])
-        np.onehot_encode(y, onehot_y)
-    else:
-        onehot_y = y
-    probs = x - np.max(x, axis=1, keepdims=True)
-    loss = -np.sum(probs * onehot_y) / N
-    loss += np.sum(np.log(np.sum(np.exp(probs), axis=1, keepdims=True))) / N
-    return loss
-
-
 def softmax_cross_entropy(prob, label):
     """
     Computes the cross entropy for softmax activation.
@@ -225,6 +196,33 @@ def softmax_cross_entropy(prob, label):
     else:
         onehot_label = label
     return -np.sum(np.log(prob) * onehot_label) / N
+
+
+def softmax_loss(x, label):
+    """
+    Computes the loss and gradient for softmax classification.
+
+    Inputs:
+    - x: Input data, of shape (N, C) where x[i, j] is the score for the jth class
+      for the ith input.
+    - y: Either of the followings:
+      - One hot encoding of labels, of shape (N, C)
+      - Label index of shape (N, ), each y[i] is the label of i^th example
+        (0 <= y[i] < C)
+
+    Returns a tuple of:
+    - loss: Scalar giving the loss
+    """
+    N = x.shape[0]
+    C = x.shape[1]
+    if len(label.shape) == 1:
+        #convert it to one hot encoding
+        onehot_label = np.zeros([N, C])
+        np.onehot_encode(label, onehot_label)
+    else:
+        onehot_label = label
+    prob = np.softmax_output(x, onehot_label)
+    return softmax_cross_entropy(prob, onehot_label)
 
 
 def l2_loss(x, label):
