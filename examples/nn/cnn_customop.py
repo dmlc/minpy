@@ -28,7 +28,7 @@ num_classes = 10
 
 
 @customop('numpy')
-def softmax(x, y):
+def my_softmax(x, y):
     probs = numpy.exp(x - numpy.max(x, axis=1, keepdims=True))
     probs /= numpy.sum(probs, axis=1, keepdims=True)
     N = x.shape[0]
@@ -36,7 +36,7 @@ def softmax(x, y):
     return loss
 
 
-def softmax_grad(ans, x, y):
+def my_softmax_grad(ans, x, y):
     def grad(g):
         N = x.shape[0]
         probs = numpy.exp(x - numpy.max(x, axis=1, keepdims=True))
@@ -47,7 +47,7 @@ def softmax_grad(ans, x, y):
 
     return grad
 
-softmax.def_grad(softmax_grad)
+my_softmax.def_grad(my_softmax_grad)
 
 
 class ConvolutionNet(ModelBase):
@@ -86,7 +86,7 @@ class ConvolutionNet(ModelBase):
         return out
 
     def loss(self, predict, y):
-        return softmax(predict, y)
+        return my_softmax(predict, y)
 
 
 def main(args):

@@ -43,16 +43,25 @@ class Value(object):
 
     def is_marked_for_bp(self, tape):
         """Return whether the current `Value` will be used for autograd."""
-        return tape != None and self._bp_timestamp == tape.timestamp
+        return tape != None and tape.is_recording and self._bp_timestamp == tape.timestamp
 
     def mark_for_bp(self, tape):
         """Set flag to record gradient information."""
         self._bp_timestamp = tape.timestamp
 
+    def wait_to_read(self):
+        """Wait for the internal data to be computed."""
+        pass
+
     @property
     def context(self):
         """Return context of current `Value`."""
         return self._context
+
+    @property
+    def id(self): # pylint: disable= invalid-name
+        """Return a unique id represents this value."""
+        return self._minpy_value_id
 
     def __hash__(self):
         return id(self)
@@ -486,6 +495,15 @@ class Array(Value):
     def size(self):
         """Get number of elements in the array."""
         return self._get_latest_data().size
+
+    def wait_to_read(self):
+        """Wait until the internal data has been calculated.
+
+        If the array only contains numpy data, it will simply return. Otherwise,
+        it will wait until the mxnet data is finished.
+        """
+        if self.has_type(ArrayType.MXNET):
+            self.get_data(ArrayType.MXNET).wait_to_read()
 
 def _make_wrapper_types():
     """Create dictionary from underlying data type to its wrapper type.

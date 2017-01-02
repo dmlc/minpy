@@ -161,6 +161,18 @@ def _sum_grad(_0, x, axis=None, keepdims=False):  # pylint: disable=unused-argum
     xshape = x.shape  # Only shape is needed, hope array `x` could be GC'ed.
     return lambda g: np.zeros(xshape) + np.reshape(g, ans_shape_expanded)
 
+def _softmax_output(x, _1):
+    """Softmax output implementation."""
+    probs = np.exp(x - np.max(x, axis=1, keepdims=True))
+    probs /= np.sum(probs, axis=1, keepdims=True)
+    return probs
+
+def _softmax_output_grad(ans, x, y):
+    """Gradient function for softmax output."""
+    def grad(_0): #pylint: disable= missing-docstring
+        N = x.shape[0]
+        return (ans - y) / N
+    return grad
 
 # TODO: Clean one of the implementations
 # import sys
@@ -203,6 +215,7 @@ def register_primitives(reg, prim_wrapper):
     reg.register('_minpy_getitem', prim_wrapper(_minpy_getitem))
     reg.register('sigmoid', prim_wrapper(_sigmoid))
     reg.register('onehot_encode', prim_wrapper(_onehot_encode))
+    reg.register('softmax_output', prim_wrapper(_softmax_output))
 
 
 def def_grads(prims):
@@ -288,3 +301,4 @@ def def_grads(prims):
     prims('expand_dims').def_grad(
         lambda ans, x, axis: lambda g: np.reshape(g, x.shape))
     prims('sigmoid').def_grad(lambda ans, x: lambda g: g * ans * (1 - ans))
+    prims('softmax_output').def_grad(_softmax_output_grad)

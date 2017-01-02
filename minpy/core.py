@@ -39,15 +39,28 @@ def grad_and_loss(func, argnum=0):
         arrays = tuple(array.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
         with tape.tape() as current_tape:
+            current_tape.start_recording()
             for i in argnums:
                 arrays[i].mark_for_bp(current_tape)
-            result_array = func(*arrays)
+            result = func(*arrays)
+            current_tape.stop_recording()
+            # TODO(minjie): wait for result value to be finished. This prevents
+            # backward propagation to be run in parallel with forward propagation.
+            # The main reason this is not allowed right now is due to the potential
+            # large memory consumption. This should be fixed by a more systemetic
+            # way in the future.
+            if isinstance(result, array.Value):
+                result.wait_to_read()
+            else:
+                for rst in result:
+                    rst.wait_to_read()
             _logger.debug('Forward pass finished. Start backward pass.')
-            current_tape.set_gradient_target(result_array)
-            grad_vals = tuple(current_tape.get_gradient(arrays[i]) for i in argnums)
+            # Get gradient using result as target.
+            grad_vals = current_tape.get_gradient(
+                tuple(arrays[i] for i in argnums), result)
             if len(grad_vals) == 1:
                 grad_vals = grad_vals[0]
-        return grad_vals, result_array
+        return grad_vals, result
 
     return wrapped
 

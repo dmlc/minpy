@@ -242,8 +242,7 @@ class Primitive(object):
                     continue
                 else:
                     visited_arg_indices.add(i)
-                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
-                        current_tape):
+                if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape):
                     if i not in self._grad_func:
                         _logger.debug('Partial derivative of {} "{}" on'
                                       'argument {} is not defined.'
@@ -271,6 +270,8 @@ class Primitive(object):
                                     args[grad_index].is_marked_for_bp(current_tape)):
                                     owner.append(args[grad_index])
                                 else:
+                                    # Use None as placeholder for arguments that do not require
+                                    # gradient computation.
                                     owner.append(None)
                                 visited_arg_indices.add(grad_index)
                         grad_func = raw_value_wrapper(grad_func)  # pylint: disable=redefined-variable-type
@@ -279,7 +280,7 @@ class Primitive(object):
                     current_tape.add_partial_derivative(grad_func, owner,
                                                         result)
             for k, arg in kwargs.items():
-                if hasattr(arg, 'is_marked_for_bp') and arg.is_marked_for_bp(
+                if isinstance(arg, array.Value) and arg.is_marked_for_bp(
                         current_tape):
                     if k not in self._grad_func_kw:
                         _logger.debug(
