@@ -29,10 +29,11 @@ Why obsessed with NumPy interface? First of all, programming in NumPy is very na
 
 Tensorflow is just one typical example, many other packages (e.g. Theano, or even MXNet) have similar problems. The underlying reason is the trade-off between *symbolic programming* and *imperative programming*. Codes in symbolic programs (Tensorflow and Theano) are *not* doing concrete computation but generating dataflow graph instead. This enables extensive optimizations but requires reinventing almost all language constructs (like if and loop). Imperative programs (NumPy) generates dataflow graph *along with* the computation, so you could freely query or use the value just computed. For a rough analogy, symbolic programming is like C++, where you have two stages: compilation (generating dataflow graph) and execution (concrete evaluation), while imperative programming is like Python -- it is easy to tweak but less efficient.
 
-In MinPy, we choose imperative programming (NumPy syntax) to ease your programming, and to achieve good performance at the same time.
+In MinPy, we use NumPy syntax to ease your programming, while achieving good performance at the same time.
 
 ## Is MinPy fast?
 The imperative interface does raise many challenges, but MinPy is managed to achieve good speed when the workload is not too tiny.
+
 (MLP performance chart)
 
 (RNN performance chart)
@@ -49,7 +50,7 @@ git clone --recursive -b engine https://github.com/dmlc/mxnet.git
 ```
 Please read [installation guide](https://minpy.readthedocs.io/en/latest/get-started/install.html) for more details.
 
-### Numpy version
+### NumPy version
 
 Minpy prototypes a pure Numpy interface. To make the interface consistent, please make sure Numpy version >= 1.10.0 before install Minpy.
 
