@@ -34,9 +34,7 @@ In MinPy, we use NumPy syntax to ease your programming, while achieving good per
 ## Is MinPy fast?
 The imperative interface does raise many challenges, but MinPy is managed to achieve good speed when the workload is not too tiny.
 
-(MLP performance chart)
-
-(RNN performance chart)
+![benchmark](https://raw.githubusercontent.com/dmlc/web-data/master/minpy/benchmark.png)
 
 
 ## Get Started
