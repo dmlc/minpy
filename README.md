@@ -18,7 +18,7 @@ import minpy.numpy as np
 Why obsessed with NumPy interface? First of all, programming in NumPy is very nature and has been favored by academic researches for many years. To have a taste of its flexibility, let's look at some examples below.
 
 ### Printing and Debugging
-(code snipplet)
+![printing](https://raw.githubusercontent.com/dmlc/web-data/master/minpy/p1.png)
 
 ### Data-dependent branches
 (code snipplet)
