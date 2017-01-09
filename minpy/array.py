@@ -402,14 +402,17 @@ class Array(Value):
                 nparray, ctx=self._context.as_mxnet_context())
         self._latest_version = None
 
-    def enforce_data(self, dtype):
-        """Enforce array data of given type."""
-        if self._latest_version is not None and self._latest_version != dtype:
-            self._synchronize_data()
-
     def get_data(self, dtype):
         """Get array data of given type."""
-        self.enforce_data(dtype)
+        if self._latest_version is not None and self._latest_version != dtype:
+            self._synchronize_data()
+        return self._data[dtype]
+
+    def get_data_mutable(self, dtype):
+        """Get exclusive access to array data of given type."""
+        if self._latest_version is not None and self._latest_version != dtype:
+            self._synchronize_data()
+        self._latest_version = dtype
         return self._data[dtype]
 
     @property
@@ -433,13 +436,6 @@ class Array(Value):
         This will return a copied array of numpy.ndarray type
         """
         return numpy.array(self.get_data(ArrayType.NUMPY))
-
-    def get_data_mutable(self, dtype):
-        """Get exclusive access to array data of given type."""
-        if self._latest_version is not None and self._latest_version != dtype:
-            self._synchronize_data()
-        self._latest_version = dtype
-        return self._data[dtype]
 
     @property
     def shape(self):
@@ -532,19 +528,8 @@ def wrap(data):
     """
     if data is None:
         return None
-    if hasattr(data, '_minpy_value_id'):
+    if isinstance(data, Value):
         return data
     else:
         dtype = type(data)
         return _wrapper_types[dtype](data)
-
-    '''
-    elif isinstance(data, list):
-        return [wrap(d) for d in data]
-    elif isinstance(data, tuple):
-        return tuple(wrap(d) for d in data)
-    elif isinstance(data, dict):
-        return {k: wrap(v) for k, v in data.items()}
-    else:
-        raise TypeError('Cannot wrap type of "{}".'.format(dtype))
-    '''
