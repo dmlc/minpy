@@ -7,7 +7,7 @@ import time
 from minpy.nn import optim, init
 from minpy import core
 import minpy.numpy as np
-
+from minpy.visualize import visualizer as vis
 
 class Solver(object):
     """
@@ -81,9 +81,14 @@ class Solver(object):
         Training losses will be printed every print_every iterations.
     verbose : bool, optional
         If false, no output will be printed during training.
+    visualizer : str or Visualizer, optional
+        Name or visualizer object for training.
+    summaries_dir : string, optional
+        If the visualizer is tensorboard, Log files will be created in the directory
+        declared by summaries_dir.
     """
 
-    def __init__(self, model, train_dataiter, test_dataiter, **kwargs):
+    def __init__(self, model, train_dataiter, test_dataiter, visualizer='NoVisualize', **kwargs):
         self.model = model
         self.train_dataiter = train_dataiter
         self.test_dataiter = test_dataiter
@@ -99,6 +104,15 @@ class Solver(object):
 
         self.print_every = kwargs.pop('print_every', 10)
         self.verbose = kwargs.pop('verbose', True)
+        # Retrieve the summary directory. Create summary writers for training and test.
+        self.summaries_dir = kwargs.pop('summaries_dir', '/private/tmp/newlog')
+
+        if isinstance(visualizer, str):
+            self.visualizer = vis.create(visualizer, writers=['train', 'test'],
+                                         summaries_dir=self.summaries_dir)
+
+        elif isinstance(visualizer, vis.Visualizer):
+            self.visualizer = visualizer
 
         # Throw an error if there are extra keyword arguments
         if len(kwargs) > 0:
@@ -157,7 +171,7 @@ class Solver(object):
         self.train_dataiter.reset()
         self.test_dataiter.reset()
 
-    def _step(self, batch):
+    def _step(self, batch, iteration):
         """
         Make a single gradient update. This is called by train() and should not
         be called manually.
@@ -185,6 +199,9 @@ class Solver(object):
             next_w, next_config = self.update_rule(w, dw, config)
             self.model.params[p] = next_w
             self.optim_configs[p] = next_config
+
+        self.visualizer.norm_summary('train', 'squared L2-norm of the gradient',
+                                     iteration, grads)
 
     def check_accuracy(self, dataiter, num_samples=None):
         """
@@ -243,11 +260,15 @@ class Solver(object):
             start = time.time()
             self.epoch = epoch + 1
             for each_batch in self.train_dataiter:
-                self._step(each_batch)
+                self._step(each_batch, t)
                 # Maybe print training loss
                 if self.verbose and t % self.print_every == 0:
                     print('(Iteration %d / %d) loss: %f' %
                           (t + 1, num_iterations, self.loss_history[-1]))
+
+                # Call the visualizer for visualizing training loss.
+                self.visualizer.single_scalar_summary('train', 'loss', t, self.loss_history[-1])
+
                 t += 1
 
             # evaluate after each epoch
@@ -265,6 +286,10 @@ class Solver(object):
                       format(self.epoch, self.num_epochs, train_acc, val_acc,
                              time.time() - start))
 
+            # Visualize training accuracies and validation accuracies.
+            self.visualizer.single_scalar_summary('test', 'accuracy', self.epoch, val_acc)
+            self.visualizer.single_scalar_summary('train', 'accuracy', self.epoch, train_acc)
+
             # Keep track of the best model
             if val_acc > self.best_val_acc:
                 self.best_val_acc = val_acc
@@ -279,3 +304,6 @@ class Solver(object):
 
         # At the end of training swap the best params into the model
         self.model.params = self.best_params
+
+        # Close the related writers for self.visualizer.
+        self.visualizer.close()
