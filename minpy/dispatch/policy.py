@@ -41,7 +41,7 @@ class Policy(object):
         self._numpy_op_stat = defaultdict(int)
         self._old_policy = None
 
-    def _decide(self, candidates, args, kwargs):
+    def decide(self, candidates):
         """Primitive decision policy interface.
 
         Note that this method is only used for default resolve_call.
@@ -50,10 +50,6 @@ class Policy(object):
         ----------
         candidates : list
             A list of primitive objects.
-        args : list
-            The positional arguments passed to the primitive.
-        kwargs : dict
-            The keyword arguments passed to the primitive.
 
         Returns
         -------
@@ -61,6 +57,36 @@ class Policy(object):
             The implementation type decided by the policy.
         """
         raise NotImplementedError()
+
+    def resolve_call(self, name, reg, args, kwargs):
+        """Resolve a function call.
+
+        Parameters
+        ----------
+        name : str
+            Name of the function.
+        reg
+            Registry for functions.
+        args : tuple
+            Positional arguments.
+        kwargs : dict
+            Keyword arguments.
+
+        Returns
+        -------
+        Result from appropriate function call.
+        """
+        available = Policy._available_prims(name, reg, args, kwargs)
+        preference = self.decide(available)
+        if preference == ArrayType.MXNET:
+            self._mxnet_op_stat[name] += 1
+        elif preference == ArrayType.NUMPY:
+            self._numpy_op_stat[name] += 1
+        elif preference is None:
+            raise PrimitivePolicyError(name, self.name)
+        prim = reg.get(name, preference)
+        _logger.debug('Found primitive "%s" with type %s.', name, prim.typestr)
+        return prim.call(args, kwargs)
 
     def show_op_stat(self):
         """Print policy dispatch statistics."""
@@ -88,17 +114,6 @@ class Policy(object):
         """Return policy name"""
         return type(self).__name__
 
-    def __enter__(self):
-        self._old_policy = {}
-        for mod in minpy.Config['modules']:
-            self._old_policy[mod] = mod.policy
-            mod.set_policy(self)
-        return self
-
-    def __exit__(self, ptype, value, trace):
-        for mod, plc in self._old_policy.items():
-            mod.set_policy(plc)
-
     @staticmethod
     def _available_prims(name, reg, args, kwargs):
         """Return a list of available primitives"""
@@ -113,36 +128,6 @@ class Policy(object):
                               arg.is_marked_for_bp(current_tape)))
         available = reg.iter_available_types(name, bp_args, bp_kwargs)
         return available
-
-    def resolve_call(self, name, reg, args, kwargs):
-        """Resolve a function call.
-
-        Parameters
-        ----------
-        name : str
-            Name of the function.
-        reg
-            Registry for functions.
-        args : tuple
-            Positional arguments.
-        kwargs : dict
-            Keyword arguments.
-
-        Returns
-        -------
-        Result from appropriate function call.
-        """
-        available = self._available_prims(name, reg, args, kwargs)
-        preference = self._decide(available, args, kwargs)
-        if preference == ArrayType.MXNET:
-            self._mxnet_op_stat[name] += 1
-        elif preference == ArrayType.NUMPY:
-            self._numpy_op_stat[name] += 1
-        elif preference is None:
-            raise PrimitivePolicyError(name, self.name)
-        prim = reg.get(name, preference)
-        _logger.debug('Found primitive "%s" with type %s.', name, prim.typestr)
-        return prim.call(args, kwargs)
 
 
 class AutoBlacklistPolicy(Policy):
@@ -176,7 +161,7 @@ class AutoBlacklistPolicy(Policy):
             prim = reg.get(name, impl_type)
             return prim.call(args, kwargs)
 
-        available = self._available_prims(name, reg, args, kwargs)
+        available = Policy._available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)
         if ArrayType.MXNET in possible_impl and self._rules.allow(
                 name, reg.nspace, ArrayType.MXNET, args, kwargs):
@@ -235,7 +220,7 @@ class AutoBlacklistPolicy(Policy):
 class PreferMXNetPolicy(Policy):
     """ Prefer using MXNet functions. Return None if no required function. """
 
-    def _decide(self, candidates, args, kwargs):
+    def decide(self, candidates):
         possible_impl = set(x.type for x in candidates)
         if ArrayType.MXNET in possible_impl:
             return ArrayType.MXNET
@@ -248,8 +233,8 @@ class PreferMXNetPolicy(Policy):
 class OnlyNumPyPolicy(Policy):
     """ Only use NumPy functions. Return None if no required function. """
 
-    def _decide(self, candidates, args, kwargs):
-        if ArrayType.NUMPY in tuple(x.type for x in candidates):
+    def decide(self, candidates):
+        if ArrayType.NUMPY in set(x.type for x in candidates):
             return ArrayType.NUMPY
         else:
             return None
@@ -258,20 +243,20 @@ class OnlyNumPyPolicy(Policy):
 class OnlyMXNetPolicy(Policy):
     """ Only use MXNet functions. Return None if no required function. """
 
-    def _decide(self, candidates, args, kwargs):
-        if ArrayType.MXNET in tuple(x.type for x in candidates):
+    def decide(self, candidates):
+        if ArrayType.MXNET in set(x.type for x in candidates):
             return ArrayType.MXNET
         else:
             return None
 
 
-def wrap_policy(policy):
-    """Wrap a function to use specific policy
+def wrap_policy(plc):
+    """Decorate a function to use specific policy
 
     Parameters
     ----------
-    policy : Policy
-        A MinPy Policy Instance
+    plc : str or Policy object
+        The policy to be used.
 
     Returns
     -------
@@ -283,7 +268,7 @@ def wrap_policy(policy):
         @functools.wraps(func)
         def policy_wrapper(*args, **kwargs):
             old_policy = minpy.Config['default_policy']
-            minpy.set_global_policy(policy)
+            minpy.set_global_policy(plc)
             result = func(*args, **kwargs)
             minpy.set_global_policy(old_policy)
             return result
@@ -291,3 +276,26 @@ def wrap_policy(policy):
         return policy_wrapper
 
     return policy_decorator
+
+def create(plc):
+    """Create policy object.
+
+    Parameters
+    ----------
+    plc : str or Policy object
+        Name of the policy to be created.
+
+    Returns
+    -------
+        Created policy object.
+    """
+    if isinstance(plc, Policy):
+        return plc
+    elif plc == 'prefer_mxnet':
+        return PreferMXNetPolicy()
+    elif plc == 'only_numpy':
+        return OnlyNumPyPolicy()
+    elif plc == 'only_mxnet':
+        return OnlyMXNetPolicy()
+    else:
+        raise TypeError('Unknown policy name %s' % plc)

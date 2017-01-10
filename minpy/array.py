@@ -36,6 +36,7 @@ class Value(object):
     def __init__(self, context):
         self._bp_timestamp = -1
         self._minpy_value_id = next(self._ids)
+        self._context = context
         if context is None:
             self._context = current_context()
         else:
@@ -276,27 +277,14 @@ class Array(Value):
     2. Redirect normal member functions to correct member functions of
     underlying array object.
     """
-    __slots__ = ['_data', '_latest_version']
+    __slots__ = ['_data', '_latest_version', '_dtype']
     __array_priority__ = 100.0  # Highest priority when compute with numpy.ndarray.
 
-    def __init__(self, data, context=None):
+    def __init__(self, data, atype, context=None):
         super(Array, self).__init__(context)
-        self._data = {}
-        atype = Array.to_array_type(data)
-        self._data[atype] = data
+        self._data = {atype: data}
         self._latest_version = atype
         self._dtype = data.dtype
-
-    @staticmethod
-    def to_array_type(arr):
-        """ Return the type enum of the given array """
-        atype = type(arr)
-        if atype == array_types['numpy']:
-            return ArrayType.NUMPY
-        elif atype == array_types['mxnet']:
-            return ArrayType.MXNET
-        else:
-            raise TypeError('Array data of type {} unknown.'.format(atype))
 
     def __str__(self):
         return str(self.get_data(ArrayType.NUMPY))
@@ -402,14 +390,17 @@ class Array(Value):
                 nparray, ctx=self._context.as_mxnet_context())
         self._latest_version = None
 
-    def enforce_data(self, dtype):
-        """Enforce array data of given type."""
-        if self._latest_version is not None and self._latest_version != dtype:
-            self._synchronize_data()
-
     def get_data(self, dtype):
         """Get array data of given type."""
-        self.enforce_data(dtype)
+        if self._latest_version is not None and self._latest_version != dtype:
+            self._synchronize_data()
+        return self._data[dtype]
+
+    def get_data_mutable(self, dtype):
+        """Get exclusive access to array data of given type."""
+        if self._latest_version is not None and self._latest_version != dtype:
+            self._synchronize_data()
+        self._latest_version = dtype
         return self._data[dtype]
 
     @property
@@ -433,13 +424,6 @@ class Array(Value):
         This will return a copied array of numpy.ndarray type
         """
         return numpy.array(self.get_data(ArrayType.NUMPY))
-
-    def get_data_mutable(self, dtype):
-        """Get exclusive access to array data of given type."""
-        if self._latest_version is not None and self._latest_version != dtype:
-            self._synchronize_data()
-        self._latest_version = dtype
-        return self._data[dtype]
 
     @property
     def shape(self):
@@ -532,19 +516,12 @@ def wrap(data):
     """
     if data is None:
         return None
-    if hasattr(data, '_minpy_value_id'):
+    if isinstance(data, Value):
         return data
+    elif isinstance(data, array_types['mxnet']):
+        return Array(data, ArrayType.MXNET)
+    elif isinstance(data, array_types['numpy']):
+        return Array(data, ArrayType.NUMPY)
     else:
         dtype = type(data)
         return _wrapper_types[dtype](data)
-
-    '''
-    elif isinstance(data, list):
-        return [wrap(d) for d in data]
-    elif isinstance(data, tuple):
-        return tuple(wrap(d) for d in data)
-    elif isinstance(data, dict):
-        return {k: wrap(v) for k, v in data.items()}
-    else:
-        raise TypeError('Cannot wrap type of "{}".'.format(dtype))
-    '''

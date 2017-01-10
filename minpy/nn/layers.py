@@ -272,7 +272,7 @@ def rnn_step(x, prev_h, Wx, Wh, b):
     Returns a tuple of:
     - next_h: Next hidden state, of shape (N, H)
     """
-    next_h = np.tanh(x.dot(Wx) + prev_h.dot(Wh) + b)
+    next_h = np.tanh(np.dot(x, Wx) + np.dot(prev_h, Wh) + b)
     return next_h
 
 

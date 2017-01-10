@@ -59,7 +59,7 @@ def main(args):
             return model.loss(f, label)
         if args.only_forward:
             loss = loss_func()
-            loss.get_data(minpy.array_variants.ArrayType.MXNET).wait_to_read()
+            loss.wait_to_read()
         else:
             param_arrays = list(model.params.values())
             param_keys = list(model.params.keys())
@@ -67,7 +67,7 @@ def main(args):
                 loss_func, argnum=range(len(param_arrays)))
             grad_arrays, loss = grad_and_loss_func(*param_arrays)
             for g in grad_arrays:
-                g.get_data(minpy.array_variants.ArrayType.MXNET).wait_to_read()
+                g.wait_to_read()
         
     dur = time.time() - start
     print('Per Loop Time: %.6f' % (dur / (args.num_loops - num_cold)))
@@ -82,4 +82,6 @@ if __name__ == '__main__':
     parser.add_argument('--num-classes', default=10, type=int)
     parser.add_argument('--num-unroll-steps', default=30, type=int)
     parser.add_argument('--num-loops', default=20, type=int)
+    #import profile
+    #profile.run('main(parser.parse_args())')
     main(parser.parse_args())

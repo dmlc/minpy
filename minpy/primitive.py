@@ -60,7 +60,6 @@ class FakeGradFunc(object):
     def __call__(self, grad_value):
         raise NoGradientFuncError(self.func_name, self.arg)
 
-
 class Primitive(object):
     """Class for primitives. It includes both forward function and gradient definition."""
     # pylint: disable=too-many-arguments
@@ -95,8 +94,8 @@ class Primitive(object):
         self._grad_func = {}
         self._grad_func_kw = {}
         self._type = ty
-        self._mutate_args = [] if mutate_args is None else mutate_args
-        self._mutate_kw = [] if mutate_kw is None else mutate_kw
+        self._mutate_args = set() if mutate_args is None else mutate_args
+        self._mutate_kw = set() if mutate_kw is None else mutate_kw
         if type_str is None:
             self._type_str = variants_repr[ty] + ' op'
         else:
@@ -134,6 +133,63 @@ class Primitive(object):
         """Wrap args for `call` method."""
         return self.call(args, kwargs)
 
+    def _convert_data(self, data, mutate):
+        """Convert data to the given array type (NumPy or MXNet).
+
+        Parameters
+        ----------
+        data : any
+            Could be arbitrary object. Usually array object.
+        mutate: bool
+            Whether this data would be mutated.
+
+        Returns
+        -------
+            The converted data.
+        """
+        wrapped_data = array.wrap(data)
+        converted = None
+        if isinstance(wrapped_data, array.Value):
+            if mutate:
+                converted = wrapped_data.get_data_mutable(self._type)
+            else:
+                converted = wrapped_data.get_data(self._type)
+            return converted
+        else:
+            # Non-array object. Return the object unchanged.
+            return data
+
+    def _convert_args(self, args, kwargs):
+        """Convert arguments to the underlying type of this primitive.
+
+        Parameters
+        ----------
+        args
+            Arguments for the wrapped function.
+        kwargs
+            Keyword arguments for the wrapped function.
+
+        Returns
+        -------
+            A tuple (arg_values, kwarg_values) represent the converted arguments.
+        """
+        arg_values = tuple(
+            self._convert_data(arg, i in self._mutate_args) for i, arg in enumerate(args))
+        kwarg_values = {
+            k: self._convert_data(arg, k in self._mutate_kw)
+            for k, arg in kwargs.items()
+        }
+        return arg_values, kwarg_values
+
+    @staticmethod
+    def _get_bp_args(args, kwargs, current_tape):
+        """Get argument indices or keywords that required gradient computation."""
+        bp_idx = tuple(idx for idx, arg in enumerate(args)
+                       if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape))
+        bp_kw = tuple(key for key, arg in kwargs.items()
+                      if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape))
+        return bp_idx, bp_kw
+
     def call(self, args, kwargs):  # pylint: disable= too-many-branches
         """Call wrapped function -- compact argument ver.
 
@@ -142,7 +198,7 @@ class Primitive(object):
         args
             Arguments for the wrapped function.
         kwargs
-            Arguments for the wrapped function.
+            Keyword arguments for the wrapped function.
 
         Returns
         -------
@@ -157,52 +213,36 @@ class Primitive(object):
         # pylint: disable=too-many-locals, too-many-nested-blocks
         _logger.debug('Calling "{}" type "{}".'.format(self._func, self.typestr))
 
-        # Check whether the result value is on the path of bp phase.
-        # If all the input arguments are not on the bp path, the result value
-        # is not as well.
-        need_bp = [False]
-        current_tape = tape.global_tape()
-
-        def get_val(val, mutate):
-            """Get value of array."""
-            wrapped_val = array.wrap(val)
-            if hasattr(wrapped_val, '_minpy_value_id'):
-                # XXX: Use list of only one element to avoid variable assignment. # pylint: disable= fixme
-                if not need_bp[0] and wrapped_val.is_marked_for_bp(current_tape):
-                    need_bp[0] = True
-                if mutate:
-                    return wrapped_val.get_data_mutable(self._type)
-                else:
-                    return wrapped_val.get_data(self._type)
-            return wrapped_val
-
-        # Get underlying data.
-        arg_values = tuple(
-            get_val(arg, i in self._mutate_args) for i, arg in enumerate(args))
-        kwargs_values = {
-            k: get_val(arg, k in self._mutate_kw)
-            for k, arg in kwargs.items()
-        }
         # Call the real function with raw value.
+        # Convert arguments.
+        arg_values, kwarg_values = self._convert_args(args, kwargs)
         if self.type == ArrayType.MXNET:
             with context.current_context().as_mxnet_context():
-                result_value = self._func(*arg_values, **kwargs_values)
+                result_value = self._func(*arg_values, **kwarg_values)
         else:
-            result_value = self._func(*arg_values, **kwargs_values)
-        # If you want to do profiling, try to use `minprof(func)`.
-        # result_value = minprof(self._func)(*arg_values, **kwargs_values)
+            result_value = self._func(*arg_values, **kwarg_values)
+
         # Wrap the result raw value with wrapper and node.
         if isinstance(result_value, tuple):
             # Multiple return values.
             result = tuple(array.wrap(ret) for ret in result_value)
         else:
-            result = array.wrap(result_value)
-        if need_bp[0]:
+            result = array.wrap(result_value) # pylint: disable= redefined-variable-type
+
+        # Check whether the result value is on the path of bp phase.
+        # If all the input arguments are not on the bp path, the result value
+        # is not as well.
+        current_tape = tape.global_tape()
+        bp_idx, bp_kw = Primitive._get_bp_args(args, kwargs, current_tape)
+        need_bp = len(bp_idx) != 0 or len(bp_kw) != 0
+
+        if need_bp:
             if isinstance(result, tuple):
                 for res in result:
                     res.mark_for_bp(current_tape)
             else:
                 result.mark_for_bp(current_tape)  # pylint: disable= no-member
+
             # Record partial derivative paths, only for `array.Value` type values.
             # If no gradient function is defined, also omit it
             visited_arg_indices = set()
@@ -229,7 +269,7 @@ class Primitive(object):
 
                 @functools.wraps(func)
                 def wrapped(result):  # pylint: disable= missing-docstring
-                    if isinstance(result, (tuple, list)):
+                    if isinstance(result, tuple):
                         result = (elm.get_data(self.type) for elm in result)
                     else:
                         result = result.get_data(self.type)  # pylint: disable= no-member
@@ -237,67 +277,69 @@ class Primitive(object):
 
                 return wrapped
 
-            for i, arg in enumerate(args):
+            # Add derivative for positional arguments.
+            for i in bp_idx:
+                arg = args[i]
                 if i in visited_arg_indices:
+                    # Derivative on this index has already been recorded.
                     continue
+                visited_arg_indices.add(i)
+                if i not in self._grad_func:
+                    _logger.debug('Partial derivative of {} "{}" on'
+                                  'argument {} is not defined.'
+                                  .format(self._type_str, self._func.__name__, i))
+                    grad_func = FakeGradFunc(self._type_str + ' ' + self._func.__name__, i)
+                    owner = arg
                 else:
-                    visited_arg_indices.add(i)
-                if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape):
-                    if i not in self._grad_func:
-                        _logger.debug('Partial derivative of {} "{}" on'
-                                      'argument {} is not defined.'
-                                      .format(self._type_str, self._func.__name__, i))
-                        grad_func = FakeGradFunc(self._type_str + ' ' + self._func.__name__, i)
+                    _logger.debug(
+                        'Adding partial derivative to func "{}" on argument {}.'.
+                        format(self._func, i))
+                    grad_func_rec = self._grad_func[i]
+                    # Save forward results and arguments in the gradient function closure
+                    # for later use.
+                    grad_func = grad_func_rec.f(result_value, *arg_values, **kwarg_values)
+
+                    if grad_func_rec.multi_grad_indices is None:
+                        # Derivative function of each argument is defined separately.
                         owner = arg
                     else:
-                        _logger.debug(
-                            'Adding partial derivative to func "{}" on argument {}.'.
-                            format(self._func, i))
-                        grad_func_rec = self._grad_func[i]
-                        # Save forward results and arguments in the gradient function closure
-                        # for later use.
-                        grad_func = grad_func_rec.f(result_value, *arg_values, **kwargs_values)
+                        # Derivative function could compute gradients of multiple arguments
+                        # in one call.
+                        owner = []
+                        for grad_index in grad_func_rec.multi_grad_indices:
+                            if (isinstance(args[grad_index], array.Value) and \
+                                args[grad_index].is_marked_for_bp(current_tape)):
+                                owner.append(args[grad_index])
+                            else:
+                                # Use None as placeholder for arguments that do not require
+                                # gradient computation.
+                                owner.append(None)
+                            visited_arg_indices.add(grad_index)
+                    grad_func = raw_value_wrapper(grad_func)  # pylint: disable=redefined-variable-type
+                    if self.type == ArrayType.MXNET:
+                        grad_func = context_wrapper(grad_func)
+                current_tape.add_partial_derivative(grad_func, owner, result)
 
-                        if grad_func_rec.multi_grad_indices is None:
-                            # Derivative function of each argument is defined separately.
-                            owner = arg
-                        else:
-                            # Derivative function could compute gradients of multiple arguments
-                            # in one call.
-                            owner = []
-                            for grad_index in grad_func_rec.multi_grad_indices:
-                                if (isinstance(args[grad_index], array.Value) and \
-                                    args[grad_index].is_marked_for_bp(current_tape)):
-                                    owner.append(args[grad_index])
-                                else:
-                                    # Use None as placeholder for arguments that do not require
-                                    # gradient computation.
-                                    owner.append(None)
-                                visited_arg_indices.add(grad_index)
-                        grad_func = raw_value_wrapper(grad_func)  # pylint: disable=redefined-variable-type
-                        if self.type == ArrayType.MXNET:
-                            grad_func = context_wrapper(grad_func)
-                    current_tape.add_partial_derivative(grad_func, owner,
-                                                        result)
-            for k, arg in kwargs.items():
-                if isinstance(arg, array.Value) and arg.is_marked_for_bp(
-                        current_tape):
-                    if k not in self._grad_func_kw:
-                        _logger.debug(
-                            'Partial derivative of {} "{}" on keyword argument "{}"'
-                            'is not defined.'.format(self._type_str, self._func.__name__, k))
-                        grad_func = FakeGradFunc(self._type_str + ' ' + self._func.__name__, k)
-                    else:
-                        _logger.debug(
-                            'Adding partial derivative to func "{}" on keyword argument "{}".'.
-                            format(self._func, k))
-                        grad_func_rec = self._grad_func_kw[k]
-                        grad_func = grad_func_rec.f(result_value, *arg_values,
-                                                    **kwargs_values)
-                        grad_func = raw_value_wrapper(grad_func)
-                        if self.type == ArrayType.MXNET:
-                            grad_func = context_wrapper(grad_func)
-                    current_tape.add_partial_derivative(grad_func, arg, result)
+            # Add derivative for keyword arguments.
+            for k in bp_kw:
+                arg = kwargs[k]
+                if k not in self._grad_func_kw:
+                    _logger.debug(
+                        'Partial derivative of {} "{}" on keyword argument "{}"'
+                        'is not defined.'.format(self._type_str, self._func.__name__, k))
+                    grad_func = FakeGradFunc(self._type_str + ' ' + self._func.__name__, k)
+                else:
+                    _logger.debug(
+                        'Adding partial derivative to func "{}" on keyword argument "{}".'.
+                        format(self._func, k))
+                    grad_func_rec = self._grad_func_kw[k]
+                    grad_func = grad_func_rec.f(result_value, *arg_values,
+                                                **kwarg_values)
+                    grad_func = raw_value_wrapper(grad_func)
+                    if self.type == ArrayType.MXNET:
+                        grad_func = context_wrapper(grad_func)
+                current_tape.add_partial_derivative(grad_func, arg, result)
+
         return result
         # pylint: enable=invalid-name, too-many-locals
 
