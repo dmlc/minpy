@@ -8,8 +8,8 @@ import inspect
 import mxnet.io
 import six.moves.cPickle as pickle # pylint: disable=import-error, no-name-in-module
 import numpy as np
-import minpy
 
+from .. import array
 
 class DataBatch(object): # pylint: disable=too-few-public-methods
     """Default object for holding a mini-batch of data and related information."""
@@ -111,7 +111,7 @@ def _init_data(data, allow_empty, default_name):
     if data is None:
         data = []
 
-    if isinstance(data, (np.ndarray, minpy.array.Array)):
+    if isinstance(data, (np.ndarray, array.Array)):
         data = [data]
     if isinstance(data, list):
         if not allow_empty:
@@ -126,7 +126,7 @@ def _init_data(data, allow_empty, default_name):
             "Input must be NDArray, numpy.ndarray, MinPy Array, or "
             "a list of them or dict with them as values.")
     for k, v in data.items():
-        if not isinstance(v, (np.ndarray, minpy.array.Array)):
+        if not isinstance(v, (np.ndarray, array.Array)):
             raise TypeError(("Invalid type '%s' for %s, " % (type(
                 v), k)) + "should be NDArray, numpy.ndarray, or MinPy Array.")
 
@@ -240,18 +240,20 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays, internal use only"""
         assert (self.cursor < self.num_data), "DataIter needs reset."
         if self.cursor + self.batch_size <= self.num_data:
-            if isinstance(data_source[0][1], minpy.array.Array):
+            if isinstance(data_source[0][1], array.Array):
                 return [x[1][self.cursor:self.cursor + self.batch_size] for x in data_source]
             elif isinstance(data_source[0][1], np.ndarray):
-                return [minpy.array.Array(x[1][self.cursor:self.cursor + self.batch_size]) for x in data_source]
+                return [array.wrap(x[1][self.cursor:self.cursor + self.batch_size]) for x in data_source]
             else:
                 raise TypeError("Invalid data type, only numpy.ndarray and minpy.array.Array are allowed.")
         else:
             pad = self.batch_size - self.num_data + self.cursor
-            if isinstance(data_source[0][1], minpy.array.Array):
-                return [minpy.array.Array(np.concatenate((x[1][self.cursor:].asnumpy(), x[1][:pad].asnumpy()), axis=0)) for x in data_source]
+            if isinstance(data_source[0][1], array.Array):
+                return [array.wrap(np.concatenate((x[1][self.cursor:].asnumpy(), x[1][:pad].asnumpy()), axis=0))
+                        for x in data_source]
             elif isinstance(data_source[0][1], np.ndarray):
-                return [minpy.array.Array(np.concatenate((x[1][self.cursor:], x[1][:pad]), axis=0)) for x in data_source]
+                return [array.wrap(np.concatenate((x[1][self.cursor:], x[1][:pad]), axis=0))
+                        for x in data_source]
             else:
                 raise TypeError("Invalid data type, only numpy.ndarray and minpy.array.Array are allowed.")
 

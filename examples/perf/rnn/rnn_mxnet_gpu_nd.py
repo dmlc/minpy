@@ -144,4 +144,6 @@ if __name__ == '__main__':
     parser.add_argument('--num-classes', default=10, type=int)
     parser.add_argument('--num-unroll-steps', default=30, type=int)
     parser.add_argument('--num-loops', default=20, type=int)
+    #import profile
+    #profile.run('main(parser.parse_args())')
     main(parser.parse_args())

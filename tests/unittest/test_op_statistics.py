@@ -1,7 +1,7 @@
+import minpy
 from minpy.core import grad
 import minpy.numpy as np
 import minpy.numpy.random as random
-import minpy.dispatch.policy as policy
 
 def test_op_statistics():
 
@@ -47,7 +47,7 @@ def test_op_statistics():
         weights -= gr * 0.01
     
     # Print Op Statistics Info
-    np.policy.show_op_stat()
+    minpy.get_global_policy().show_op_stat()
 
 if __name__ == "__main__":
     test_op_statistics()

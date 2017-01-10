@@ -9,7 +9,7 @@ import functools
 import collections
 
 from . import array
-from .array_variants import ArrayType
+from .array_variants import ArrayType, array_types
 from .array_variants import variants
 from .array_variants import variants_repr
 from . import context
@@ -277,7 +277,7 @@ class Primitive(object):
                 return wrapped
 
             # Add derivative for positional arguments.
-            for i in enumerate(bp_idx):
+            for i in bp_idx:
                 arg = args[i]
                 if i in visited_arg_indices:
                     # Derivative on this index has already been recorded.

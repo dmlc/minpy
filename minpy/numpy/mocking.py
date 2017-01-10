@@ -64,6 +64,10 @@ class Module(object):
         self.generate_attrs(minpy.Config['default_policy'])
         # pylint: enable= protected-access, cell-var-from-loop
 
+    def set_policy(self, policy):
+        """[Deprecated] Set policy for this module."""
+        self.generate_attrs(policy)
+
     def generate_attrs(self, policy):
         """Generate attributes for this module"""
         # The latter will override the former, so set attributes in reverse priority order
@@ -73,7 +77,8 @@ class Module(object):
             setattr(self, k, self._name_injector[k])
         for k, prims in self._registry._reg.items(): # pylint: disable= protected-access
             prim_type = policy.decide(prims.values())
-            setattr(self, k, prims[prim_type])
+            if prim_type is not None:
+                setattr(self, k, prims[prim_type])
         if '__all__' in dir(self._old):
             setattr(self, '__all__', self._old.__all__)
         setattr(self, '__registry__', self._registry)
