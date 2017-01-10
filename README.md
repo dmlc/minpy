@@ -4,33 +4,35 @@
 [![PyPI version](https://badge.fury.io/py/minpy.svg)](https://badge.fury.io/py/minpy)
 [![Docs](https://readthedocs.org/projects/minpy/badge/?version=latest)](https://minpy.readthedocs.io/en/latest/)
 
-This repository aims at prototyping a pure [NumPy](http://www.numpy.org/) interface above [MXNet](https://github.com/dmlc/mxnet) backend. In one word, if you have NumPy code, with
+This repository aims at providing a high performing and flexible deep learning platform, by prototyping a pure [NumPy](http://www.numpy.org/) interface above [MXNet](https://github.com/dmlc/mxnet) backend. In one word, you get the following automatically with your NumPy code:
 ```python
 import minpy.numpy as np
 ```
-* Operators with GPU support will be ran on GPU automatically.
-* Graceful fallback for missing operations to NumPy.
-* [Autograd](https://github.com/HIPS/autograd) support. Automatic gradient generation.
+* Operators with GPU support will be ran on GPU.
+* Graceful fallback for missing operations to NumPy on CPU.
+* Automatic gradient generation with [Autograd](https://github.com/HIPS/autograd) support.
 * Seamless MXNet symbol integration.
 
-## Why NumPy interface?
+## Pure NumPy and purely imperative programming
 
-Why obsessed with NumPy interface? First of all, programming in NumPy is very nature and has been favored by academic researches for many years. To have a taste of its flexibility, let's look at some examples below.
+Why obsessed with NumPy interface? First of all, NumPy is an extension to the Python programming language, with support for large, multi-dimensional arrays, matrices, and a large library of high-level mathematical functions to operate on these abstractions. If you just begin to learn deep learning, you should absolutely start from NumPy to gain a firm grasp of its concepts (see, for example, the Stanford's [CS231n course](http://cs231n.stanford.edu/syllabus.html)). For quick prototyping of advanced deep learning algorithms, you may often start composing with NumPy as well.
+
+Second, as an extension of Python, your implementation follows the intuitive imperative style. This is the *only* style, and there is *no* new syntax constructs to learn. To have a taste of this, let's look at some examples below.
 
 ### Printing and Debugging
 ![p1](https://raw.githubusercontent.com/dmlc/web-data/master/minpy/p1.png)
-In symbolic programming, the control dependency before the print statement is required, otherwise the print operator will not appear on the critical dependency path and thus not being executed. As a contrast, MinPy's way is very straight-forward, just like what you've done in Python's hello world.
+In symbolic programming, the control dependency before the print statement is required, otherwise the print operator will not appear on the critical dependency path and thus not being executed. In contrast, MinPy is simply NumPy, as straightforward as Python's hello world.
 
 ### Data-dependent branches
 ![p2](https://raw.githubusercontent.com/dmlc/web-data/master/minpy/p2.png)
-In symbolic programming, the `lambda` is required in each branch to lazily expand the dataflow graph during runtime, which is quite confusing. As a contrast, you could feel free to use the if statement in MinPy.
+In symbolic programming, the `lambda` is required in each branch to lazily expand the dataflow graph during runtime, which can be quite confusing. Again, MinPy is NumPy, and you freely use the if statement anyway you like.
 
-Tensorflow is just one typical example, many other packages (e.g. Theano, or even MXNet) have similar problems. The underlying reason is the trade-off between *symbolic programming* and *imperative programming*. Codes in symbolic programs (Tensorflow and Theano) are *not* doing concrete computation but generating dataflow graph instead. This enables extensive optimizations but requires reinventing almost all language constructs (like if and loop). Imperative programs (NumPy) generates dataflow graph *along with* the computation, so you could freely query or use the value just computed. For a rough analogy, symbolic programming is like C++, where you have two stages: compilation (generating dataflow graph) and execution (concrete evaluation), while imperative programming is like Python -- it is easy to tweak but less efficient.
+Tensorflow is just one typical example, many other packages (e.g. Theano, or even MXNet) have similar problems. The underlying reason is the trade-off between *symbolic programming* and *imperative programming*. Codes in symbolic programs (Tensorflow and Theano) generates dataflow graph instead of performing concrete computation. This enables extensive optimizations, but requires reinventing almost all language constructs (like if and loop). Imperative programs (NumPy) generates dataflow graph *along with* the computation, enabling you freely query or use the value just computed. 
 
-In MinPy, we use NumPy syntax to ease your programming, while achieving good performance at the same time.
+In MinPy, we use NumPy syntax to ease your programming, while simultaneously achieving good performance.
 
 ## Dynamic automatic gradient computation
-Automatic gradient computation has become an essential component in modern deep learning systems. In MinPy, we adopts [Autograd](https://github.com/HIPS/autograd)'s approach to compute gradients. Since the dataflow graph is generated along with the computation, all kinds of native control flow are supported during gradient computation. For example:
+Automatic gradient computation has become essential in modern deep learning systems. In MinPy, we adopt [Autograd](https://github.com/HIPS/autograd)'s approach to compute gradients. Since the dataflow graph is generated along with the computation, all kinds of native control flow are supported during gradient computation. For example:
 ```python
 import minpy
 from minpy.core import grad
@@ -48,7 +50,7 @@ print foo_grad(-1) # should print 2.0
 Here, feel free to use native `if` statement. A complete tutorial about auto-gradient computation could be found [here](https://minpy.readthedocs.io/en/latest/tutorial/autograd_tutorial.html).
 
 ## Elegant fallback for missing operators
-You never like `NotImplementedError`, so do we. In MinPy, we automatically fallback to NumPy if some operators have not been implemented in MXNet yet. For example, the following code runs smoothly and you don't need to worry about copying arrays back and forth from GPU to CPU.
+You never like `NotImplementedError`, so do we. NumPy is a very large library. In MinPy, we automatically fallback to NumPy if some operators have not been implemented in MXNet yet. For example, the following code runs smoothly and you don't need to worry about copying arrays back and forth from GPU to CPU; MinPy handles the fallback and its side effect transparently.
 ```python
 import minpy.numpy as np
 x = np.zeros((2, 3))
@@ -57,7 +59,7 @@ z = np.logaddexp(x, y)
 ```
 
 ## Seamless MXNet symbol support
-Although we pick the imperative side, we understand that symbolic programming is necessary for operators like convolution. Therefore, MinPy allows you to "wrap" a symbol into a function that could be called together with other imperative calls:
+Although we pick the imperative side, we understand that symbolic programming is necessary for operators like convolution. Therefore, MinPy allows you to "wrap" a symbol into a function that could be called together with other imperative calls. From a programmer's eye, these functions is just as other NumPy calls, thus we preserve the imperative style throughout:
 ```python
 import mxnet as mx
 import minpy.numpy as np
@@ -73,16 +75,14 @@ y = np.exp(conv(x=x, conv_weight=w))
 ```
 
 ## Is MinPy fast?
-The imperative interface does raise many challenges, but MinPy is managed to achieve good speed when the workload is not too tiny.
+The imperative interface does raise many challenges, especially it foregoes some of the deep optimization that only (currently) embodied in symbolic programming. However, MinPy manages to retain performance, especially when the actual computation is intense. Our next target is to get back the performance with advanced system techniques.
 ![benchmark](https://raw.githubusercontent.com/dmlc/web-data/master/minpy/benchmark.png)
 
 
 ## Get Started
 ### MXNet version
 
-Currently both MXNet and MinPy are going through rapid development. MinPy is not guaranteed to work with all MXNet versions.
-
-This version of MinPy is tested to work with MXNet on `engine` branch. So use following command when you download and build MXNet from source:
+Currently both MXNet and MinPy are going through rapid development. MinPy is not guaranteed to work with all MXNet versions. This version of MinPy is tested to work with MXNet on `engine` branch. So use the following command when you download and build MXNet from source:
 ```
 git clone --recursive -b engine https://github.com/dmlc/mxnet.git
 ```
@@ -98,4 +98,4 @@ Minpy prototypes a pure Numpy interface. To make the interface consistent, pleas
 pip install minpy
 ```
 
-We are still actively polishing the package. You could look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents are hosted [here](https://minpy.readthedocs.io/en/latest/).
+We are still actively polishing the package. You can look at this [tutorial](https://github.com/dmlc/minpy/blob/master/examples/demo/minpy_tutorial.ipynb) to understand its concept. Documents are hosted [here](https://minpy.readthedocs.io/en/latest/).
