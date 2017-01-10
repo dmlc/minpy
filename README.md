@@ -13,7 +13,7 @@ import minpy.numpy as np
 * Automatic gradient generation with [Autograd](https://github.com/HIPS/autograd) support.
 * Seamless MXNet symbol integration.
 
-## Pure NumPy and purely imperative programming
+## Pure NumPy, purely imperative
 
 Why obsessed with NumPy interface? First of all, NumPy is an extension to the Python programming language, with support for large, multi-dimensional arrays, matrices, and a large library of high-level mathematical functions to operate on these abstractions. If you just begin to learn deep learning, you should absolutely start from NumPy to gain a firm grasp of its concepts (see, for example, the Stanford's [CS231n course](http://cs231n.stanford.edu/syllabus.html)). For quick prototyping of advanced deep learning algorithms, you may often start composing with NumPy as well.
 
