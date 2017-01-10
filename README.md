@@ -48,10 +48,32 @@ print foo_grad(-1) # should print 2.0
 Here, feel free to use native `if` statement. A complete tutorial about auto-gradient computation could be found [here](https://minpy.readthedocs.io/en/latest/tutorial/autograd_tutorial.html).
 
 ## Elegant fallback for missing operators
+You never like `NotImplementedError`, so do we. In MinPy, we automatically fallback to NumPy if some operators have not been implemented in MXNet yet. For example, the following code runs smoothly and you don't need to worry about copying arrays back and forth from GPU to CPU.
+```python
+import minpy.numpy as np
+x = np.zeros((2, 3))
+y = np.ones((2, 3))
+z = np.logaddexp(x, y)
+```
+
+## Seamless MXNet symbol support
+Although we pick the imperative side, we understand that symbolic programming is necessary for operators like convolution. Therefore, MinPy allows you to "wrap" a symbol into a function that could be called together with other imperative calls:
+```python
+import mxnet as mx
+import minpy.numpy as np
+from minpy.core import Function
+# Create Function from symbol.
+net = mx.sym.Variable('x')
+net = mx.sym.Convolution(net, name='conv', kernel=(3, 3), num_filter=32, no_bias=True)
+conv = Function(net, input_shapes={'x', (8, 3, 10, 10)}
+# Call Function as normal function.
+x = np.zeros((8, 3, 10, 10))
+w = np.ones((32, 3, 3, 3,))
+y = np.exp(conv(x=x, conv_weight=w))
+```
 
 ## Is MinPy fast?
 The imperative interface does raise many challenges, but MinPy is managed to achieve good speed when the workload is not too tiny.
-
 ![benchmark](https://raw.githubusercontent.com/dmlc/web-data/master/minpy/benchmark.png)
 
 
