@@ -9,7 +9,7 @@ import functools
 import collections
 
 from . import array
-from .array_variants import ArrayType, array_types
+from .array_variants import ArrayType
 from .array_variants import variants
 from .array_variants import variants_repr
 from . import context
@@ -161,7 +161,7 @@ class Primitive(object):
 
     def _convert_args(self, args, kwargs):
         """Convert arguments to the underlying type of this primitive.
-        
+
         Parameters
         ----------
         args
@@ -181,12 +181,13 @@ class Primitive(object):
         }
         return arg_values, kwarg_values
 
-    def _get_bp_args(self, args, kwargs, tape):
+    @staticmethod
+    def _get_bp_args(args, kwargs, current_tape):
         """Get argument indices or keywords that required gradient computation."""
         bp_idx = tuple(idx for idx, arg in enumerate(args)
-            if isinstance(arg, array.Value) and arg.is_marked_for_bp(tape))
+                       if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape))
         bp_kw = tuple(key for key, arg in kwargs.items()
-            if isinstance(arg, array.Value) and arg.is_marked_for_bp(tape))
+                      if isinstance(arg, array.Value) and arg.is_marked_for_bp(current_tape))
         return bp_idx, bp_kw
 
     def call(self, args, kwargs):  # pylint: disable= too-many-branches
@@ -226,13 +227,13 @@ class Primitive(object):
             # Multiple return values.
             result = tuple(array.wrap(ret) for ret in result_value)
         else:
-            result = array.wrap(result_value)
+            result = array.wrap(result_value) # pylint: redefined-variable-type
 
         # Check whether the result value is on the path of bp phase.
         # If all the input arguments are not on the bp path, the result value
         # is not as well.
         current_tape = tape.global_tape()
-        bp_idx, bp_kw = self._get_bp_args(args, kwargs, current_tape)
+        bp_idx, bp_kw = _get_bp_args(args, kwargs, current_tape)
         need_bp = len(bp_idx) != 0 or len(bp_kw) != 0
 
         if need_bp:

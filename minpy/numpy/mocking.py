@@ -12,7 +12,6 @@ import importlib
 import minpy
 from minpy.array_variants import variants
 from minpy.dispatch.registry import Registry
-from minpy.dispatch.policy import Policy
 from minpy.primitive import Primitive
 from minpy.utils import log
 

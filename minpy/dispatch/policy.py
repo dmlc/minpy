@@ -77,7 +77,7 @@ class Policy(object):
         Result from appropriate function call.
         """
         available = self._available_prims(name, reg, args, kwargs)
-        preference = self.decide(available, args, kwargs)
+        preference = self.decide(available)
         if preference == ArrayType.MXNET:
             self._mxnet_op_stat[name] += 1
         elif preference == ArrayType.NUMPY:
@@ -114,7 +114,8 @@ class Policy(object):
         """Return policy name"""
         return type(self).__name__
 
-    def _available_prims(self, name, reg, args, kwargs):
+    @staticmethod
+    def _available_prims(name, reg, args, kwargs):
         """Return a list of available primitives"""
 
         current_tape = tape.global_tape()
@@ -128,7 +129,7 @@ class Policy(object):
         available = reg.iter_available_types(name, bp_args, bp_kwargs)
         return available
 
-    
+
 class AutoBlacklistPolicy(Policy):
     """Automatically dispatch ops to MXNet impl by provided config.
 
@@ -160,7 +161,7 @@ class AutoBlacklistPolicy(Policy):
             prim = reg.get(name, impl_type)
             return prim.call(args, kwargs)
 
-        available = self._available_prims(name, reg, args, kwargs)
+        available = _available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)
         if ArrayType.MXNET in possible_impl and self._rules.allow(
                 name, reg.nspace, ArrayType.MXNET, args, kwargs):
