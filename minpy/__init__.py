@@ -11,6 +11,8 @@ from .dispatch.policy import PreferMXNetPolicy
 Config = {'modules': [], }
 Config['default_policy'] = PreferMXNetPolicy()
 
+from . import numpy
+
 def set_global_policy(plc):
     """ Set global policy for all modules. This will also change default policy
     in future imported modules.
