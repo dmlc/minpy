@@ -11,7 +11,8 @@ from .dispatch.policy import PreferMXNetPolicy
 Config = {'modules': [], }
 Config['default_policy'] = PreferMXNetPolicy()
 
-from . import numpy
+# Import minpy.numpy package to do some initialization.
+from . import numpy  # pylint: disable= wrong-import-position
 
 def set_global_policy(plc):
     """ Set global policy for all modules. This will also change default policy

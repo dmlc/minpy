@@ -76,7 +76,7 @@ class Policy(object):
         -------
         Result from appropriate function call.
         """
-        available = self._available_prims(name, reg, args, kwargs)
+        available = Policy._available_prims(name, reg, args, kwargs)
         preference = self.decide(available)
         if preference == ArrayType.MXNET:
             self._mxnet_op_stat[name] += 1
@@ -161,7 +161,7 @@ class AutoBlacklistPolicy(Policy):
             prim = reg.get(name, impl_type)
             return prim.call(args, kwargs)
 
-        available = _available_prims(name, reg, args, kwargs)
+        available = Policy._available_prims(name, reg, args, kwargs)
         possible_impl = set(x.type for x in available)
         if ArrayType.MXNET in possible_impl and self._rules.allow(
                 name, reg.nspace, ArrayType.MXNET, args, kwargs):

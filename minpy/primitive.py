@@ -227,13 +227,13 @@ class Primitive(object):
             # Multiple return values.
             result = tuple(array.wrap(ret) for ret in result_value)
         else:
-            result = array.wrap(result_value) # pylint: redefined-variable-type
+            result = array.wrap(result_value) # pylint: disable= redefined-variable-type
 
         # Check whether the result value is on the path of bp phase.
         # If all the input arguments are not on the bp path, the result value
         # is not as well.
         current_tape = tape.global_tape()
-        bp_idx, bp_kw = _get_bp_args(args, kwargs, current_tape)
+        bp_idx, bp_kw = Primitive._get_bp_args(args, kwargs, current_tape)
         need_bp = len(bp_idx) != 0 or len(bp_kw) != 0
 
         if need_bp:
