@@ -17,7 +17,7 @@ We have also observed a great deal of innovations from the community. Therefore,
 
 People
 ------
-A great number of people have contributed to the project. Most of them are students from around the world, and work with their spare time. People listed below without specified contributions are in fact *generalists* who have wider work span.
+A great number of people have contributed to the project. Most of them are students from around the world, and work with their spare time. People listed below without specified contributions are *generalists* who have wider work span. We want also to thank the MXNet development community for timely technical support.
 
 * Minjie Wang; NYU, project lead (`GitHub <https://github.com/jermainewang>`_)
 * Yutian Li: Face++/Stanford (`GitHub <https://github.com/hotpxl>`_)
