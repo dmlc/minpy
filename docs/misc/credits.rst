@@ -24,7 +24,7 @@ A great number of people have contributed to the project. Most of them are stude
 * Larry Tang: NYU Shanghai/Michigan (`GitHub <https://github.com/lryta>`_)
 * Haoran Wang: NYU Shanghai/CMU (`GitHub <https://github.com/HrWangChengdu>`_)
 * Tianjun Xiao: Microsoft/Tesla (`GitHub <https://github.com/sneakerkg>`_)
-* Ziheng Jiang: Fudan (`GitHub <https://github.com/ZihengJiang>`_)
+* Ziheng Jiang: Fudan/NYU Shanghai (`GitHub <https://github.com/ZihengJiang>`_)
 * Alex Gai: NYU Shanghai [Model builder] (`GitHub <https://github.com/GaiYu0>`_)
 * Sean Welleck: NYU/NYU Shanghai [Reinforcement learning] (`GitHub <https://github.com/wellecks>`_)
 * Xu Zhou: ShanghaiTech [CS231 courseware] (`GitHub <https://github.com/zx0502>`_)
