@@ -53,9 +53,9 @@ Here, feel free to use native `if` statement. A complete tutorial about auto-gra
 You never like `NotImplementedError`, so do we. NumPy is a very large library. In MinPy, we automatically fallback to NumPy if some operators have not been implemented in MXNet yet. For example, the following code runs smoothly and you don't need to worry about copying arrays back and forth from GPU to CPU; MinPy handles the fallback and its side effect transparently.
 ```python
 import minpy.numpy as np
-x = np.zeros((2, 3))
-y = np.ones((2, 3))
-z = np.logaddexp(x, y)
+x = np.zeros((2, 3))     # Use MXNet GPU implementation
+y = np.ones((2, 3))      # Use MXNet GPU implementation
+z = np.logaddexp(x, y)   # Use NumPy CPU implementation
 ```
 
 ## Seamless MXNet symbol support
