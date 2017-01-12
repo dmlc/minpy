@@ -8,7 +8,7 @@ The key goal is *innovation without compromising performance and usability*. Thi
 Technical inspiration
 ---------------------
 
-We have also observed a great deal of innovtions from the community. Therefore, we innovate when necessary, and otherwise draw inspiration (and sometimes direct implementations) from the followings:
+We have also observed a great deal of innovations from the community. Therefore, we innovate when necessary, and otherwise draw inspiration (and sometimes direct implementations) from the followings:
 
 * Auto-differentiation, i.e. `Autograd project <https://github.com/HIPS/autograd>`_.
 * Transparent CPU/GPU acceleration
@@ -17,7 +17,7 @@ We have also observed a great deal of innovtions from the community. Therefore, 
 
 People
 ------
-A great number of people have contributed to the project. Most of them are students from around world, and work with their spare time. People listed below without specified contributions are in fact *generalists* who have wider work span.
+A great number of people have contributed to the project. Most of them are students from around the world, and work with their spare time. People listed below without specified contributions are in fact *generalists* who have wider work span.
 
 * Minjie Wang; NYU, project lead (`GitHub <https://github.com/jermainewang>`_)
 * Yutian Li: Face++/Stanford (`GitHub <https://github.com/hotpxl>`_)
