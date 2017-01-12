@@ -3,7 +3,7 @@ History and Credits
 
 MinPy is intended to be the NumPy frontend of the MXNet project. Its core members contributed to MXNet's execution engine. Having completed that part, the team decided to take a step back and rehthink the user experience, before moving to yet another stage of performance optimizations. 
 
-The key goal that we want to achieve is innovation without compromising performance and usability. This philosophy is shared by the community, but the difference is we see sticking to NumPy interface and imperative programming as higher priority. 
+The key goal is *innovation without compromising performance and usability*. This philosophy is shared by the community, but the difference is we see sticking to NumPy interface and imperative programming as higher priority. 
 
 Technical inspiration
 ---------------------
