@@ -62,14 +62,13 @@ If the installation meets Numpy or MXNet version conflicts with your other proje
 
 ::
 
-    sudo pip install virtualenv virtualenvwrapper
+    pip install virtualenv virtualenvwrapper
 
-Add three lines to your shell startup file (.bashrc, .profile, etc.) to set the location where the virtual environments should live, the location of your development project directories, and the location of the script installed with this package:
+Add two lines to your shell startup file (.bashrc, .profile, etc.) to set the location where the virtual environments should live and the location of the script installed with this package:
 
 ::
 
     export WORKON_HOME=$HOME/.virtualenvs
-    export PROJECT_HOME=$HOME/Devel
     source /usr/local/bin/virtualenvwrapper.sh
 
 After editing it, reload the startup file (e.g., run source ~/.bashrc). Then config the virtual python environment:
@@ -78,7 +77,7 @@ After editing it, reload the startup file (e.g., run source ~/.bashrc). Then con
     
     mkvirtualenv minpy_dev
     pip install numpy pyyaml
-    add2virtualenv ~/mxnet/python
+    python ~/mxnet/python/setup.py install
 
 Note that ``~/mxnet/python`` should be replaced by the path of the ``engine`` branch MXNet.
 
