@@ -77,6 +77,7 @@ def _reduce_select_grad_gen(ans, x, axis=None, keepdims=False):
     """Generate gradient function of reduce selection (max/min)."""
     reduce_grad_func = _reduce_grad_gen(ans, x, axis, keepdims)
     def reduce_select_grad_func(g):
+        """Gradient function for reduce selection."""
         reduce_grad = reduce_grad_func(g)
         ans_bcast = reduce_grad_func(ans)
         return reduce_grad * (ans_bcast == x)

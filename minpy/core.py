@@ -54,7 +54,7 @@ def grad_and_loss(func, argnum=0):
             if isinstance(result, tuple):
                 result_wrapped = tuple(array.wrap(rst) for rst in result)
             else:
-                result_wrapped = array.wrap(result)
+                result_wrapped = array.wrap(result) # pylint: disable=redefined-variable-type
             _logger.debug('Forward pass finished. Start backward pass.')
             # Get gradient using result as target.
             grad_vals = current_tape.get_gradient(

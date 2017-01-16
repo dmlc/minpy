@@ -174,6 +174,7 @@ class Tape(object):
         tuple of Array
             The gradient of input arrays.
         """
+        # pylint: disable= too-many-locals, too-many-branches
         def decr_refcount(owner):
             """Decrement the reference count of the given owner.
 
@@ -252,6 +253,7 @@ class Tape(object):
                 # TODO(minjie): This may need to return a zero array of proper shape.
                 origin_grad.append(0.0)
         return origin_grad
+        # pylint: enable= too-many-locals, too-many-branches
 
 
 @contextlib.contextmanager
