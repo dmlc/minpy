@@ -3,7 +3,7 @@ from __future__ import print_function
 import minpy.numpy as mp
 import numpy as np
 import minpy.dispatch.policy as policy
-from minpy.core import convert_args, return_numpy, grad_and_loss, minpy_to_numpy as mn, numpy_to_minpy as nm
+from minpy.core import convert_args, return_numpy, grad_and_loss, grad, minpy_to_numpy as mn, numpy_to_minpy as nm
 import time
 
 # mp.set_policy(policy.OnlyNumPyPolicy())
@@ -80,5 +80,12 @@ def test_autograd():
     print('dWh error: ', rel_error(dWh, grad_arrays[3]))
     print('db error: ', rel_error(db, grad_arrays[4]))
 
+def test_zero_input_grad():
+    def foo1(x):
+        return 1
+    bar1 = grad(foo1)
+    assert bar1(0) == 0.0
+
 if __name__ == "__main__":
     test_autograd()
+    test_zero_input_grad()

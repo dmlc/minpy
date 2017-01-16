@@ -197,7 +197,7 @@ class Tape(object):
                 return grad_record.grad_func(
                     tuple(self._grads[rst.id] for rst in grad_record.result))
 
-        origin_id = tuple(arr.id for arr in origin)
+        origin_id = set(arr.id for arr in origin)
 
         # Set gradient target.
         self._set_gradient_target(target)
@@ -243,9 +243,15 @@ class Tape(object):
             if not current_id in origin_id:
                 self._grads.pop(current_id, None)
 
-        # TODO(minjie): If the gradient cannot be computed, this should return a zero array
-        # of proper shape.
-        return tuple(self._grads[arrid] for arrid in origin_id)
+        origin_grad = []
+        for arr in origin:
+            if arr.id in self._grads:
+                origin_grad.append(self._grads[arr.id])
+            else:
+                # The gradient of this array is zero.
+                # TODO(minjie): This may need to return a zero array of proper shape.
+                origin_grad.append(0.0)
+        return origin_grad
 
 
 @contextlib.contextmanager
