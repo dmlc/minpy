@@ -103,6 +103,8 @@ Then use the [instructions](http://mxnet.io/get_started/ubuntu_setup.html#instal
 
 Minpy prototypes a pure Numpy interface. To make the interface consistent, please make sure Numpy version >= 1.10.0 before install Minpy.
 
+MXNet and Numpy could meet version conflicts if you are working with them on other projects. Our [installation guide](https://minpy.readthedocs.io/en/latest/get-started/install.html) provides how to use `virtualenv <https://virtualenv.pypa.io/en/stable/>`_ and ` virtualenvwrapper <https://virtualenvwrapper.readthedocs.io/en/latest/>`_ to resolve the issue.
+
 ### Easy installation
 
 ```

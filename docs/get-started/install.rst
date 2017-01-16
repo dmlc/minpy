@@ -58,7 +58,7 @@ Refer to MXNet installation document for `Python package installation. <http://m
 
     export PYTHONPATH=~/mxnet/python:$PYTHONPATH
 
-If the installation meets Numpy or MXNet version conflicts with your other projects, we recommend using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_ and ` virtualenvwrapper < https://virtualenvwrapper.readthedocs.io/en/latest/>`_ to resolve the issue:
+If the installation meets Numpy or MXNet version conflicts with your other projects, we recommend using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_ and ` virtualenvwrapper <https://virtualenvwrapper.readthedocs.io/en/latest/>`_ to resolve the issue:
 
 ::
 
