@@ -15,18 +15,23 @@ There are generally three steps to follow:
 Install MXNet
 -------------
 
-The full guide of MXNet is `here  <http://mxnet.readthedocs.io/en/latest/how_to/build.html>`_ to build and install MXNet.
+The full guide of MXNet is `here  <http://mxnet.io/get_started/setup.html>`_ to build and install MXNet.
 Below, we give the common steps for Linux and OSX.
 
 On Ubuntu/Debian
 ^^^^^^^^^^^^^^^^
-Install the dependencies and build mxnet by
+With CUDA 8.0 and Cudnn 5.0 installed, install the other dependencies and build mxnet by
 ::
 
     sudo apt-get update
     sudo apt-get install -y build-essential git libatlas-base-dev libopencv-dev
-    git clone --recursive https://github.com/dmlc/mxnet
-    cd mxnet; make -j$(nproc)
+    git clone --recursive -b engine https://github.com/dmlc/mxnet
+    cd mxnet;
+    cp make/config.mk .
+    echo "USE_CUDA=1" >>config.mk
+    echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
+    echo "USE_CUDNN=1" >>config.mk
+    make -j$(nproc)
 
 On OSX
 ^^^^^^
@@ -39,7 +44,7 @@ Do the following instead.
     brew install opencv
     brew info openblas
     brew install openblas
-    git clone --recursive https://github.com/dmlc/mxnet
+    git clone --recursive -b engine https://github.com/dmlc/mxnet
     cd mxnet; cp make/osx.mk ./config.mk; make -j$(sysctl -n hw.ncpu)
 
 It turns out that installing ``openblas`` is necessary, in addition to modify the makefile, to fix `one of the build issues <https://github.com/dmlc/mxnet/issues/572>`_.
@@ -47,11 +52,40 @@ It turns out that installing ``openblas`` is necessary, in addition to modify th
 Setup Python and its environment
 --------------------------------
 
-Refer to MXNet installation document for `Python package installation. <http://mxnet.readthedocs.io/en/latest/how_to/build.html>`_. One of the most common problem a beginner runs into is not setting the environment variable to tell Python where to find the library. Suppose you have installed ``mxnet`` under your home directory and is running bash shell. Put the following line in your ``~/.bashrc`` (or ``~/.bash_profile``)
+Refer to MXNet installation document for `Python package installation. <http://mxnet.io/get_started/ubuntu_setup.html#install-mxnet-for-python>`_. One of the most common problem a beginner runs into is not setting the environment variable to tell Python where to find the library. Suppose you have installed ``mxnet`` under your home directory and is running bash shell. Put the following line in your ``~/.bashrc`` (or ``~/.bash_profile``)
 
 ::
 
     export PYTHONPATH=~/mxnet/python:$PYTHONPATH
+
+If the installation meets Numpy or MXNet version conflicts with your other projects, we recommend using `virtualenv <https://virtualenv.pypa.io/en/stable/>`_ and `virtualenvwrapper <https://virtualenvwrapper.readthedocs.io/en/latest/>`_ to resolve the issue:
+
+::
+
+    pip install virtualenv virtualenvwrapper
+
+Add two lines to your shell startup file (.bashrc, .profile, etc.) to set the location where the virtual environments should live and the location of the script installed with this package:
+
+::
+
+    export WORKON_HOME=$HOME/.virtualenvs
+    source /usr/local/bin/virtualenvwrapper.sh
+
+After editing it, reload the startup file (e.g., run source ~/.bashrc). Then config the virtual python environment:
+
+::
+    
+    mkvirtualenv minpy_dev
+    pip install numpy pyyaml
+    python ~/mxnet/python/setup.py install
+
+Note that ``~/mxnet/python`` should be replaced by the path of the ``engine`` branch MXNet.
+
+To start the virtual envirment:
+
+::
+    
+    workon minpy_dev
 
 Install MinPy
 -------------

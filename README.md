@@ -80,17 +80,30 @@ The imperative interface does raise many challenges, especially it foregoes some
 
 
 ## Get Started
+
+### Installation Guide
+
+Minpy is depend on MXNet. The installation contains two phase:
+
+1) Install MXNet for Python;
+
+2) Install Minpy.
+
+Please read [installation guide](https://minpy.readthedocs.io/en/latest/get-started/install.html) for more details.
+
 ### MXNet version
 
 Currently both MXNet and MinPy are going through rapid development. MinPy is not guaranteed to work with all MXNet versions. This version of MinPy is tested to work with MXNet on `engine` branch. So use the following command when you download and build MXNet from source:
 ```
 git clone --recursive -b engine https://github.com/dmlc/mxnet.git
 ```
-Please read [installation guide](https://minpy.readthedocs.io/en/latest/get-started/install.html) for more details.
+Then use the [instructions](http://mxnet.io/get_started/ubuntu_setup.html#install-mxnet-for-python) to build MXNet with python interface.
 
 ### NumPy version
 
 Minpy prototypes a pure Numpy interface. To make the interface consistent, please make sure Numpy version >= 1.10.0 before install Minpy.
+
+MXNet and Numpy could meet version conflicts if you are working with them on other projects. Our [installation guide](https://minpy.readthedocs.io/en/latest/get-started/install.html) provides how to use [virtualenv](https://virtualenv.pypa.io/en/stable/) and [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) to resolve the issue.
 
 ### Easy installation
 
