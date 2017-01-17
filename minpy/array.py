@@ -439,7 +439,7 @@ class Array(Value):
         if isinstance(index, tuple):
             np_index = tuple(_make_numpy_index(i) for i in index)
         else:
-            np_index = _make_numpy_index(index)
+            np_index = _make_numpy_index(index) # pylint: disable=redefined-variable-type
         return Value._ns._minpy_getitem(self, np_index)
 
     def __setitem__(self, index, val):
@@ -453,7 +453,7 @@ class Array(Value):
         if isinstance(index, tuple):
             np_index = tuple(_make_numpy_index(i) for i in index)
         else:
-            np_index = _make_numpy_index(index)
+            np_index = _make_numpy_index(index) # pylint: disable=redefined-variable-type
         np_array = self.get_data_mutable(ArrayType.NUMPY)
         np_array.__setitem__(np_index, np_val)
 
