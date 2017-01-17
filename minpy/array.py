@@ -267,7 +267,6 @@ class Number(Value, float):
         """ return the underlying value """
         return self._val
 
-
 class Array(Value):
     """Base array type.
 
@@ -437,11 +436,10 @@ class Array(Value):
         conversion to NumPy array.
         """
         np_index = None
-        to_np = lambda x: x if isinstance(x, slice) else wrap(x).get_data(ArrayType.NUMPY)
         if isinstance(index, tuple):
-            np_index = tuple(to_np(i) for i in index)
+            np_index = tuple(_make_numpy_index(i) for i in index)
         else:
-            np_index = to_np(index)
+            np_index = _make_numpy_index(index) # pylint: disable=redefined-variable-type
         return Value._ns._minpy_getitem(self, np_index)
 
     def __setitem__(self, index, val):
@@ -452,11 +450,10 @@ class Array(Value):
         """
         np_index = None
         np_val = wrap(val).get_data(ArrayType.NUMPY)
-        to_np = lambda x: x if isinstance(x, slice) else wrap(x).get_data(ArrayType.NUMPY)
         if isinstance(index, tuple):
-            np_index = tuple(to_np(i) for i in index)
+            np_index = tuple(_make_numpy_index(i) for i in index)
         else:
-            np_index = to_np(index)
+            np_index = _make_numpy_index(index) # pylint: disable=redefined-variable-type
         np_array = self.get_data_mutable(ArrayType.NUMPY)
         np_array.__setitem__(np_index, np_val)
 
@@ -488,6 +485,16 @@ class Array(Value):
         """
         if self.has_type(ArrayType.MXNET):
             self.get_data(ArrayType.MXNET).wait_to_read()
+
+def _make_numpy_index(raw_index):
+    """Create index that could be passed to numpy's indexing functions."""
+    if isinstance(raw_index, slice):
+        return raw_index
+    np_index = wrap(raw_index).asnumpy()
+    if isinstance(np_index, numpy.ndarray):
+        return np_index.astype(numpy.int32)
+    else:
+        return np_index
 
 def _make_wrapper_types():
     """Create dictionary from underlying data type to its wrapper type.

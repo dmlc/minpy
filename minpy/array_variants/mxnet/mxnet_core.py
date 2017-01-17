@@ -36,18 +36,18 @@ def _unbroadcast(ans, x, gradfun):
         return gradfun
     #pylint: enable= missing-docstring
 
-def _maximum_grad_gen0(ans, x, _):
+def _selection_grad_gen0(ans, x, _):
     """Generate gradient function of maximum on lhs."""
     # pylint: disable=protected-access
     return _unbroadcast(ans, x, lambda g: g * _in._equal(x, ans))
 
-def _maximum_grad_gen1(ans, _, y):
+def _selection_grad_gen1(ans, _, y):
     """Generate gradient function of maximum on rhs."""
     # pylint: disable=protected-access
     return _unbroadcast(ans, y, lambda g: g * _in._equal(y, ans))
 
-def _sum_grad(ans, x, axis=None, keepdims=False):
-    """ Generate gradient function of sum """
+def _reduce_grad_gen(ans, x, axis=None, keepdims=False):
+    """Generate gradient function of all kinds of reductions."""
     # pylint: disable=unused-argument
     if axis is None:
         def grad(g):
@@ -66,8 +66,22 @@ def _sum_grad(ans, x, axis=None, keepdims=False):
     for a in axis:
         ans_shape_expanded[a] = 1
     xshape = x.shape  # Only shape is needed, hope array `x` could be GC'ed.
-    return lambda g: mx.nd.zeros(xshape, ctx=g.context) + g.reshape(tuple(ans_shape_expanded))
+    return lambda g: g.reshape(tuple(ans_shape_expanded)).broadcast_to(xshape)
     # pylint: enable=unused-argument
+
+def _reduce_sum_grad_gen(ans, x, axis=None, keepdims=False):
+    """Generate gradient function of reduce sum."""
+    return _reduce_grad_gen(ans, x, axis, keepdims)
+
+def _reduce_select_grad_gen(ans, x, axis=None, keepdims=False):
+    """Generate gradient function of reduce selection (max/min)."""
+    reduce_grad_func = _reduce_grad_gen(ans, x, axis, keepdims)
+    def reduce_select_grad_func(g):
+        """Gradient function for reduce selection."""
+        reduce_grad = reduce_grad_func(g)
+        ans_bcast = reduce_grad_func(ans)
+        return reduce_grad * (ans_bcast == x)
+    return reduce_select_grad_func
 
 def _softmax_output(x, _1):
     """Softmax output implementation."""
@@ -104,7 +118,9 @@ def def_grads(prims):
     prims('exp').def_grad(lambda ans, x: lambda g: g * ans)
     prims('log').def_grad(lambda ans, x: lambda g: g / x)
     # reduce
-    prims('sum').def_grad(_sum_grad)
+    prims('sum').def_grad(_reduce_sum_grad_gen)
+    prims('max').def_grad(_reduce_select_grad_gen)
+    prims('min').def_grad(_reduce_select_grad_gen)
     # + - * /
     prims('multiply').def_grad(
         lambda ans, x, y: _unbroadcast(ans, x, lambda g: g * y))
@@ -127,8 +143,10 @@ def def_grads(prims):
     prims('true_divide').def_grad(
         lambda ans, x, y: _unbroadcast(ans, y, lambda g: -g * x / (y * y)),
         argnum=1)
-    prims('maximum').def_grad(_maximum_grad_gen0)
-    prims('maximum').def_grad(_maximum_grad_gen1, argnum=1)
+    prims('maximum').def_grad(_selection_grad_gen0)
+    prims('maximum').def_grad(_selection_grad_gen1, argnum=1)
+    prims('minimum').def_grad(_selection_grad_gen0)
+    prims('minimum').def_grad(_selection_grad_gen1, argnum=1)
     # negate
     prims('negative').def_grad(lambda ans, x: operator.neg)
     prims('transpose').def_grad(lambda ans, x: mx.nd.transpose)

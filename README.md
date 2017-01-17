@@ -93,7 +93,7 @@ Please read [installation guide](https://minpy.readthedocs.io/en/latest/get-star
 
 ### MXNet version
 
-Currently both MXNet and MinPy are going through rapid development. MinPy is not guaranteed to work with all MXNet versions. This version of MinPy is tested to work with MXNet on `engine` branch. So use the following command when you download and build MXNet from source:
+Currently both MXNet and MinPy are going through rapid development. MinPy is not guaranteed to work with all MXNet versions. **The minimum version required for MXNet is 0.9.2.** To achieve the best performance, we recommend you download the MXNet from `engine` branch and build it from source. The following command would be useful:
 ```
 git clone --recursive -b engine https://github.com/dmlc/mxnet.git
 ```

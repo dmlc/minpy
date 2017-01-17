@@ -4,6 +4,8 @@
 """minpy root module"""
 from __future__ import absolute_import
 
+import mxnet as mx
+
 from .dispatch import policy
 from .dispatch.policy import PreferMXNetPolicy
 
@@ -30,5 +32,21 @@ def set_global_policy(plc):
 def get_global_policy():
     """Return the current global policy."""
     return Config['default_policy']
+
+def check_mxnet_version():
+    """Check whether MXNet version satisfies minimum requirement."""
+    supported = (0, 9, 2)
+    current = tuple(int(v) for v in mx.__version__.split("."))
+    succ = True
+    for v1, v2 in zip(current, supported):
+        if v1 > v2:
+            succ = True
+            break
+        elif v1 < v2:
+            succ = False
+            break
+    assert succ, "Unsupported MXNet version: %s; minimum version required: 0.9.2" % mx.__version__
+
+check_mxnet_version()
 
 wrap_policy = policy.wrap_policy
