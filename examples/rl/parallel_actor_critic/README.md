@@ -6,6 +6,8 @@ Trajectories are obtained from multiple environments in a single process, batche
 
 [Generalized Advantage Estimation](https://arxiv.org/pdf/1506.02438v5.pdf) is used to estimate the advantage function.
 
+Please see the accompanying [tutorial](https://minpy.readthedocs.io/en/latest/tutorial/rl_policy_gradient_tutorial/rl_policy_gradient.html#improved-rl-with-parallel-advantage-actor-critic) for additional background.
+
 Author: Sean Welleck ([@wellecks](https://github.com/wellecks))
 
 ## Training
