@@ -28,5 +28,6 @@ A great number of people have contributed to the project. Most of them are stude
 * Alex Gai: NYU Shanghai [Model builder] (`GitHub <https://github.com/GaiYu0>`_)
 * Sean Welleck: NYU/NYU Shanghai [Reinforcement learning] (`GitHub <https://github.com/wellecks>`_)
 * Xu Zhou: ShanghaiTech [CS231 courseware] (`GitHub <https://github.com/zx0502>`_)
+* Kerui Min: BosonData [RNN example on MNIST] (`Linkedin <https://www.linkedin.com/in/kerui-min-b974b52a>`_)
 * Murphy Li: NYU Shangai [Tensorboard integration] (`GitHub <https://github.com/mufeili>`_)
 * Professor Zheng Zhang: NYU Shanghai [general advising] (`GitHub <https://github.com/zzhang-cn>`_)
