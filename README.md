@@ -83,7 +83,7 @@ The imperative interface does raise many challenges, especially it foregoes some
 
 ### Installation Guide
 
-Minpy is depend on MXNet. The installation contains two phase:
+MinPy depends on MXNet. In order to get up and running with MinPy you'll need to
 
 1) Install MXNet for Python;
 
