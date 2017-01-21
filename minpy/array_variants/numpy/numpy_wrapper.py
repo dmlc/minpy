@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import types
+import inspect
 import numpy as np
 
 
@@ -15,8 +15,7 @@ def wrap_namespace(nspace, reg, prim_wrapper):
     :param reg: Primitive registry.
     :param prim_wrapper: Wrapper to convert a raw function to primitive.
     """
-    function_types = {np.ufunc, types.FunctionType, types.BuiltinFunctionType}
     for name, obj in nspace.items():
-        if type(obj) in function_types:  # pylint: disable=unidiomatic-typecheck
+        if isinstance(obj, np.ufunc) or inspect.isroutine(obj):
             prim = prim_wrapper(obj)
             reg.register(name, prim)
