@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=cell-var-from-loop
 """Wrapper for MXNet namespace."""
-import types
-# pylint: disable=deprecated-lambda
+import inspect
 
 
 def wrap_namespace(nspace, reg, prim_wrapper):
@@ -13,8 +12,7 @@ def wrap_namespace(nspace, reg, prim_wrapper):
     :param reg: Primitive registry.
     :param prim_wrapper: Wrapper to convert a raw function to primitive.
     """
-    function_types = {types.FunctionType, types.BuiltinFunctionType}
     for name, obj in nspace.items():
-        if len(list(filter(lambda x: isinstance(obj, x), function_types))) != 0:
+        if inspect.isroutine(obj):
             prim = prim_wrapper(obj)
             reg.register(name, prim)
