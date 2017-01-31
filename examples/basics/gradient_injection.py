@@ -1,7 +1,6 @@
 from minpy import core
 import minpy.numpy as np
 
-
 def f(x):
     return x
 

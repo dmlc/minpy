@@ -1,10 +1,6 @@
 from minpy.core import grad
 import minpy.numpy as np
 import minpy.numpy.random as random
-import minpy.dispatch.policy as policy
-
-#np.set_policy(policy.OnlyNumPyPolicy())
-
 
 def sigmoid(x):
     return 0.5 * (np.tanh(x / 2) + 1)

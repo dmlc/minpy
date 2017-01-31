@@ -11,7 +11,7 @@ from minpy.nn import io
 from minpy.nn import layers
 import minpy.nn.model
 import minpy.dispatch.policy
-np.set_policy(minpy.dispatch.policy.OnlyNumPyPolicy())
+minpy.set_global_policy('only_numpy')
 
 # import logging
 # logging.getLogger('minpy.array').setLevel(logging.DEBUG)

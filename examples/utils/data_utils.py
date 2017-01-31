@@ -224,8 +224,8 @@ def adding_problem_generator(N, seq_len=30, high=1):
     return X, Y
 
 
-""" Generates several clusters of Gaussian points """
 def gaussian_cluster_generator(num_samples=10000, num_features=500, num_classes=5):
+    """ Generates several clusters of Gaussian points """
     mu = np.random.rand(num_classes, num_features)
     sigma = np.ones((num_classes, num_features)) * 0.1
     num_cls_samples = num_samples / num_classes
