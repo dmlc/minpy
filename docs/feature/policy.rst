@@ -3,54 +3,37 @@ Select Policy for Operations
 
 MinPy integrates MXNet NDArray and NumPy into a seamless system. For a single operation, it may have MXNet
 implementation, pure NumPy CPU implementation, or both of them. MinPy utilizes a policy system to determine which
-implementation will be applied. MinPy has three build-in policies in ``minpy.dispatch.policy``
-(also aliased in ``minpy`` root):
+implementation will be applied. MinPy currently has three build-in policies:
 
-1. ``PreferMXNetPolicy()`` [**Default**]: Prefer MXNet. Use NumPy as a transparent fallback.
-2. ``OnlyNumPyPolicy()``: Only use NumPy.
-3. ``OnlyMXNetPolicy()``: Only use MXNet.
+1. ``prefer_mxnet`` [**Default**]: Prefer MXNet. Use NumPy as a transparent fallback.
+2. ``only_numpy``: Only use NumPy.
+3. ``only_mxnet``: Only use MXNet.
 
-The policy is set under module level. Each mocking module (a.k.a. the module
-mocking the behavior of NumPy's corresponding package), like ``minpy.numpy``
-and ``minpy.numpy.random`` has its own policy. To change the policy, use
-``set_policy`` method in the module. For example, for ``minpy.numpy``, use
-``minpy.numpy.set_policy`` method:
+The policy is global. To change the policy, use ``minpy.set_global_policy``. For example:
 
 ::
 
     import minpy.numpy as np
-    from minpy import OnlyNumPyPolicy
-    np.set_policy(OnlyNumPyPolicy())
-
-To make life easier, MinPy can also change the policy of all MinPy mocking
-modules at the same time, including the modules already imported and modules
-imported in the future. Simply add the following two lines before computation.
-Note that ``minpy.set_global_policy`` changes **all** MinPy mocking modules
-and set a new default.
-
-::
-
-    import minpy.numpy as np
-    import minpy.numpy.random as random
     import minpy
-    minpy.set_global_policy(minpy.OnlyNumPyPolicy())
-    # np and random is now in OnlyNumPyPolicy policy
+    minpy.set_global_policy('only_numpy')
 
-It is worth mentioning that ``np.set_policy`` and ``minpy.set_global_policy`` only accept instances of policy classes.
+It is worth mentioning that ``minpy.set_global_policy`` only accepts strings of policy names.
 
 ``@minpy.wrap_policy``: Wrap a Function under Specific Policy
 -------------------------------------------------------------
-``@minpy.wrap_policy`` is a wrapper that wraps a function under specific policy. For example
+``@minpy.wrap_policy`` is a wrapper that wraps a function under specific policy. It only accpets policy objects.
+For example
 
 ::
 
     import minpy.numpy as np
     import minpy
-    minpy.set_global_policy(minpy.PreferMXNetPolicy())
+    import minpy.dispatch.policy as policy
+    minpy.set_global_policy('prefer_mxnet')
 
 
-    @minpy.wrap_policy(minpy.OnlyNumPyPolicy())
-    def foo(a, b)
+    @minpy.wrap_policy(policy.OnlyNumPyPolicy())
+    def foo(a, b):
         return np.log(a + b)
 
     a = np.ones((2, 2))
