@@ -9,7 +9,7 @@ from minpy.nn import io
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
 import minpy.dispatch.policy
-np.set_policy(minpy.dispatch.policy.OnlyNumPyPolicy())
+minpy.set_global_policy('only_numpy')
 
 # import logging
 # logging.getLogger('minpy.array').setLevel(logging.DEBUG)
@@ -31,7 +31,7 @@ class RNNNet(ModelBase):
 
     def forward(self, X, mode):
         h = np.zeros(self.hshape)  # init hidden state
-        for t in xrange(self.num_unroll_steps):
+        for t in range(self.num_unroll_steps):
             h = layers.rnn_step(X, h, self.params['Wx'],
                                 self.params['Wh'], self.params['b'])
         y = layers.affine(h, self.params['Wa'], self.params['ba'])

@@ -10,7 +10,6 @@ from minpy.nn.io import NDArrayIter
 # Can also use MXNet IO here
 # from mxnet.io import NDArrayIter
 
-
 def main(args):
     data = get_CIFAR10_data(args.data_dir)
     # reshape all data to matrix
