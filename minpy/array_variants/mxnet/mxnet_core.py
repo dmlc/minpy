@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 import operator
 import mxnet as mx
-from mxnet import _ndarray_internal as _in
 from mxnet.ndarray import NDArray
 from . import mxnet_wrapper
 
@@ -39,12 +38,12 @@ def _unbroadcast(ans, x, gradfun):
 def _selection_grad_gen0(ans, x, _):
     """Generate gradient function of maximum on lhs."""
     # pylint: disable=protected-access
-    return _unbroadcast(ans, x, lambda g: g * _in._equal(x, ans))
+    return _unbroadcast(ans, x, lambda g: g * (x == ans))
 
 def _selection_grad_gen1(ans, _, y):
     """Generate gradient function of maximum on rhs."""
     # pylint: disable=protected-access
-    return _unbroadcast(ans, y, lambda g: g * _in._equal(y, ans))
+    return _unbroadcast(ans, y, lambda g: g * (y == ans))
 
 def _reduce_grad_gen(ans, x, axis=None, keepdims=False):
     """Generate gradient function of all kinds of reductions."""
