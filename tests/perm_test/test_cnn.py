@@ -57,6 +57,8 @@ def test_cnn():
             out = layers.affine(out, self.params['w1'], self.params['b1'])
             out = layers.relu(out)
             out = layers.affine(out, self.params['w2'], self.params['b2'])
+            # This verifies whether symbols can be reused.
+            trash = self.conv(X=np.zeros(X.shape), **self.params)
             return out
     
         def loss(self, predict, y):

@@ -94,8 +94,10 @@ class MXNetSymbolError(ValueError):
     """Error class for creating mxnet symbols"""
     pass
 
+
 class Function(object):
     """Container for MXNet symbol"""
+
     def __init__(self, symbol, input_shapes, name='mxnet_symbol'):
         """Construct a differentiable function from MXNet symbol.
 
@@ -111,7 +113,6 @@ class Function(object):
         self._symbol = symbol
         self._input_shapes = input_shapes
         self._sym_name = name
-        self._executor, self._prim = self._create_prim()
         # Infer shapes of parameters and outputs.
         arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(
             **self._input_shapes)
@@ -161,7 +162,7 @@ class Function(object):
         # Create primitives.
         prim = Primitive(func, ArrayType.MXNET)
         prim.def_multiple_grad(grad_wrapper, tuple(range(len(arg_names))))
-        return executor, prim
+        return prim
         # pylint: enable= missing-docstring
 
     def __call__(self, **kwargs):
@@ -169,7 +170,8 @@ class Function(object):
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
                         for name in self._symbol.list_arguments()]
-        return self._prim.call(args=ordered_args, kwargs={})
+        prim = self._create_prim()
+        return prim.call(args=ordered_args, kwargs={})
 
     # pylint: disable= missing-docstring
     def get_params(self):
