@@ -127,7 +127,9 @@ class Tape(object):
         touch_queue = copy.deepcopy(target_queue)
         while len(touch_queue) != 0:
             current_id = touch_queue.popleft()
-            if not current_id in touched:
+            if current_id in touched:
+                continue
+            else:
                 touched.add(current_id)
             for grad_record in self._result_grad_records[current_id]:
                 owner = grad_record.owner
