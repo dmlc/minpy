@@ -1,19 +1,38 @@
+from data_utils import get_mnist
+
 import minpy
 import minpy.numpy as np
 import mxnet as mx
+from minpy.nn.io import DataIter, NDArrayIter
+import argparse
+
+from dcgan_solver import DCGanSolver
 
 from minpy.core import Function
 from minpy.nn import layers
 from minpy.nn.model import ModelBase
-from minpy.nn.solver import Solver
 from examples.utils.data_utils import get_CIFAR10_data
+
+# input shape
+gnet_input_size = (100,1, 1)
+nc = 3
+ndf = 64
+ngf = 64
+dnet_input_size=(3, 64, 64)
+batch_size = 64
+Z = 100
+lr = 0.0002
+beta1 = 0.5
+no_bias = True
+fix_gamma = True
+eps = 1e-5 + 1e-12
 
 class GenerativeNet(ModelBase):
     def __init__(self):
         super(GenerativeNet, self).__init__()
         # Define symbols that using convolution and max pooling to extract better features
         BatchNorm = mx.sym.BatchNorm
-        data = mx.sym.Variable('data')
+        data = mx.sym.Variable('X')
 
         g1 = mx.sym.Deconvolution(data, name='g1', kernel=(4,4), num_filter=ngf*8, no_bias=no_bias)
         gbn1 = BatchNorm(g1, name='gbn1', fix_gamma=fix_gamma, eps=eps)
@@ -34,21 +53,22 @@ class GenerativeNet(ModelBase):
         g5 = mx.sym.Deconvolution(gact4, name='g5', kernel=(4,4), stride=(2,2), pad=(1,1), num_filter=nc, no_bias=no_bias)
         gout = mx.sym.Activation(g5, name='gact5', act_type='tanh')
 
-        input_shapes = {'X': (batch_size,) + input_size}
-        self.gnet = Function(net, input_shapes=input_shapes, name='gnet')
+        input_shapes = {'X': (batch_size,) + gnet_input_size}
+        self.gnet = Function(gout, input_shapes=input_shapes, name='gnet')
         self.add_params(self.gnet.get_params())
 
-    def forward_batch(self, batch, mode):
-        out = self.gnet(X=batch.data[0], **self.params)
+    def forward_batch(self, batch_data, mode):
+        out = self.gnet(X=batch_data, **self.params)
         return out
     
     # User get confused?
     def loss(self, dnet_bottom_gradient, predict):
         return np.sum(dnet_bottom_gradient * predict)
 
-class DiscrimiinativeNet(ModelBase):
+class DiscriminativeNet(ModelBase):
     def __init__(self):
         super(DiscriminativeNet, self).__init__()
+        BatchNorm = mx.sym.BatchNorm
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('label')
 
@@ -68,48 +88,59 @@ class DiscrimiinativeNet(ModelBase):
         dact4 = mx.sym.LeakyReLU(dbn4, name='dact4', act_type='leaky', slope=0.2)
 
         d5 = mx.sym.Convolution(dact4, name='d5', kernel=(4,4), num_filter=1, no_bias=no_bias)
-        d5 = mx.sym.Flatten(d5)
+        dact5 = mx.sym.Activation(d5, name='dact5', act_type='sigmoid')
+        dact_flat5 = mx.sym.Flatten(dact5)
     
-        input_shapes = {'data': (batch_size,) + input_size}
-        self.dnet = Function(d5, input_shapes=input_shapes, name='dnet')
+        input_shapes = {'data': (batch_size,) + dnet_input_size}
+        self.dnet = Function(dact_flat5, input_shapes=input_shapes, name='dnet')
         self.add_params(self.dnet.get_params())
 
-    def forward_batch(self, batch, mode):
-        out = self.dnet(data=batch.data[0],
+    def forward_batch(self, batch_data, mode):
+        out = self.dnet(data=batch_data,
                 **self.params)
         return out
 
     def loss(self, predict, y):
         return layers.softmax_cross_entropy(predict, y)
 
-def main(args):
+class RandIter(mx.io.DataIter):
+    def __init__(self, batch_size, ndim):
+        self.batch_size = batch_size
+        self.ndim = ndim
+        self.provide_data = [('rand', (batch_size, ndim, 1, 1))]
+        self.provide_label = [np.zeros(batch_size)]
+
+    def iter_next(self):
+        return True
+
+    def getdata(self):
+        return [np.random.normal(0, 1.0, shape=(self.batch_size, self.ndim, 1, 1))]
+
+def main():
     # Create model.
     gnet_model = GenerativeNet()
-    dnet_model = DiscrimiinativeNet()
-    # Create data iterators for training and testing sets.
-    data = get_CIFAR10_data(args.data_dir)
-    train_dataiter = NDArrayIter(data=data['X_train'],
-                                 label=data['y_train'],
-                                 batch_size=batch_size,
-                                 shuffle=True)
-    test_dataiter = NDArrayIter(data=data['X_test'],
-                                label=data['y_test'],
-                                batch_size=batch_size,
-                                shuffle=False)
+    dnet_model = DiscriminativeNet()
+    
+    # Prepare data
+    X_train, X_test = get_mnist()
+    train_iter = NDArrayIter(X_train, np.zeros(X_train.shape[0]), batch_size=batch_size)
+    rand_iter = RandIter(batch_size, Z)
+
     # Create solver.
-    solver = GanSolver(gnet_model,
+    solver = DCGanSolver(gnet_model,
                     dnet_model,
-                    train_dataiter,
-                    test_dataiter,
-                    num_epochs=10,
+                    train_iter,
+                    rand_iter,
+                    num_epochs=100,
                     init_rule='gaussian',
                     init_config={
-                        'stdvar': 0.001
+                        'stdvar': 0.02
                     },
-                    update_rule='sgd_momentum',
+                    update_rule='adam',
                     optim_config={
-                        'learning_rate': 1e-3,
-                        'momentum': 0.9
+                        'learning_rate': lr,
+                        'wd': 0.,
+                        'beta1': beta1,
                     },
                     verbose=True,
                     print_every=20)
@@ -120,10 +151,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Multi-layer perceptron example using minpy operators")
-    parser.add_argument('--data_dir',
-                        type=str,
-                        required=True,
-                        help='Directory that contains cifar10 data')
-    main(parser.parse_args())
+    parser = argparse.ArgumentParser(description="Deep Convolutional Generative Adversarial Net")
+    main()
 

@@ -5,7 +5,8 @@ import os
 import minpy.numpy as np
 from minpy import core
 from minpy.nn.solver import Solver
-
+from minpy.nn.io import DataBatch
+from minpy.nn import optim, init
 
 class DCGanSolver(Solver):
     """A custom `Solver` for Discriminative Generative GAN models
@@ -15,7 +16,7 @@ class DCGanSolver(Solver):
         .loss(xs, ys, rs)
     """
 
-    def __init__(self, gnet, dnet, **kwargs):
+    def __init__(self, gnet, dnet, train_iter, rand_iter, **kwargs):
         """ Construct a new `DCGanSolver` instance.
 
         Parameters
@@ -29,8 +30,6 @@ class DCGanSolver(Solver):
         ----------------
         num_episodes : int, optional
             Number of episodes to train for.
-        update_every : int, optional
-            Update model parameters every `update_every` episodes.
         save_every : int, optional
             Save model parameters in the `save_dir` directory every `save_every` episodes.
         save_dir : str, optional
@@ -42,14 +41,15 @@ class DCGanSolver(Solver):
         """
         self.gnet = gnet
         self.dnet = dnet
+        self.real_dataiter = train_iter
+        self.rand_dataiter = rand_iter
         self.num_episodes = kwargs.pop('num_episodes', 100000)
-        self.update_every = kwargs.pop('update_every', 10)
         self.save_every = kwargs.pop('save_every', 10)
         self.save_dir = kwargs.pop('save_dir', './')
         self.resume_from = kwargs.pop('resume_from', None)
         self.render = kwargs.pop('render', False)
 
-        super(, self).__init__(gnet, None, None, **kwargs)
+        super(DCGanSolver, self).__init__(gnet, None, None, **kwargs)
 
     def _reset(self):
         """
@@ -63,8 +63,8 @@ class DCGanSolver(Solver):
         self.loss_history = []
         self.train_acc_history = []
         self.val_acc_history = []
-        self._reset_data_iterators()
-
+        self.real_dataiter.reset()
+        self.rand_dataiter.reset()
         # Make a deep copy of the optim_config for each parameter
         self.optim_configs = {}
         for p in self.gnet.param_configs:
@@ -119,31 +119,33 @@ class DCGanSolver(Solver):
         # (1) train DNet with real
         ##########################
         # Compute loss and gradient
-        def dnet_loss_func(batch, *params): # pylint: disable=unused-argument
+        def dnet_loss_func(batch_data, batch_label, *params): # pylint: disable=unused-argument
             """
             Loss function calculate the loss
             """
 
             # It seems that params are not used in forward function. But since we will pass
             # model.params as arguments, we are ok here.
-            predict = self.dnet.forward_batch(batch, mode='train')
-            return self.model.loss_batch(batch, predict)
+            predict = self.dnet.forward_batch(batch_data, mode='train')
+            return self.dnet.loss_batch(batch_label, predict)
 
         dnet_param_arrays = list(self.dnet.params.values())
         dnet_param_keys = list(self.dnet.params.keys())
         dnet_grad_and_loss_func = core.grad_and_loss(
-            dnet_loss_func, argnum=range(len(param_arrays)))
-        dnet_grad_arrays_real, dnet_loss_real = dnet_grad_and_loss_func(real_batch, *dnet_param_arrays)
-        dnet_grads_real = dict(zip(dnet_param_keys_real, dnet_grad_arrays_real))
+            dnet_loss_func, argnum=range(len(dnet_param_arrays) + 2))
+        
+        dnet_grad_arrays_real, dnet_loss_real = dnet_grad_and_loss_func(real_batch.data[0], real_batch.label[0],  *dnet_param_arrays)
+        dnet_grads_real = dict(zip(dnet_param_keys, dnet_grad_arrays_real[2:]))
 
         ##########################
         # (2) train DNet with fake
         ##########################
-        fake_batch = real_batch
-        fake_batch.data[0] = self.gnet.forward_batch(rand_batch, mode='train')
-        fake_batch.label[0] = np.zeros(np.shape(fake_batch.label[0]))
-        dnet_grad_arrays_fake, dnet_loss_fake = dnet_grad_and_loss_func(fake_batch, *dnet_param_arrays)
-        dnet_grads_fake = dict(zip(dnet_param_keys_fake, dnet_grad_arrays_fake))
+        #generated_data = self.gnet.forward_batch(rand_batch[0], mode='train').as_numpy()
+        generated_data = self.gnet.forward_batch(rand_batch[0], mode='train')
+        fake_batch = DataBatch([generated_data], [np.zeros(generated_data.shape[0])])
+        dnet_grad_arrays_fake, dnet_loss_fake = dnet_grad_and_loss_func(fake_batch.data[0], fake_batch.label[0], *dnet_param_arrays)
+        dnet_grads_fake = dict(zip(dnet_param_keys, dnet_grad_arrays_fake[2:]))
+
 
         # Perform a parameter update for dnet
         for p, w in self.dnet.params.items():
@@ -157,26 +159,27 @@ class DCGanSolver(Solver):
         # (3) train GNet
         ##########################
         # use fake data, but give real label to bp
-        fake_batch = real_batch
-        fake_batch.data[0] = self.gnet.forward_batch(rand_batch, mode='train')
-        # TODO: Do not call ff once more, just bp
-        dnet_grad_arrays_for_gnet, dnet_loss_for_gnet = dnet_grad_and_loss_func(fake_batch, *dnet_param_arrays)
-        dnet_bottom_grad = dnet_grad_arrays_real['data']
+        fake_batch = DataBatch([generated_data], [np.ones(generated_data.shape[0])])
+        dnet_grad_and_loss_func_on_data = core.grad_and_loss(
+            dnet_loss_func, argnum=range(1))
+        dnet_grad_arrays_on_data, dnet_loss_on_data = dnet_grad_and_loss_func_on_data(fake_batch.data[0], fake_batch.label[0], *dnet_param_arrays)
+        dnet_bottom_grad = dnet_grad_arrays_on_data[0]
 
-        def gnet_loss_func(gnet_out, dnet_bottom_grad, *params): # pylint: disable=unused-argument
+        def gnet_loss_func(rand_batch_data, dnet_bottom_grad, *params): # pylint: disable=unused-argument
             """
             Loss function calculate the loss
             """
 
             # It seems that params are not used in forward function. But since we will pass
             # model.params as arguments, we are ok here.
-            return self.model.loss_batch(dnet_bottom_grad, predict)
+            gnet_out = self.gnet.forward_batch(rand_batch_data, mode='train')
+            return self.model.loss_batch(dnet_bottom_grad, gnet_out)
 
         gnet_param_arrays = list(self.gnet.params.values())
         gnet_param_keys = list(self.gnet.params.keys())
         gnet_grad_and_loss_func = core.grad_and_loss(
-            gnet_loss_func, argnum=range(len(gnet_param_arrays)))
-        gnet_grad_arrays, gnet_loss = gnet_grad_and_loss_func(fake_batch.data[0], dnet_bottom_grad, *gnet_param_arrays)
+            gnet_loss_func, argnum=range(len(gnet_param_arrays)+2))
+        gnet_grad_arrays, gnet_loss = gnet_grad_and_loss_func(rand_batch[0], dnet_bottom_grad, *gnet_param_arrays)
         gnet_grads = dict(zip(gnet_param_keys, gnet_grad_arrays))
 
         # Perform a parameter update
@@ -206,22 +209,19 @@ class DCGanSolver(Solver):
         """
         Run optimization to train the model.
         """
-        num_iterations = self.train_dataiter.getnumiterations(
-        ) * self.num_epochs
+        num_iterations = self.real_dataiter.getnumiterations() * self.num_epochs
         t = 0
         for epoch in range(self.num_epochs):
             start = time.time()
             self.epoch = epoch + 1
-            for each_batch in self.train_dataiter:
-                rand_batch = self.rand_dataiter.iter_next()
+            for each_batch in self.real_dataiter:
+                rand_batch = self.rand_dataiter.getdata()
                 self._step(each_batch, rand_batch)
                 # Maybe print training loss
                 if self.verbose and t % self.print_every == 0:
-                    print('(Iteration %d / %d) loss: %f' %
-                          (t + 1, num_iterations, self.loss_history[-1]))
+                    print('(Iteration %d / %d)' %
+                          (t + 1, num_iterations))
                 t += 1
 
             # TODO: should call reset automatically
             self._reset_data_iterators()
-        # At the end of training swap the best params into the model
-        self.model.params = self.best_params

@@ -90,7 +90,9 @@ class ModelBase(object):
         # Default implementation is to use only the first input data.
         return self.forward(batch.data[0], mode)
 
-    def loss_batch(self, batch, forward_outputs):
+    #def loss_batch(self, batch, forward_outputs):
+    ##HACK
+    def loss_batch(self, batch_label, forward_outputs):
         """Calculate the loss value of the current batch.
 
         This is a more general interface than `loss` which only uses one label.
@@ -110,7 +112,7 @@ class ModelBase(object):
             Loss value.
         """
         # Default implementation is to use only the first label.
-        return self.loss(forward_outputs, batch.label[0])
+        return self.loss(forward_outputs, batch_label)
 
     def forward(self, X, mode):
         """Do forward propagation.
