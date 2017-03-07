@@ -171,6 +171,15 @@ def svm_loss(x, y):
     return loss
 
 
+def logistic_cross_entropy(sigmoid_output, label):
+    N = sigmoid_output.shape[0]
+    C = 2
+    prob = np.append(sigmoid_output, 1- sigmoid_output, axis = 1)
+    print prob.shape
+    onehot_label = np.zeros([N, C])
+    np.onehot_encode(label, onehot_label)
+    return -np.sum(np.log(prob) * onehot_label) / N
+
 def softmax_cross_entropy(prob, label):
     """
     Computes the cross entropy for softmax activation.

@@ -63,6 +63,10 @@ class GenerativeNet(ModelBase):
     
     # User get confused?
     def loss(self, dnet_bottom_gradient, predict):
+
+        #print 'genet'
+        #print predict
+
         return np.sum(dnet_bottom_gradient * predict)
 
 class DiscriminativeNet(ModelBase):
@@ -87,9 +91,11 @@ class DiscriminativeNet(ModelBase):
         dbn4 = BatchNorm(d4, name='dbn4', fix_gamma=fix_gamma, eps=eps)
         dact4 = mx.sym.LeakyReLU(dbn4, name='dact4', act_type='leaky', slope=0.2)
 
-        d5 = mx.sym.Convolution(dact4, name='d5', kernel=(4,4), num_filter=1, no_bias=no_bias)
-        dact5 = mx.sym.Activation(d5, name='dact5', act_type='sigmoid')
-        dact_flat5 = mx.sym.Flatten(dact5)
+        d5 = mx.sym.Convolution(dact4, name='d5', kernel=(4,4), num_filter=2, no_bias=no_bias)
+        dact_flat5 = mx.sym.Flatten(d5)
+        #d5 = mx.sym.Convolution(dact4, name='d5', kernel=(4,4), num_filter=1, no_bias=no_bias)
+        #dact5 = mx.sym.Activation(d5, name='dact5', act_type='sigmoid')
+        #dact_flat5 = mx.sym.Flatten(dact5)
     
         input_shapes = {'data': (batch_size,) + dnet_input_size}
         self.dnet = Function(dact_flat5, input_shapes=input_shapes, name='dnet')
@@ -101,7 +107,8 @@ class DiscriminativeNet(ModelBase):
         return out
 
     def loss(self, predict, y):
-        return layers.softmax_cross_entropy(predict, y)
+        #return layers.logistic_cross_entropy(predict, y)
+        return layers.softmax_loss(predict, y)
 
 class RandIter(mx.io.DataIter):
     def __init__(self, batch_size, ndim):
@@ -123,7 +130,7 @@ def main():
     
     # Prepare data
     X_train, X_test = get_mnist()
-    train_iter = NDArrayIter(X_train, np.zeros(X_train.shape[0]), batch_size=batch_size)
+    train_iter = NDArrayIter(X_train, np.ones(X_train.shape[0]), batch_size=batch_size)
     rand_iter = RandIter(batch_size, Z)
 
     # Create solver.

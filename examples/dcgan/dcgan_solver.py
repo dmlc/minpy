@@ -48,6 +48,7 @@ class DCGanSolver(Solver):
         self.save_dir = kwargs.pop('save_dir', './')
         self.resume_from = kwargs.pop('resume_from', None)
         self.render = kwargs.pop('render', False)
+        self.verbose = True
 
         super(DCGanSolver, self).__init__(gnet, None, None, **kwargs)
 
@@ -60,7 +61,8 @@ class DCGanSolver(Solver):
         self.epoch = 0
         self.best_val_acc = 0
         self.best_params = {}
-        self.loss_history = []
+        self.dnet_loss_history = []
+        self.gnet_loss_history = []
         self.train_acc_history = []
         self.val_acc_history = []
         self.real_dataiter.reset()
@@ -78,6 +80,7 @@ class DCGanSolver(Solver):
 
         # Make a deep copy of the init_config for each parameter
         # and set each param to their own init_rule and init_config
+        
         self.init_rules = {}
         self.init_configs = {}
         for p in self.gnet.param_configs:
@@ -119,6 +122,7 @@ class DCGanSolver(Solver):
         # (1) train DNet with real
         ##########################
         # Compute loss and gradient
+
         def dnet_loss_func(batch_data, batch_label, *params): # pylint: disable=unused-argument
             """
             Loss function calculate the loss
@@ -135,6 +139,11 @@ class DCGanSolver(Solver):
             dnet_loss_func, argnum=range(len(dnet_param_arrays) + 2))
         
         dnet_grad_arrays_real, dnet_loss_real = dnet_grad_and_loss_func(real_batch.data[0], real_batch.label[0],  *dnet_param_arrays)
+        self.dnet_loss_history.append(dnet_loss_real[0])
+        print 'dnet real'
+        print real_batch.label[0]
+        print dnet_loss_real[0]
+        
         dnet_grads_real = dict(zip(dnet_param_keys, dnet_grad_arrays_real[2:]))
 
         ##########################
@@ -143,7 +152,12 @@ class DCGanSolver(Solver):
         #generated_data = self.gnet.forward_batch(rand_batch[0], mode='train').as_numpy()
         generated_data = self.gnet.forward_batch(rand_batch[0], mode='train')
         fake_batch = DataBatch([generated_data], [np.zeros(generated_data.shape[0])])
+        
         dnet_grad_arrays_fake, dnet_loss_fake = dnet_grad_and_loss_func(fake_batch.data[0], fake_batch.label[0], *dnet_param_arrays)
+        self.dnet_loss_history[-1] += dnet_loss_fake[0]
+        print 'dnet_fake'
+        print fake_batch.label[0]
+        print dnet_loss_fake[0]
         dnet_grads_fake = dict(zip(dnet_param_keys, dnet_grad_arrays_fake[2:]))
 
 
@@ -162,7 +176,9 @@ class DCGanSolver(Solver):
         fake_batch = DataBatch([generated_data], [np.ones(generated_data.shape[0])])
         dnet_grad_and_loss_func_on_data = core.grad_and_loss(
             dnet_loss_func, argnum=range(1))
+        
         dnet_grad_arrays_on_data, dnet_loss_on_data = dnet_grad_and_loss_func_on_data(fake_batch.data[0], fake_batch.label[0], *dnet_param_arrays)
+        self.gnet_loss_history.append(dnet_loss_on_data[0])
         dnet_bottom_grad = dnet_grad_arrays_on_data[0]
 
         def gnet_loss_func(rand_batch_data, dnet_bottom_grad, *params): # pylint: disable=unused-argument
@@ -180,7 +196,7 @@ class DCGanSolver(Solver):
         gnet_grad_and_loss_func = core.grad_and_loss(
             gnet_loss_func, argnum=range(len(gnet_param_arrays)+2))
         gnet_grad_arrays, gnet_loss = gnet_grad_and_loss_func(rand_batch[0], dnet_bottom_grad, *gnet_param_arrays)
-        gnet_grads = dict(zip(gnet_param_keys, gnet_grad_arrays))
+        gnet_grads = dict(zip(gnet_param_keys, gnet_grad_arrays[2:]))
 
         # Perform a parameter update
         for p, w in self.gnet.params.items():
@@ -200,7 +216,7 @@ class DCGanSolver(Solver):
         for name, value in self.dnet.aux_param_configs.items():
             self.dnet.aux_params[name] = value
         for name, config in self.gnet.param_configs.items():
-            self.dnet.params[name] = self.init_rules[name](
+            self.gnet.params[name] = self.init_rules[name](
                 config['shape'], self.init_configs[name])
         for name, value in self.gnet.aux_param_configs.items():
             self.gnet.aux_params[name] = value
@@ -218,9 +234,8 @@ class DCGanSolver(Solver):
                 rand_batch = self.rand_dataiter.getdata()
                 self._step(each_batch, rand_batch)
                 # Maybe print training loss
-                if self.verbose and t % self.print_every == 0:
-                    print('(Iteration %d / %d)' %
-                          (t + 1, num_iterations))
+                print('(Iteration %d / %d, dloss %f, gloss %f)' %
+                      (t + 1, num_iterations, self.dnet_loss_history[-1], self.gnet_loss_history[-1]))
                 t += 1
 
             # TODO: should call reset automatically
