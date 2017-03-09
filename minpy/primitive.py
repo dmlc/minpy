@@ -154,17 +154,23 @@ class Primitive(object):
         -------
             The converted data.
         """
-        wrapped_data = array.wrap(data)
-        converted = None
-        if isinstance(wrapped_data, array.Value):
-            if mutate:
-                converted = wrapped_data.get_data_mutable(self._type)
+        def get_converted_data(data):
+            """convert non-list data to given array type"""
+            wrapped_data = array.wrap(data)
+            if isinstance(wrapped_data, array.Value):
+                if mutate:
+                    converted = wrapped_data.get_data_mutable(self._type)
+                else:
+                    converted = wrapped_data.get_data(self._type)
+                return converted
             else:
-                converted = wrapped_data.get_data(self._type)
-            return converted
+                return data
+
+        if isinstance(data, list) and len(data) != 0 and isinstance(data[0], array.Value):
+            # convert [minpy.array] to [mxnet.ndarray]/[numpy.ndarray]
+            return [get_converted_data(item) for item in data]
         else:
-            # Non-array object. Return the object unchanged.
-            return data
+            return get_converted_data(data)
 
     def _convert_args(self, args, kwargs):
         """Convert arguments to the underlying type of this primitive.
