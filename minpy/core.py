@@ -171,7 +171,7 @@ class Function(object):
 
     def __call__(self, **kwargs):
         if self._input_shapes is None:
-            self._infer_shapes({kv[0]: kv[1].shape for kv in kwargs.items()})
+            self._infer_shape({kv[0]: kv[1].shape for kv in kwargs.items()})
         # Remove arguments that are not defined in symbol's argument
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
