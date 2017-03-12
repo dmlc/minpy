@@ -98,7 +98,7 @@ class MXNetSymbolError(ValueError):
 class Function(object):
     """Container for MXNet symbol"""
 
-    def __init__(self, symbol, input_shapes, name='mxnet_symbol'):
+    def __init__(self, symbol, input_shapes=None, name='mxnet_symbol'):
         """Construct a differentiable function from MXNet symbol.
 
         There is a known issue with current implementation. If SoftmaxLoss symbol is used, the
@@ -112,22 +112,26 @@ class Function(object):
         """
         self._symbol = symbol
         self._input_shapes = input_shapes
+        if input_shapes is not None:
+            self._infer_shape(input_shapes)
         self._sym_name = name
+
+    def _infer_shape(self, input_shapes):
         # Infer shapes of parameters and outputs.
-        arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(
+        arg_shapes, out_shapes, aux_shapes = self._symbol.infer_shape(
             **self._input_shapes)
         # Get shapes of learnable parameters.
         self._param_shapes = {}
-        for i, arg_name in enumerate(symbol.list_arguments()):
+        for i, arg_name in enumerate(self._symbol.list_arguments()):
             if arg_name not in input_shapes:
                 self._param_shapes[arg_name] = arg_shapes[i]
         # Get shapes of output.
         self._out_shapes = {}
-        for i, out_name in enumerate(symbol.list_outputs()):
+        for i, out_name in enumerate(self._symbol.list_outputs()):
             self._out_shapes[out_name] = out_shapes[i]
         # Get shapes of auxiliary tensors.
         self._aux_shapes = {}
-        for i, aux_name in enumerate(symbol.list_auxiliary_states()):
+        for i, aux_name in enumerate(self._symbol.list_auxiliary_states()):
             self._aux_shapes[aux_name] = aux_shapes[i]
 
     def _create_prim(self):
@@ -166,6 +170,8 @@ class Function(object):
         # pylint: enable= missing-docstring
 
     def __call__(self, **kwargs):
+        if self._input_shapes is None:
+            self._infer_shape({kv[0]: kv[1].shape for kv in kwargs.items()})
         # Remove arguments that are not defined in symbol's argument
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
