@@ -39,15 +39,29 @@ def grad_and_loss(func, argnum=0):
         arrays = tuple(array.wrap(a) for a in args)
         argnums = [argnum] if isinstance(argnum, int) else argnum
         with tape.tape() as current_tape:
+            current_tape.start_recording()
             for i in argnums:
                 arrays[i].mark_for_bp(current_tape)
-            result_array = func(*arrays)
+            result = func(*arrays)
+            current_tape.stop_recording()
+            # Wrap result value.
+            # TODO(minjie): Also wait for result value to be finished. This prevents
+            # backward propagation to be run in parallel with forward propagation.
+            # The main reason this is not allowed right now is due to the potential
+            # large memory consumption. This should be fixed by a more systemetic
+            # way in the future.
+            result_wrapped = None
+            if isinstance(result, tuple):
+                result_wrapped = tuple(array.wrap(rst) for rst in result)
+            else:
+                result_wrapped = array.wrap(result) # pylint: disable=redefined-variable-type
             _logger.debug('Forward pass finished. Start backward pass.')
-            current_tape.set_gradient_target(result_array)
-            grad_vals = tuple(current_tape.get_gradient(arrays[i]) for i in argnums)
+            # Get gradient using result as target.
+            grad_vals = current_tape.get_gradient(
+                tuple(arrays[i] for i in argnums), result_wrapped)
             if len(grad_vals) == 1:
                 grad_vals = grad_vals[0]
-        return grad_vals, result_array
+        return grad_vals, result
 
     return wrapped
 
@@ -80,9 +94,11 @@ class MXNetSymbolError(ValueError):
     """Error class for creating mxnet symbols"""
     pass
 
+
 class Function(object):
     """Container for MXNet symbol"""
-    def __init__(self, symbol, input_shapes, name='mxnet_symbol'):
+
+    def __init__(self, symbol, input_shapes=None, name='mxnet_symbol'):
         """Construct a differentiable function from MXNet symbol.
 
         There is a known issue with current implementation. If SoftmaxLoss symbol is used, the
@@ -96,23 +112,26 @@ class Function(object):
         """
         self._symbol = symbol
         self._input_shapes = input_shapes
+        if input_shapes is not None:
+            self._infer_shape(input_shapes)
         self._sym_name = name
-        self._executor, self._prim = self._create_prim()
+
+    def _infer_shape(self, input_shapes):
         # Infer shapes of parameters and outputs.
-        arg_shapes, out_shapes, aux_shapes = symbol.infer_shape(
+        arg_shapes, out_shapes, aux_shapes = self._symbol.infer_shape(
             **self._input_shapes)
         # Get shapes of learnable parameters.
         self._param_shapes = {}
-        for i, arg_name in enumerate(symbol.list_arguments()):
+        for i, arg_name in enumerate(self._symbol.list_arguments()):
             if arg_name not in input_shapes:
                 self._param_shapes[arg_name] = arg_shapes[i]
         # Get shapes of output.
         self._out_shapes = {}
-        for i, out_name in enumerate(symbol.list_outputs()):
+        for i, out_name in enumerate(self._symbol.list_outputs()):
             self._out_shapes[out_name] = out_shapes[i]
         # Get shapes of auxiliary tensors.
         self._aux_shapes = {}
-        for i, aux_name in enumerate(symbol.list_auxiliary_states()):
+        for i, aux_name in enumerate(self._symbol.list_auxiliary_states()):
             self._aux_shapes[aux_name] = aux_shapes[i]
 
     def _create_prim(self):
@@ -147,15 +166,18 @@ class Function(object):
         # Create primitives.
         prim = Primitive(func, ArrayType.MXNET)
         prim.def_multiple_grad(grad_wrapper, tuple(range(len(arg_names))))
-        return executor, prim
+        return prim
         # pylint: enable= missing-docstring
 
     def __call__(self, **kwargs):
+        if self._input_shapes is None:
+            self._infer_shape({kv[0]: kv[1].shape for kv in kwargs.items()})
         # Remove arguments that are not defined in symbol's argument
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
                         for name in self._symbol.list_arguments()]
-        return self._prim(args=ordered_args, kwargs={})
+        prim = self._create_prim()
+        return prim.call(args=ordered_args, kwargs={})
 
     # pylint: disable= missing-docstring
     def get_params(self):

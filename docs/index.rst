@@ -1,7 +1,16 @@
 Welcome to MinPy's documentation!
 =================================
 
-MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface above `MXNet <https://github.com/dmlc/mxnet>`_ backend. This document describes its main features: 
+MinPy aims at prototyping a pure `NumPy <http://www.numpy.org/>`_ interface above `MXNet <https://github.com/dmlc/mxnet>`_ backend. This package targets two groups of users: 
+
+* The beginners who wish to have a firm grasp of the fundamental concepts of deep learning, and 
+* Researchers who want a quick prototype of advanced and complex algorithms. 
+
+It is not intended for those who want to compose with ready-made components, although there are enough (layers and activation functions etc.) to get started.
+
+As much as possible, MinPy strikes to be purely NumPy-compatible. It also abides to a fully imperative programming experience that is familiar to most users. Letting go the popular approach that mixes in symbolic programming sacrifices some runtime optimization opportunities, in favor of algorithmic expressiveness and flexibility. However, MinPy performs reasonably well, especially when computation dominates.  
+
+This document describes its main features: 
 
 * Auto-differentiation 
 * Transparent CPU/GPU acceleration

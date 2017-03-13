@@ -3,7 +3,7 @@ from __future__ import print_function
 import minpy.numpy as mp
 import numpy as np
 import minpy.dispatch.policy as policy
-from minpy.core import convert_args, return_numpy, grad_and_loss, minpy_to_numpy as mn, numpy_to_minpy as nm
+from minpy.core import convert_args, return_numpy, grad_and_loss, grad, minpy_to_numpy as mn, numpy_to_minpy as nm
 import time
 
 # mp.set_policy(policy.OnlyNumPyPolicy())
@@ -80,5 +80,86 @@ def test_autograd():
     print('dWh error: ', rel_error(dWh, grad_arrays[3]))
     print('db error: ', rel_error(db, grad_arrays[4]))
 
+def test_zero_input_grad():
+    def foo1(x):
+        return 1
+    bar1 = grad(foo1)
+    assert bar1(0) == 0.0
+
+def test_reduction():
+    def test_sum():
+        x_np = np.array([[1, 2], [3, 4], [5, 6]])
+        x_grad = np.array([[1, 1], [1, 1], [1, 1]])
+        def red1(x):
+            return mp.sum(x)
+        def red2(x):
+            return mp.sum(x, axis=0)
+        def red3(x):
+            return mp.sum(x, axis=0, keepdims=True)
+        grad1 = grad(red1)
+        assert np.all(grad1(x_np).asnumpy() == x_grad)
+        grad2 = grad(red2)
+        assert np.all(grad2(x_np).asnumpy() == x_grad)
+        grad3 = grad(red3)
+        assert np.all(grad3(x_np).asnumpy() == x_grad)
+
+    def test_max():
+        x_np = np.array([[1, 2], [2, 1], [0, 0]])
+        x_grad1 = np.array([[0, 1], [1, 0], [0, 0]])
+        x_grad2 = np.array([[0, 1], [1, 0], [1, 1]])
+        x_grad3 = np.array([[0, 1], [1, 0], [0, 0]])
+        def red1(x):
+            return mp.max(x)
+        def red2(x):
+            return mp.max(x, axis=1)
+        def red3(x):
+            return mp.max(x, axis=1, keepdims=True)
+        def red4(x):
+            return mp.max(x, axis=0)
+        def red5(x):
+            return mp.max(x, axis=0, keepdims=True)
+        grad1 = grad(red1)
+        assert np.all(grad1(x_np).asnumpy() == x_grad1)
+        grad2 = grad(red2)
+        assert np.all(grad2(x_np).asnumpy() == x_grad2)
+        grad3 = grad(red3)
+        assert np.all(grad3(x_np).asnumpy() == x_grad2)
+        grad4 = grad(red4)
+        assert np.all(grad4(x_np).asnumpy() == x_grad3)
+        grad5 = grad(red5)
+        assert np.all(grad5(x_np).asnumpy() == x_grad3)
+
+    def test_min():
+        x_np = np.array([[1, 2], [2, 1], [0, 0]])
+        x_grad1 = np.array([[0, 0], [0, 0], [1, 1]])
+        x_grad2 = np.array([[1, 0], [0, 1], [1, 1]])
+        x_grad3 = np.array([[0, 0], [0, 0], [1, 1]])
+        def red1(x):
+            return mp.min(x)
+        def red2(x):
+            return mp.min(x, axis=1)
+        def red3(x):
+            return mp.min(x, axis=1, keepdims=True)
+        def red4(x):
+            return mp.min(x, axis=0)
+        def red5(x):
+            return mp.min(x, axis=0, keepdims=True)
+        grad1 = grad(red1)
+        assert np.all(grad1(x_np).asnumpy() == x_grad1)
+        grad2 = grad(red2)
+        assert np.all(grad2(x_np).asnumpy() == x_grad2)
+        grad3 = grad(red3)
+        assert np.all(grad3(x_np).asnumpy() == x_grad2)
+        grad4 = grad(red4)
+        assert np.all(grad4(x_np).asnumpy() == x_grad3)
+        grad5 = grad(red5)
+        assert np.all(grad5(x_np).asnumpy() == x_grad3)
+
+    test_sum()
+    test_max()
+    test_min()
+
 if __name__ == "__main__":
     test_autograd()
+    test_zero_input_grad()
+    test_reduction()

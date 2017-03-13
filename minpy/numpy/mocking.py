@@ -9,14 +9,11 @@ from __future__ import absolute_import
 
 import importlib
 
+import minpy
 from minpy.array_variants import variants
 from minpy.dispatch.registry import Registry
-from minpy.dispatch.policy import Policy
-from minpy.dispatch.primitive_selector import PrimitiveSelector
 from minpy.primitive import Primitive
 from minpy.utils import log
-import minpy
-
 
 class Module(object):
     """Mocking module class for name dispatching.
@@ -38,7 +35,6 @@ class Module(object):
         # Add module itself into global config
         minpy.Config['modules'].append(self)
         self._registry = Registry(old['__name__'])
-        self._policy = minpy.Config['default_policy']
         self._logger = log.get_logger(old['__name__'])
         self._logger.info('Initialize module: %s.', old['__name__'])
         self._old = old
@@ -64,36 +60,24 @@ class Module(object):
             # Define gradients of primitives.
             mod.def_grads(primitive_getter)
         self._logger.info('Import %d primitives', len(self._registry._reg))
-        self._set_attrs()
+        self.generate_attrs(minpy.Config['default_policy'])
         # pylint: enable= protected-access, cell-var-from-loop
 
-    def set_policy(self, plc):
-        """Set name dispatch policy.
+    def set_policy(self, policy):
+        """[Deprecated] Set policy for this module."""
+        self.generate_attrs(policy)
 
-        Parameters
-        ----------
-        plc
-            New policy.
-        """
-        assert isinstance(
-            plc, Policy), 'Need an instance of `minpy.dispatch.policy.Policy`.'
-        self._policy = plc
-
-    @property
-    def policy(self):
-        """Get policy of current module"""
-        return self._policy
-
-    def _set_attrs(self):
-        """Set attributes for this module"""
+    def generate_attrs(self, policy):
+        """Generate attributes for this module"""
         # The latter will override the former, so set attributes in reverse priority order
         for k, val in self._old.items():
             setattr(self, k, val)
         for k in self._name_injector.keys():
             setattr(self, k, self._name_injector[k])
-        for k in self._registry._reg: # pylint: disable= protected-access
-            fun = PrimitiveSelector(k, self)
-            setattr(self, k, fun)
+        for k, prims in self._registry._reg.items(): # pylint: disable= protected-access
+            prim_type = policy.decide(prims.values())
+            if prim_type is not None:
+                setattr(self, k, prims[prim_type])
         if '__all__' in dir(self._old):
             setattr(self, '__all__', self._old.__all__)
         setattr(self, '__registry__', self._registry)

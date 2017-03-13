@@ -1,13 +1,14 @@
 import logging
+
+import minpy
 import minpy.numpy as np
 import minpy.numpy.random as random
 from minpy import core
-from minpy.dispatch import policy
 
 logging.getLogger('minpy.array').setLevel(logging.DEBUG)
 logging.getLogger('minpy.core').setLevel(logging.DEBUG)
 logging.getLogger('minpy.primitive').setLevel(logging.DEBUG)
-np.set_policy(policy.OnlyNumPyPolicy())
+minpy.set_global_policy('only_numpy')
 
 
 def f(x, y):

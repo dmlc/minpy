@@ -10,7 +10,8 @@ if [ ${TASK} == "example_test" ]; then
     make all || exit -1
     cd python && python setup.py install
     cd ../..
-    nosetests tests/unittest || exit -1
-    nosetests tests/perm_test || exit -1
+    nosetests -v tests/unittest || exit -1
+    # -s allows stdout. Avoids travis killing test for 10-min no output.
+    nosetests -vs tests/perm_test || exit -1
     exit 0
 fi

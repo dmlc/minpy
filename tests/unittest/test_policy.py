@@ -17,9 +17,8 @@ from minpy.core import grad_and_loss
 # this function by `@minpy.wrap_policy`or `with minpy.OnlyNumPyPolicy(): ...`
 """ Generates several clusters of Gaussian points """
 def test_policy():
-    @minpy.wrap_policy(minpy.OnlyNumPyPolicy())
+    @minpy.wrap_policy("only_numpy")
     def gaussian_cluster_generator(num_samples=10000, num_features=500, num_classes=5):
-        # with minpy.OnlyNumPyPolicy():
         mu = np.random.rand(num_classes, num_features)
         sigma = np.ones((num_classes, num_features)) * 0.1
         num_cls_samples = num_samples / num_classes

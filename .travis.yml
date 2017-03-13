@@ -42,7 +42,7 @@ addons:
       - gfortran
 
 before_install:
-  - git clone -b nnvm --recursive https://github.com/dmlc/mxnet.git
+  - git clone --recursive -b engine https://github.com/dmlc/mxnet.git
   # set up travis path & nnvm settings
   - source mxnet/dmlc-core/scripts/travis/travis_setup_env.sh
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/mxnet/python
@@ -60,6 +60,8 @@ install:
   - cd ..
   - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-4.8 /usr/bin/gcc
   - sudo unlink /usr/bin/g++ && sudo ln -s /usr/bin/g++-4.8 /usr/bin/g++
+  # Download cifar-10 dataset
+  - . examples/dataset/cifar10/get_datasets.sh
 
 script:
   - travis/run_test.sh
