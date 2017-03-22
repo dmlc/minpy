@@ -317,6 +317,7 @@ class _ConfigParser(object):
             self._configs = configs
             self._attr = attr
 
+        # TODO not float(self)
         def __add__(self, other):
             return float(self) + float(other)
 
@@ -328,6 +329,25 @@ class _ConfigParser(object):
 
         # TODO div family
         def __div__(self, other):
+            return float(self) + float(other)
+
+        def __iadd__(self, other):
+            for config in self._configs:
+                try: config[self._attr] += other
+                except KeyError: pass
+
+        def __isub__(self, other):
+            for config in self._configs:
+                try: config[self._attr] -= other
+                except KeyError: pass
+
+        def __imul__(self, other):
+            for config in self._configs:
+                try: config[self._attr] *= other
+                except KeyError: pass
+
+        # TODO idiv family
+        def __idiv__(self, other):
             return float(self) + float(other)
 
         def __getitem__(self, param_name):
