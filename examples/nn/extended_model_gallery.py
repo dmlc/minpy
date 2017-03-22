@@ -1,8 +1,11 @@
 import minpy.nn.model_builder as builder
 
 '''
-__init__: declare a module
-__call__: connect (an)other symbol(s) to self, i.e. create an edge in graph
+Model builder only supports static symbol and a friendly interface for layer customization.
+
+Static symbol:
+  __init__(self, ...): declare a module
+  __call__(self, ...): connect (an)other symbol(s) to self, i.e. create an edge in graph
 '''
 
 # residual network (for CIFAR)
@@ -89,10 +92,53 @@ temporal_data = builder.slice(data, axis=1, output_number=N_STEPS)
 temporal_labels = builder.slice(labels, axis=1, output_number=N_STEPS)
 
 total_loss = 0
-for d, l in zip(temporal_data, temporal_labels):
-    H = activation(X_to_H(d) + H_to_H(data))
+H = 0
+for data, labels in zip(temporal_data, temporal_labels):
+    H = activation(X_to_H(data) + H_to_H(H))
     O = H_to_O(H)
-    loss = builder.NLLLoss(O, l)
+    loss = builder.NLLLoss(O, labels)
     total_loss += loss
 
 unfolded_rnn = builder.Model(total, loss=None) # set loss function to None since loss computation is integrated into network
+
+class FullyConnected(builder.Layer):
+    _module_name = 'fully_connected'
+    def __init__(self, n_hidden_units, init_configs=None, update_configs=None, name=None):
+        """ Fully connected layer.
+
+        param int n_hidden_units: number of hidden units.
+        """
+
+        params = ('weight', 'bias') # "local" parameter name
+        aux_params = None
+
+        # register parameters
+        # after registration, user could refer to global parameter name directly
+        super(FullyConnected, self).__init__(params, aux_params, name)
+
+        # register initializer and optimizer
+        self._default_init_configs = {
+            self.weight : builder.WEIGHT_INITIALIZER,
+            self.bias   : builder.BIAS_INITIALIZER,
+        }
+        self._default_update_configs = {'update_rule' : 'sgd', 'learning_rate' : 0.1}
+        self._register_init_configs(init_configs)     # method implemented by builder.Layer
+        self._register_update_configs(update_configs) # method implemented by builder.Layer
+
+        # customization starts
+        self._n_hidden_units = n_hidden_units
+       
+    def forward(self, input, params):
+        from minpy.nn.layers import affine
+        weight, bias = self._get_params(self.weight, self.bias)
+        return affine(input, weight, bias)
+
+    def output_shape(self, input_shape):
+        # shape inference happens later
+        N, D = input_shape
+        return (N, self._n_hidden_units)
+
+    def param_shapes(self, input_shape):
+        # shape inference happens later
+        N, D = input_shape
+        return {self.weight : (D, self._n_hidden_units), self.bias : (self._n_hidden_units,)}
