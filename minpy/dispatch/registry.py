@@ -43,9 +43,8 @@ class Registry(object):
         if name not in self._reg:
             self._reg[name] = {}
         if prim.type in self._reg[name]:
-            raise PrimitiveRegistryError(
-                'Type "{}" for name "{}" has already existed'.format(
-                    prim.typestr, name))
+            _logger.warning('Type %s for name %s has already existed',
+                            prim.typestr, name)
         else:
             _logger.debug('Function "%s" registered with type %s', name,
                           prim.typestr)
