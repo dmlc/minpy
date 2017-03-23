@@ -1,23 +1,61 @@
 import minpy.nn.model_builder as builder
 
 '''
-Temporary strategy: only supports static symbol and a friendly interface for layer customization.
+Only supports static symbol and a friendly interface for layer customization for the time being.
+
+A graph contains nodes and operators
+
+In model_builder, an operator is a callable object.
+First, user instantiate an operator: operator0 = Operator(...).
+Then, user writes "node_b = operator0(node_a)", which creates an edge in computation graph:
+
+node_a ----------> node_b
+      operator0
+
+This mechanism enables user to share operator easily.
+For example, after writing "node_b = operator(node_a)", if user writes "node_c = operator0(node_a)", 
+then:
+
+node_c <---------- node_a ----------> node_b
+        operator0           operator0
 '''
 
-# residual network (for CIFAR)
+
+
+################################
+# residual network (for CIFAR) #
+################################
+
 def _convolution(*args, **kwargs):
     '''
-    builder.Convolution(*args, **kwargs) only specifies an operation (an edge in computation graph)
-    builder.Sequential is responsible for organizing those edges into an sequential order
+    builder.Convolution(*args, **kwargs) only specifies an operator (an edge in computation graph).
+    builder.Sequential is responsible for organizing those edges into an sequential order.
     '''
+
     return builder.Sequential((
         builder.Convolution(*args, **kwargs),
         builder.ReLU(),
         builder.BatchNormalization(),
     ))
 
+    '''
+    builder.Sequential is only an operator as well. To complete computation graph, user must specify
+    an input for the operator by calling the operator. However, we will not specifie input to this operator 
+    right now because this operator will later be used to compose more complex operators. After composition
+    is finished, we can simply specify input to the resultant operator instead of this one.
+
+    If one would like to specify input immediately after operator definition:
+
+    builder.Sequential((
+        builder.Convolution(*args, **kwargs),
+        builder.ReLU(),
+        builder.BatchNormalization(),
+    ))(input) # call the operator here
+    '''
+
 def _residual_module(filter_number, bottleneck=False):
     if bottleneck:
+        # identity and residual are only operators
         identity = _convolution(filter_number, (2, 2), (2, 2), (0, 0))
         residual = builder.Sequential((
             _convolution(filter_number // 4, (1, 1), (1, 1), (0, 0)),
@@ -32,18 +70,26 @@ def _residual_module(filter_number, bottleneck=False):
             # keyword arguments improve readability at the cost of simplicity
             _convolution(filter_number=filter_number, kernel_shape=(3, 3), stride=(1, 1), pad=(1, 1)),
         ))
-    return identity + residual # '+' creates another symbol
+    return identity + residual # '+' creates another operator
 
 # n controls total number of residual modules
 # please refer to section 4.2 of "Deep Residual Learning for Image Recognition" for details
 n = 3
 
-network = builder.Variable('data')
+network = builder.Variable('data') # builder.Variable('data') is not an operator
 network = _convolution(16, (3, 3), (1, 1), (1, 1))(network)
 
 for filter_number in (16, 32):
     network = builder.Sequential(tuple(_residual_module(filter_number) for i in range(n)))(network)
     network = _residual_module(filter_number * 2, True)(network)
+'''
+builder.Sequential(tuple(_residual_module(filter_number) for i in range(n)))(network)
+is equivalent to
+for i in range(n):
+    network = _residual_module(filter_number)(network)
+
+builder.Sequential provides an intuitive syntax of "stacking n layers"
+'''
 
 network = builder.Sequential(tuple(_residual_module(64) for i in range(n)))(network)
 
@@ -55,7 +101,12 @@ network = builder.Sequential((
 
 residual_network = builder.Model(network, loss='softmax_loss')
 
-# residual network involving weight sharing (illustration of layer sharing)
+
+
+#############################################################################
+# residual network involving weight sharing (illustration of layer sharing) #
+#############################################################################
+
 n = 3
 
 network = builder.Variable('data')
@@ -76,7 +127,12 @@ network = builder.Sequential((
 
 weight_sharing_residual_network = builder.Model(network, loss='softmax_loss')
 
-# unfolded rnn (illustration of slicing)
+
+
+##########################################
+# unfolded rnn (illustration of slicing) #
+##########################################
+
 X_to_H = builder.FullyConnected(256, bias=None)
 H_to_H = builder.FullyConnected(256)
 H_to_O = builder.FullyConnected(10)
@@ -87,9 +143,9 @@ N_STEPS = 8 # temporal length
 data = builder.Variable('data')
 labels = builder.Variable('labels')
 
-# slice is a function returning a tuple of symbols (slicers)
-temporal_data = builder.slice(data, axis=1, output_number=N_STEPS)
-temporal_labels = builder.slice(labels, axis=1, output_number=N_STEPS)
+# temporal_data and temporal_labels are tuples of nodes
+temporal_data = builder.Slice(axis=1, output_number=N_STEPS)(data)
+temporal_labels = builder.Slice(axis=1, output_number=N_STEPS)(labels)
 
 total_loss = 0
 H = 0
@@ -101,24 +157,32 @@ for data, labels in zip(temporal_data, temporal_labels):
 
 unfolded_rnn = builder.Model(total, loss=None) # set loss function to None since loss computation is integrated into network
 
-class FullyConnected(builder.Layer):
-    _module_name = 'fully_connected'
+
+
+##################################
+# An example of customized layer #
+##################################
+
+class FullyConnected(builder.Layer): # builder.Layer provides helper functions
+    _module_name = 'fully_connected' # used to assign global name to parameter
     def __init__(self, n_hidden_units, init_configs=None, update_configs=None, name=None):
         """ Fully connected layer.
 
         param int n_hidden_units: number of hidden units.
         """
 
-        '''
-        the global name of a parameter is an string that is unique to every parameter
-        the local name of a parameter is used to refer to a parameter in a layer
-        '''
-        params = ('weight', 'bias') # "local" parameter name
+        # model_builder requires a unique name (global name) for every parameter
+        # for example, the weight of a fully-connected layer has a global name "fully_connected0_weight",
+        # but one can only provide a simpler local name, model_builder will figure out the global one
+        params = ('weight', 'bias')
         aux_params = None
 
         # register parameters
-        # after registration, user could refer to global parameter name directly
+        # model_builder figures out global parameter name on the basis of module name and local parameter name
         super(FullyConnected, self).__init__(params, aux_params, name)
+
+        # after registration, global parameter name can be referred to via object attribute
+        # for example, self.weight might be 'fully_connected0_weight'
 
         # register initializer and optimizer
         self._default_init_configs = {
@@ -134,7 +198,7 @@ class FullyConnected(builder.Layer):
        
     def forward(self, input, params):
         from minpy.nn.layers import affine
-        weight, bias = self._get_params(self.weight, self.bias)
+        weight, bias = self._get_params(self.weight, self.bias) # get parameter using global name
         return affine(input, weight, bias)
 
     def output_shape(self, input_shape):
