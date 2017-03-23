@@ -1,15 +1,15 @@
 import minpy.nn.model_builder as builder
 
 '''
-Model builder only supports static symbol and a friendly interface for layer customization.
-
-Static symbol:
-  __init__(self, ...): declare a module
-  __call__(self, ...): connect (an)other symbol(s) to self, i.e. create an edge in graph
+Temporary strategy: only supports static symbol and a friendly interface for layer customization.
 '''
 
 # residual network (for CIFAR)
 def _convolution(*args, **kwargs):
+    '''
+    builder.Convolution(*args, **kwargs) only specifies an operation (an edge in computation graph)
+    builder.Sequential is responsible for organizing those edges into an sequential order
+    '''
     return builder.Sequential((
         builder.Convolution(*args, **kwargs),
         builder.ReLU(),
@@ -109,6 +109,10 @@ class FullyConnected(builder.Layer):
         param int n_hidden_units: number of hidden units.
         """
 
+        '''
+        the global name of a parameter is an string that is unique to every parameter
+        the local name of a parameter is used to refer to a parameter in a layer
+        '''
         params = ('weight', 'bias') # "local" parameter name
         aux_params = None
 
@@ -118,14 +122,14 @@ class FullyConnected(builder.Layer):
 
         # register initializer and optimizer
         self._default_init_configs = {
-            self.weight : builder.WEIGHT_INITIALIZER,
-            self.bias   : builder.BIAS_INITIALIZER,
+            self.weight : builder.WEIGHT_INITIALIZER, # pre-defined initializer
+            self.bias   : builder.BIAS_INITIALIZER,   # pre-defined initializer
         }
         self._default_update_configs = {'update_rule' : 'sgd', 'learning_rate' : 0.1}
-        self._register_init_configs(init_configs)     # method implemented by builder.Layer
-        self._register_update_configs(update_configs) # method implemented by builder.Layer
+        self._register_init_configs(init_configs)     # method inherited from builder.Layer
+        self._register_update_configs(update_configs) # method inherited from builder.Layer
 
-        # customization starts
+        # layer customization starts
         self._n_hidden_units = n_hidden_units
        
     def forward(self, input, params):
