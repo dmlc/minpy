@@ -13,7 +13,7 @@ node_a ----------> node_b
       operator0
 
 This mechanism enables user to share operator easily.
-For example, after writing "node_b = operator(node_a)", if user writes "node_c = operator0(node_a)", 
+For example, after writing "node_b = operator0(node_a)", if user writes "node_c = operator0(node_a)", 
 then:
 
 node_c <---------- node_a ----------> node_b
@@ -40,9 +40,9 @@ def _convolution(*args, **kwargs):
 
     '''
     builder.Sequential is only an operator as well. To complete computation graph, user must specify
-    an input for the operator by calling the operator. However, we will not specifie input to this operator 
+    an input for the operator by calling the operator. However, we will not specify input to this operator 
     right now because this operator will later be used to compose more complex operators. After composition
-    is finished, we can simply specify input to the resultant operator instead of this one.
+    is finished, we can simply specify input to the operator resulting from composition instead of this one.
 
     If one would like to specify input immediately after operator definition:
 
@@ -76,19 +76,23 @@ def _residual_module(filter_number, bottleneck=False):
 # please refer to section 4.2 of "Deep Residual Learning for Image Recognition" for details
 n = 3
 
-network = builder.Variable('data') # builder.Variable('data') is not an operator
-network = _convolution(16, (3, 3), (1, 1), (1, 1))(network)
+# builder.Variable('data') is not an operator but a node that can be input of operator
+network = builder.Variable('data')
+network = _convolution(16, (3, 3), (1, 1), (1, 1))(network) # specify operator input right after operator definition
 
 for filter_number in (16, 32):
     network = builder.Sequential(tuple(_residual_module(filter_number) for i in range(n)))(network)
     network = _residual_module(filter_number * 2, True)(network)
+
 '''
 builder.Sequential(tuple(_residual_module(filter_number) for i in range(n)))(network)
-is equivalent to
+
+  is equivalent to
+
 for i in range(n):
     network = _residual_module(filter_number)(network)
 
-builder.Sequential provides an intuitive syntax of "stacking n layers"
+builder.Sequential provides an intuitive syntax of "stacking n layers".
 '''
 
 network = builder.Sequential(tuple(_residual_module(64) for i in range(n)))(network)
@@ -113,7 +117,11 @@ network = builder.Variable('data')
 network = _convolution(16, (3, 3), (1, 1), (1, 1))(network)
 
 for filter_number in (16, 32):
-    # all references received by builder.Sequential refer to an identical module
+    '''
+    builder.Sequential requires a tuple of operators as input
+    All references in the tuple received by builder.Sequential refer to one identical module,
+    which enables operator-sharing.
+    '''
     network = builder.Sequential((_residual_module(filter_number),) * n)(network)
     network = _residual_module(filter_number * 2, True)(network)
 
@@ -133,17 +141,17 @@ weight_sharing_residual_network = builder.Model(network, loss='softmax_loss')
 # unfolded rnn (illustration of slicing) #
 ##########################################
 
-X_to_H = builder.FullyConnected(256, bias=None)
-H_to_H = builder.FullyConnected(256)
-H_to_O = builder.FullyConnected(10)
+X_to_H = builder.FullyConnected(256, bias=None) # shared operator
+H_to_H = builder.FullyConnected(256)            # shared operator
+H_to_O = builder.FullyConnected(10)             # shared operator
 activation = builder.Tanh()
 
-N_STEPS = 8 # temporal length
+N_STEPS = 8 # number of time steps
 
 data = builder.Variable('data')
 labels = builder.Variable('labels')
 
-# temporal_data and temporal_labels are tuples of nodes
+# temporal_data and temporal_labels are tuples of nodes, which are outputs of slicing operators.
 temporal_data = builder.Slice(axis=1, output_number=N_STEPS)(data)
 temporal_labels = builder.Slice(axis=1, output_number=N_STEPS)(labels)
 
@@ -163,7 +171,7 @@ unfolded_rnn = builder.Model(total, loss=None) # set loss function to None since
 # An example of customized layer #
 ##################################
 
-class FullyConnected(builder.Layer): # builder.Layer provides helper functions
+class FullyConnected(builder.Layer):
     _module_name = 'fully_connected' # used to assign global name to parameter
     def __init__(self, n_hidden_units, init_configs=None, update_configs=None, name=None):
         """ Fully connected layer.
@@ -171,29 +179,31 @@ class FullyConnected(builder.Layer): # builder.Layer provides helper functions
         param int n_hidden_units: number of hidden units.
         """
 
-        # model_builder requires a unique name (global name) for every parameter
-        # for example, the weight of a fully-connected layer has a global name "fully_connected0_weight",
-        # but one can only provide a simpler local name, model_builder will figure out the global one
+        # model_builder requires a unique name (global name) for every parameter.
+        # For example, the weight of a fully-connected layer has a global name "fully_connected0_weight".
+        # But one only needs to provide a simpler local name and model_builder will figure out the global one
         params = ('weight', 'bias')
         aux_params = None
 
         # register parameters
-        # model_builder figures out global parameter name on the basis of module name and local parameter name
         super(FullyConnected, self).__init__(params, aux_params, name)
 
-        # after registration, global parameter name can be referred to via object attribute
-        # for example, self.weight might be 'fully_connected0_weight'
+        # model_builder figures out global parameter name on the basis of module name and local parameter name
+        # After registration, global parameter name can be referred to via object attribute.
+        # For example, self.weight == 'fully_connected0_weight'.
 
-        # register initializer and optimizer
+        # Specify initializer and optimizer by global parameter name
         self._default_init_configs = {
             self.weight : builder.WEIGHT_INITIALIZER, # pre-defined initializer
             self.bias   : builder.BIAS_INITIALIZER,   # pre-defined initializer
         }
         self._default_update_configs = {'update_rule' : 'sgd', 'learning_rate' : 0.1}
+
+        # routines
         self._register_init_configs(init_configs)     # method inherited from builder.Layer
         self._register_update_configs(update_configs) # method inherited from builder.Layer
 
-        # layer customization starts
+        # layer customization starts here
         self._n_hidden_units = n_hidden_units
        
     def forward(self, input, params):
