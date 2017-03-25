@@ -4,6 +4,7 @@
 """minpy root module"""
 from __future__ import absolute_import
 
+import re
 import mxnet as mx
 
 from .dispatch import policy
@@ -36,7 +37,7 @@ def get_global_policy():
 def check_mxnet_version():
     """Check whether MXNet version satisfies minimum requirement."""
     supported = (0, 9, 2)
-    current = tuple(int(v) for v in mx.__version__.split("."))
+    current = tuple(int(re.match(r'^\d+', v).group()) for v in mx.__version__.split("."))
     succ = True
     for v1, v2 in zip(current, supported):
         if v1 > v2:
