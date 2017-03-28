@@ -1,3 +1,4 @@
+"""Examples for using Op Calling Statistics"""
 import minpy
 from minpy.core import grad
 import minpy.numpy as np
@@ -8,17 +9,14 @@ def test_op_statistics():
     def sigmoid(x):
         return 0.5 * (np.tanh(x / 2) + 1)
     
-    
     def predict(weights, inputs):
         return sigmoid(np.dot(inputs, weights))
-    
     
     def training_loss(weights, inputs):
         preds = predict(weights, inputs)
         label_probabilities = preds * targets + (1 - preds) * (1 - targets)
         l = -np.sum(np.log(label_probabilities))
         return l
-    
     
     def training_accuracy(weights, inputs):
         preds = predict(weights, inputs)
