@@ -1,9 +1,12 @@
-from functools import reduce as _reduce
-import mxnet as mx
-import minpy.numpy as np
-from minpy.core import Function as _Function
-import minpy.nn.layers as _layers
-from minpy.nn.model import ModelBase as _ModelBase
+import collections
+import functools
+import operator
+
+import minpy.core
+import minpy.nn.init
+import minpy.nn.layers
+import minpy.nn.model
+import minpy.nn.optim
 
 
 _module_counter = {}
@@ -16,7 +19,7 @@ def _module_prefix(module_name):
     return prefix
 
 
-class _Module(object):
+class Module(object):
     # pylint: disable=too-few-public-methods
     """ Base class of module.
     :param dict initializer: Initializer.
@@ -24,7 +27,7 @@ class _Module(object):
 
     _module_name = None
     def __init__(self, name):
-        super(_Module, self).__init__()
+        super(Module, self).__init__()
         if self._module_name is None: raise NotImplementedError()
         self._name = _module_prefix(self._module_name) if name is None else name
 
@@ -35,281 +38,498 @@ class _Module(object):
     def forward(self, data, mode):
         raise NotImplementedError()
 
-    def output_shape(self, input_shape):
-        raise NotImplementedError()
-
     def __setitem__(self, _):
         raise NotImplementedError()
 
     def __setitem__(self, _):
         raise NotImplementedError()
 
+    def __repr__(self):
+        return str(self)
 
-class _Container(_Module):
+    def __str__(self):
+        return self._name
+
+
+class Container(Module):
     def __init__(self, name):
-        super(_Container, self).__init__(name)
+        super(Container, self).__init__(name)
+
+    def __call__(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
+
+    def _affiliate_to(self, model):
+        raise NotImplementedError()
+
+    def param_shapes(self, input_shape):
+        return {}
+
+    def aux_param_shapes(self, input_shape):
+        return {}
 
 
-class Sequential(_Container):
+class Sequential(Container):
     _module_name = 'sequential'
     def __init__(self, *args, **kwargs):
         """ Sequential network.
 
-        :param _Module args: all layers of the feedforward networks in sequential order.
+        :param Module args: all layers of the feedforward networks in sequential order.
         """
 
         name = kwargs.get('name', None)
         super(Sequential, self).__init__(name)
-        assert all(isinstance(arg, _Module) for arg in args), TypeError()
+
+        assert all(isinstance(arg, Module) for arg in args), TypeError()
+
         self._modules = list(args)
 
         self.append = self._modules.append
         self.insert = self._modules.insert
         self.pop = self._modules.pop
         self.reverse = self._modules.reverse
+        self.__iter__ = self._modules.__iter__
 
-    def __iter__(self):
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return str(self._modules)
+
+    def forward(self, *args):
+        # It is recommended that all forward functions, especially those in Sequential, only receive positional arguments.
+        to_tuple = lambda results : results if isinstance(results, tuple) else (results,)
+        forward_module = lambda args, module : to_tuple(module.forward(*args))
+        result = functools.reduce(forward_module, self._modules, args)
+        if len(result) is 1: result, = result
+        return result
+
+        '''
         for module in self._modules:
-            yield module
+            args = module.forward(*args),
+            print len(args)
+        '''
 
-    def forward(self, data, mode):
-        forward_module = lambda input, module : module.forward(input, mode)
-        return _reduce(forward_module, self._modules, data)
-
-    def output_shape(self, input_shape):
-        module_output_shape = lambda input_shape, module : module.output_shape(input_shape)
-        return _reduce(module_output_shape, self._modules, input_shape)
-
-    def param_shapes(self, input_shape):
-        shapes = {}
+    def training(self):
         for module in self._modules:
-            shapes.update(module.param_shapes(input_shape))
-            input_shape = module.output_shape(input_shape)
-        return shapes
+            module.training()
 
-    def aux_param_shapes(self, input_shape):
-        shapes = {}
+    def inference(self):
         for module in self._modules:
-            shapes.update(module.aux_param_shapes(input_shape))
-            input_shape = module.output_shape(input_shape)
-        return shapes
+            module.inference()
 
+    def _affiliate_to(self, model):
+        for module in self._modules:
+            if isinstance(module, Container):
+                module._affiliate_to(model)
+            elif isinstance(module, Layer):
+                # TODO optimize for non-parameterized layers
+                module._model_params = model.params
+                module._model_aux_params = model.aux_params
+                module._model_update_configs = model._update_configs
+
+
+class Parallel(Container):
+    def __init__(self, name=None):
+        super(Parallel, self).__init__(name)
+
+
+class Binary(Parallel):
+    # TODO training/inference
+    def __init__(self, left, right, operator, name):
+        super(Binary, self).__init__(name)
+        self._left, self._right = left, right
+        self._operator = operator
+
+    def forward(self, X):
+        left = self._left(X)
+        right = self._right(X)
+        return self._operator(left, right)
+
+    def training(self):
+        self._left.training()
+        self._right.training()
+
+    def inference(self):
+        self._left.inference()
+        self._right.inference()
+
+    def _affiliate_to(self, model):
+        for module in (self._left, self._right):
+            if isinstance(module, Container):
+                module._affiliate_to(self)
+            elif isinstance(module, Layer):
+                # TODO optimize for non-parameterized layers
+                module._model_params = self.params
+                module._model_aux_params = self.aux_params
+                module._model_update_configs = self._update_configs
+
+
+class Add(Binary):
+    _module_name = 'add'
+    def __init__(self, left, right, name=None):
+        super(Add, self).__init__(left, right, operator.add, name)
+
+
+class Sub(Binary):
+    _module_name = 'sub'
+    def __init__(self, left, right, name=None):
+        super(Sub, self).__init__(left, right, operator.sub, name)
+
+
+class Mul(Binary):
+    _module_name = 'mul'
+    def __init__(self, left, right, name=None):
+        super(Mul, self).__init__(left, right, operator.mul, name)
+
+# TODO div etc.
 
 def _register_configs(configs, to_register):
-    # used in _Layer and _ConfigParser
+    ''' param dict configs: pair param_name(str) : param_configs(dict)
+        param to_register: pair param_name(str) : param_configs(dict) or attr(str) : attr_value(object)
+    '''
+
+    _configs = {}
+
     # register global attributes
-    local_configs = {}
     for identifier, attr_value in to_register.items():
-        if isinstance(identifier, str):
-            if identifier in configs: local_configs[identifier] = attr_value
-            else: 
-                for config in configs.values(): config[identifier] = attr_value
-        else: raise Exception()
+        assert isinstance(identifier, str), KeyError() # global attribute must be str (e.g. 'learning_rate')
+        if identifier in configs:
+            # identifier is a param name and attr_value is a dict containing configs specific to this parameter
+            # memorize and skip it
+            _configs[identifier] = attr_value
+        else: 
+            # a global attribute, modify this attribute for all parameters
+            for config in configs.values():
+                # TODO the modification might be ineligible
+                config[identifier] = attr_value
+
     # register parameter-specific attributes
-    for identifier, attr_value in local_configs.items():
-          configs[identifier].update(attr_value)
+    for identifier, attr_value in _configs.items():
+        # parameter-specific attribute values overwrite global attribute values
+        configs[identifier].update(attr_value)
 
 
-class _Layer(_Module):
+class Layer(Module):
     def __init__(self, params=None, aux_params=None, name=None):
-        super(_Layer, self).__init__(name)
+        '''
+            Currently, a layer must be bound to a model.
+        '''
+
+        super(Layer, self).__init__(name)
 
         if params is None: params = tuple()
-        self._module_param_names = params
-        self._param_names = self._assign_param_names(*params)
+        self._module_param_names = params                     # local param names
+        self._param_names = self._assign_param_names(*params) # global param names (identifiable in model)
         for param, param_name in zip(params, self._param_names):
             setattr(self, param, param_name)
-        self._model_params = None
+        # TODO Is it necessary to bind one layer to multiple models?
+        self._model_params = None # a reference to model.params
 
         if aux_params is None: aux_params = tuple()
-        self._module_aux_param_names = aux_params
-        self._aux_param_names = self._assign_param_names(*aux_params)
+        self._module_aux_param_names = aux_params                     # local aux param names
+        self._aux_param_names = self._assign_param_names(*aux_params) # global aux param names (identifiable in model)
         for aux_param, aux_param_name in zip(aux_params, self._aux_param_names):
             setattr(self, '_%s' % aux_param, aux_param_name)
         self._model_aux_params = None
 
-    def __getitem__(self, layer_name):
-        if layer_name == self._name: return self
-        else: raise KeyError()
+        # default init configs
+        default_init_configs = \
+            {name : self._get_default_init_config(name) for name in self._module_param_names}
+        default_init_configs.update(
+            {name : self._get_default_init_config(name) for name in self._module_aux_param_names}
+        )
+
+        self._init_configs = {name : {} for name in self._param_names}
+        self._init_configs.update({name : {} for name in self._aux_param_names})
+
+        self._register_init_configs(default_init_configs)
+
+        # default update configs
+        default_update_configs = {
+            'update_rule'   : 'nil', # user must specify update configs explicitly
+            'learning_rate' : 0.0
+        }
+
+        self._update_configs = {name : {} for name in self._param_names}
+
+        self._register_update_configs(default_update_configs)
+
+        self._model_update_configs = None # a reference to update configs of model
+
+        self._mode = 'training' # training/inference
+
+    def __call__(self, *args, **kwargs):
+        # initialize only if self is bound to a model
+        if self._model_params is not None and \
+            self._model_update_configs is not None and\
+            self._model_aux_params is not None:
+
+            # child classes should not replace this method
+            arg_shapes = tuple(arg.shape for arg in args if isinstance(arg, minpy.array.Array))
+            kwarg_shapes = \
+                {key : value.shape for key, value in kwargs.items() if isinstance(value, minpy.array.Array)}
+
+            # initialize params
+            param_shapes = self.param_shapes(*arg_shapes, **kwarg_shapes)
+            self._init_params(param_shapes)
+
+            # initialize aux params
+            aux_param_shapes = self.aux_param_shapes(*arg_shapes, **kwarg_shapes)
+            self._init_aux_params(aux_param_shapes)
+
+        # reset
+        self.__call__ = self.forward
+
+        return self.forward(*args, **kwargs)
+
+    def __add__(self, other):
+        return Add(self, other)
+
+    def __sub__(self, other):
+        return Sub(self, other)
+
+    def __mul__(self, other):
+        return Mul(self, other)
 
     def _assign_param_names(self, *params):
         return tuple('%s_%s' % (self._name, param) for param in params)
 
-    def _get_params(self, *param_names):
-        try: 
-            if len(param_names) > 1:
-                return tuple(self._model_params[param_name] for param_name in param_names)
-            else: return self._model_params[param_name]
-        except KeyError: raise Exception('Parameters not initialized.')
+    @staticmethod
+    def _get_default_init_config(param_name):
+        if 'weight' in param_name:
+            return {'init_rule' : 'xavier'}
+        elif 'bias' in param_name:
+            return {'init_rule' : 'constant', 'value' : 0}
+        elif 'beta' in param_name:
+            return {'init_rule' : 'constant', 'value' : 0}
+        elif 'gamma' in param_name:
+            return {'init_rule' : 'constant', 'value' : 1}
+        elif 'moving_mean' in param_name:
+            return {'init_rule' : 'constant', 'value' : 0}
+        elif 'moving_var' in param_name:
+            return {'init_rule' : 'constant', 'value' : 1}
+ 
+    def _init_params(self, param_shapes):
+        # param_shapes: dict
+        for name, shape in param_shapes.items():
+            # init only if param is absent (to support pre-loading params)
+            if name not in self._model_params:
+                init_config = self._init_configs[name]
+                self._model_params[name] = \
+                    getattr(minpy.nn.init, init_config['init_rule'])(shape, init_config)
 
-    def _get_aux_param(self, aux_param_name):
-        try: return self._model_aux_params[aux_param_name]
-        except: raise Exception('Auxiliary parameters not initialized.')
-    
+        # register update_configs in model
+        self._model_update_configs.update(self._update_configs)
+        
+    def _init_aux_params(self, aux_param_shapes):
+        # aux_param_shapes: dict
+        for name, shape in aux_param_shapes.items():
+            # init only if aux param is absent (to support pre-loading aux params)
+            if name not in self._model_aux_params:
+                init_config = self._init_configs[name]
+                self._model_aux_params[name] = \
+                    getattr(minpy.nn.init, init_config['init_rule'])(shape, init_config)
+
+    def _get_params(self, *param_names):
+        # should not be called prior to calling __call__ for the first time
+        if len(param_names) > 1:
+            return tuple(self._model_params[param_name] for param_name in param_names)
+        elif len(param_names) is 1:
+            return self._model_params[param_name]
+        else: return None
+
+    def _get_aux_params(self, *aux_param_names):
+        # should not be called prior to calling __call__ for the first time
+        if len(aux_param_names) > 1:
+            return tuple(self._model_aux_params[aux_param_name] for aux_param_name in aux_param_names)
+        elif len(aux_param_names) is 1:
+            return self._model_aux_params[aux_param_name]
+        else: return None
+
     def _parse_param_configs(self, configs):
+        '''
+            parsed configs might contain:
+                1. pair param_name(str) : configs(dict), which are parameter-specific configs
+                2. pair attr_name(str) : attr_value(object), which are global configs
+        '''
         if configs is None: return {}
+
         _configs = {key : value for key, value in configs.items()}
+
         for identifier in _configs:
-            if isinstance(identifier, tuple):
+            if isinstance(identifier, tuple): # configs applied to a group of parameters
                 config = _configs.pop(identifier)
+                # expand group configs to parameter-specific configs
                 for param_name in identifier: _configs[param_name] = config
-        for module_param_name, param_name in zip(self._module_param_names, self._param_names):
+
+        # convert local (module) name to global name
+        for module_param_name, param_name in \
+            zip(self._module_param_names, self._param_names):
             if module_param_name in _configs:
                 _configs[param_name] = _configs.pop(module_param_name)
-        for module_aux_param_name, aux_param_name in zip(self._module_aux_param_names, self._aux_param_names):
+
+        # convert local (module) name to global name
+        for module_aux_param_name, aux_param_name in \
+            zip(self._module_aux_param_names, self._aux_param_names):
             if module_aux_param_name in _configs:
                 _configs[aux_param_name] = _configs.pop(module_aux_param_name)
+
         return _configs
 
     def _register_init_configs(self, init_configs):
-        self._init_configs = {param_name : {} for param_name in self._param_names}
-
-        default_configs = self._parse_param_configs(self._default_init_configs)
-        _register_configs(self._init_configs, default_configs)
+        # Parent Layer class provides global default init_configs.
+        # A child (probably customized) layer may replace global default init_configs.
 
         init_configs = self._parse_param_configs(init_configs)
         _register_configs(self._init_configs, init_configs)
 
     def _register_update_configs(self, update_configs):
-        self._update_configs = {param_name : {} for param_name in self._param_names}
-
-        default_configs = self._parse_param_configs(self._default_update_configs)
-        _register_configs(self._update_configs, default_configs)
+        # Parent Layer class provides global default update_configs.
+        # A child (probably customized) layer may replace global default update_configs.
 
         update_configs = self._parse_param_configs(update_configs)
         _register_configs(self._update_configs, update_configs)
 
-    @property
-    def params(self):
-        return dict(zip(self._param_names, self._get_params(*self._param_names)))
+    def forward(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def training(self):
+        self._mode = 'training'
+
+    def inference(self):
+        self._mode = 'inference'
 
     @property
-    def aux_params(self):
-        return {aux_param_name : self._get_aux_param(aux_param_name) for aux_param_name in self._aux_param_names}
+    def param_dict(self):
+        return dict(zip(
+            self._param_names,
+            self._get_params(*self._param_names)
+        ))
+
+    @property
+    def aux_param_dict(self):
+        return dict(zip(
+            self._aux_param_names,
+            self._get_aux_params(*self._aux_param_names)
+        ))
     
-    def param_shapes(self, input_shape):
+    def param_shapes(self, *args, **kwargs):
+        # customized layer must specify the shapes of ALL params
         return {}
 
-    def aux_param_shapes(self, input_shape):
+    def aux_param_shapes(self, *args, **kwargs):
+        # customized layer must specify the shapes of ALL aux params
         return {}
 
 
-class FullyConnected(_Layer):
-    _module_name = 'fully_connected'
-    def __init__(self, n_hidden_units, init_configs=None, update_configs=None, name=None):
-        """ Fully connected layer.
-
-        param int n_hidden_units: number of hidden units.
-        """
-        params = ('weight', 'bias')
-        aux_params = None
-        super(FullyConnected, self).__init__(params, aux_params, name)
-        self._default_init_configs = {
-            self.weight : {'init_rule' : 'xavier'},
-            self.bias   : {'init_rule' : 'constant', 'value' : 0}
-        }
-        self._default_update_configs = {
-            'update_rule'   : 'sgd',
-            'learning_rate' : 0.1
-        }
-        self._register_init_configs(init_configs)
-        self._register_update_configs(update_configs)
-        self._n_hidden_units = n_hidden_units
-       
-    def forward(self, input, params):
-        weight, bias = self._get_params(self.weight, self.bias)
-        return _layers.affine(input, weight, bias)
-
-    def output_shape(self, input_shape):
-        N, D = input_shape
-        return (N, self._n_hidden_units)
-
-    def param_shapes(self, input_shape):
-        N, D = input_shape
-        return {self.weight : (D, self._n_hidden_units), self.bias : (self._n_hidden_units,)}
-
-
-class ReLU(_Layer):
-    _module_name = 'ReLU'
-    def __init__(self, name=None):
-        """ Rectified linear unit.
-        """
-        super(ReLU, self).__init__(name=name)
-
-    def forward(self, input, *args):
-        return _layers.relu(input)
-
-    def output_shape(self, input_shape):
-        return input_shape
-
-
-class Model(_ModelBase):
-    def __init__(self, module, input_shape, loss_func=None):
-        """ Create model from composition of modules.
-        :param _Module module: network
-        :param input_shape: shape of one sample, e.g. shape of CIFAR-10 data might be (3072,) or (3, 32, 32).
-        """
-
+class Model(minpy.nn.model.ModelBase):
+    # TODO check duplicated layers
+    def __init__(self, loss=None):
         super(Model, self).__init__()
-        self._module = module
 
-        for param_name, shape in module.param_shapes(input_shape).items():
-            self.add_param(param_name, shape)
-        for aux_param_name, shape in module.aux_param_shapes(input_shape).items():
-            self.add_aux_param(aux_param_name, shape)
-
-        self._submodules = {submodule.name : submodule for submodule in self._module_iter()}
-
-        self._init_configs = {}
+        # TODO layers are responsible for placing param update configs here once param is placed in params
         self._update_configs = {}
-        for submodule in self._submodules.values():
-            try:
-                self._init_configs.update(submodule._init_configs)
-                self._update_configs.update(submodule._update_configs)
-            except AttributeError: pass
-        print self._init_configs
 
-        if isinstance(loss_func, str):
-            self.loss_func = getattr(_layers, loss_func)
-        else:
-            self.loss_func = loss_func
+        self._modules = set() # references to all registered modules
+        self._module_names = set() # names of all registered modules
 
-    def __getitem__(self, module_name):
-        return self._submodules[module_name]
+        if isinstance(loss, str):
+            self.loss = getattr(minpy.nn.layers, loss)
+        elif callable(loss):
+            self.loss = loss
 
-    def _module_iter(self, module=None):
-        if module is None: module = self._module
-        for submodule in module:
-            yield submodule
-            if isinstance(submodule, _Container):
-                for sub_submodule in self._module_iter(submodule):
-                    yield sub_submodule
+    def __setattr__(self, attr, attr_value):
+        '''
+            All modules containing states modified by model (e.g. parameters,
+            training/inference mode) should be registered as an attribute of model.
+        '''
+        # TODO training/inference
 
-    def forward(self, data, mode, *args):
-        return self._module.forward(data, mode)
+        if isinstance(attr_value, Module):
+            self._register_module(attr_value)
+        elif isinstance(attr_value, collections.Iterable) and \
+            all(isinstance(module, collections.Iterable) for module in attr_value):
+            for module in attr_value:
+                self._register_module(module)
 
+        # TODO works for iterable, but probably problematic
+        object.__setattr__(self, attr, attr_value)
+
+    def _register_module(self, module):
+        # check duplication
+        assert module not in self._modules
+        assert module.name not in self._module_names
+
+        self._modules.add(module)
+        self._module_names.add(module.name)
+        
+        if isinstance(module, Container):
+            module._affiliate_to(self)
+        elif isinstance(module, Layer):
+            # TODO optimize for non-parameterized layers
+            module._model_params = self.params
+            module._model_aux_params = self.aux_params
+            module._model_update_configs = self._update_configs
+
+    # disable several inherited attributes and methods
+    # TODO cannot set attribute
+    '''
+    @property
+    def param_configs(self):
+        raise NotImplementedError()
+
+    @property
+    def aux_param_configs(self):
+        raise NotImplementedError()
+    '''
+        
+    def add_param(*args, **kwargs):
+        raise NotImplementedError()
+ 
+    def add_params(*args, **kwargs):
+        raise NotImplementedError()
+        
+    def add_aux_param(*args, **kwargs):
+        raise NotImplementedError()
+ 
+    # requires implementation
+    def forward(self):
+        raise NotImplementedError()
+    
+    def forward_batch(self):
+        # TODO eliminate?
+        raise NotImplementedError()
+        
     def loss(self, data, labels, *args):
         if self.loss_func is None: raise Exception()
         predictions = self.forward(data, 'train')
         return self.loss_func(predictions, labels)
    
-    # TODO hook
-    def backward(self, data, labels):
-        from minpy.core import grad
-
+    # TODO multiple inputs to forward and loss function
+    def grad_and_loss(self, data, labels):
         def loss(*args):
-            if self.loss_func is None: raise Exception()
             predictions = self.forward(data, 'train')
             return self.loss_func(predictions, labels)
      
-        param_names = tuple(self.params)
-        params = tuple(self.params.values())
-        grad_func = grad(loss, range(len(params)))
-        grad_list = grad_func(*params)
+        param_names = tuple(self.params.keys())
+        param_values = tuple(self.params.values())
+        grad_func = minpy.core.grad_and_loss(loss, range(len(param_values)))
+        grad_list, loss = grad_func(*params)
         grad_dict = dict(zip(param_names, grad_list))
 
-        return grad_dict
+        return grad_dict, loss
+    
+    # TODO load/save (inherited method)
 
+    def training(self):
+        # training mode
+        for module in self._modules:
+            module.training()
+  
+    def inference(self):
+        # inference mode
+        for module in self._modules:
+            module.inference()
 
 class _ConfigParser(object):
     class _AttrRef(object):
@@ -410,31 +630,6 @@ class _ConfigParser(object):
     def __setitem__(self, param_name, attr_values):
         self._configs[param_name] = attr_values
 
-class Initializer(_ConfigParser):
-    def __init__(self, model):
-        super(Initializer, self).__init__(model._init_configs)
-        self._set('_model', model)
-
-    def __call__(self):
-        import minpy.nn.init as init
-
-        self._model.params = {}
-        for param_name, config in self._get('_model').param_configs.items():
-            init_config = self._get('_model')._init_configs[param_name]
-            param_shape = config['shape']
-            self._get('_model').params[param_name] = \
-                getattr(init, init_config['init_rule'])(param_shape, init_config)
-
-        self._model.aux_params = {}
-        for aux_param_name, config in self._get('_model').aux_param_configs:
-            init_config = self._get('_model')._init_configs[aux_param_name]
-            aux_param_shape = config['shape']
-            self._get('_model').aux_params[aux_param_name] = \
-                getattr(init, init_config['init_rule'])(aux_param_shape, init_config)
-
-        for module in self._get('_model')._module_iter():
-            module._model_params = self._get('_model').params
-            module._model_aux_params = self._get('_model').aux_params
 
 class Updater(_ConfigParser):
     def __init__(self, model):
@@ -445,11 +640,10 @@ class Updater(_ConfigParser):
         """ Only update parameters corresponding to gradients contained in grad_dict.
             User could update parameters selectively by manipulating grad_dict.
         """
-        import minpy.nn.optim as optim
         for param_name, grad in grad_dict.items():
             param = self._get('_model').params[param_name]
             update_rule = self._get('_model')._update_configs[param_name]['update_rule']
             update_config = self._get('_model')._update_configs[param_name]
             self._get('_model').params[param_name], _update_config = \
-                getattr(optim, update_rule)(param, grad, update_config)
+                getattr(minpy.nn.optim, update_rule)(param, grad, update_config)
             update_config.update(_update_config)

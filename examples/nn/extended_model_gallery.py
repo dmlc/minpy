@@ -220,3 +220,40 @@ class FullyConnected(builder.Layer):
         # shape inference happens later
         N, D = input_shape
         return {self.weight : (D, self._n_hidden_units), self.bias : (self._n_hidden_units,)}
+
+
+
+from builder import *
+
+network = Variable('data')
+network = Convolution(64, (3, 3), (1, 1), (1, 1))(network)
+network = ReLU()(network)
+network = BatchNormalization()(network)
+
+lstm = SpatialLSTM()
+h, c = lstm(network, 0, 0)
+
+N_STEPS = 8
+
+for step in range(N_STEPS):
+    network = Sequential((
+        Convolution(64, (3, 3), (1, 1), (1, 1)),
+        ReLU(),
+        BatchNormalization(),
+    ) * 2)(h)
+    h, c = lstm(network, h, c)
+
+network = Sequential(
+    Pooling('average', global_pooling=True),
+    Flatten(),
+    FullyConnected(10)
+)(network)
+
+model = Model(network, loss='softmax_loss')
+
+# training
+for data, labels in :
+    model.forward(data, mode='training')
+    loss = softmax_loss()
+    gradients = 
+    optimizer.update(gradients)
