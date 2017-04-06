@@ -117,33 +117,59 @@ class Flatten(minpy.nn.model_builder.Layer):
         return minpy.numpy.reshape(X, (N, D))
 
 
+# TODO use it
+_get_shapes = lambda arrays : map(lambda array : array.shape, arrays)
+
+
 class Symbolic(minpy.nn.model_builder.Layer):
     # TODO help!
+    # TODO simplify implementation by using Function interfaces
     _module_name = 'symbolic'
     def __init__(self, symbol, variables=None, init_configs=None, update_configs=None, name=None):
         self._symbol = symbol
 
         params = set(symbol.list_arguments())
-        if variables is None: variables = ('data',)
-        params = params.difference(set(variables))
+        self._variables = ('data',) if variables is None else variables
+        params = params.difference(set(self._variables))
         params = tuple(params)
-
         aux_params = tuple(symbol.list_auxiliary_states())
+
         super(Symbolic, self).__init__(params, aux_params, name)
+
+        self._func = None
         
     def forward(self, **kwargs):
+        # kwargs should contain ALL variables
         # TODO multiple outputs
-        shapes = {key : value.shape for key, value in kwargs.items()}
-        func = minpy.core.Function(self._symbol, shapes)
-        return func(**kwargs)
+        if self._func is None:
+            shapes = {key : value.shape for key, value in kwargs.items()}
+            shapes.update(dict(zip(
+                self._module_param_names,
+                _get_shapes(self._get_params(*self._param_names))
+            )))
+            shapes.update(dict(zip(
+                self._module_aux_param_names,
+                _get_shapes(self._get_aux_params(*self._aux_param_names))
+            )))
+            self._func = minpy.core.Function(self._symbol, shapes)
+
+        kwargs.update(dict(zip(self._module_param_names, self._get_params(*self._param_names))))
+        kwargs.update(dict(zip(self._module_aux_param_names, self._get_aux_params(*self._aux_param_names))))
+
+        return self._func(**kwargs)
 
     def param_shapes(self, **kwargs):
-        arg_shapes, _, _ = self._symbol.infer_shape(**kwargs)
-        return dict(zip(self._param_names, tuple(arg_shapes)))
+        args = self._symbol.list_arguments()
+        shapes, _, _ = self._symbol.infer_shape(**kwargs)
+        shapes = dict(zip(args, tuple(shapes)))
+        for variable in self._variables:
+            del shapes[variable]
+        shapes = dict(zip(self._param_names, shapes.values()))
+        return shapes
 
     def aux_param_shapes(self, **kwargs):
-        arg_shapes, _, _ = self._symbol.infer_shape(**kwargs)
-        return dict(zip(self._aux_param_names, tuple(arg_shapes)))
+        _, _, shapes = self._symbol.infer_shape(**kwargs)
+        return dict(zip(self._aux_param_names, tuple(shapes)))
 
 
 class FullyConnected(Symbolic):
@@ -240,4 +266,4 @@ class BatchNorm(Symbolic):
         return super(BatchNorm, self).param_shapes(data=input_shape)
 
     def aux_param_shapes(self, input_shape):
-        return super(BatchNorm, self).param_shapes(data=input_shape)
+        return super(BatchNorm, self).aux_param_shapes(data=input_shape)
