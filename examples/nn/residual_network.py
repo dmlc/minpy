@@ -12,17 +12,20 @@ class ResNet(Model):
         # blocks preserving input dimensionality
         preserving_blocks = []
         for filter_number in filter_numbers:
-            preserving_blocks.append(
-                Sequential(*(ResNet._preserving_block(filter_number),) * block_number)
-            )
-        self._preserving_blocks = preserving_blocks
+            sequential = Sequential()
+            for i in range(block_number):
+                sequential.append(ResNet._preserving_block(filter_number))
+            preserving_blocks.append(sequential)
+
+        self._preserving_blocks = preserving_blocks # register
 
         # blocks that reduce size of feature maps but increase number of filters
         shrinking_blocks = [ResNet._convolution(num_filter=filter_numbers[0], kernel=(3, 3), stride=(1, 1), pad=(1, 1))]
 
         for filter_number in filter_numbers[1:]:
             shrinking_blocks.append(ResNet._shrinking_block(filter_number))
-        self._shrinking_blocks = shrinking_blocks
+
+        self._shrinking_blocks = shrinking_blocks # register
 
         # compute class scores from feature maps
         self._to_scores = Sequential(
@@ -75,13 +78,32 @@ class ResNet(Model):
         )
 
 
-if __name__ is '__main__':
+if __name__ == '__main__':
+    import sys
+    sys.settrace
+
+    '''
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument('--gpu_index', type=int, required=True)
+    parser.add_argument('--data_path', type=str, required=True)
+    args = parser.parse_args()
+    '''
+
     resnet = ResNet(3, (16, 32, 64))
 
     updater = Updater(resnet, update_rule='sgd', learning_rate=0.1, momentem=0.9)
 
     from load_cifar10_data_iter import *
     train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=64)
+
+    '''
+    from mxnet.io import NDArrayIter
+    import numpy as np
+    train_data_iter = NDArrayIter(np.random.normal(0, 1, (50000, 3, 32, 32)), np.random.choice(np.arange(10), (50000,)))
+    val_data_iter = NDArrayIter(np.random.normal(0, 1, (10000, 3, 32, 32)), np.random.choice(np.arange(10), (10000,)))
+    import minpy.numpy as np
+    '''
 
     from minpy.context import set_context, gpu
     set_context(gpu(0))
@@ -91,7 +113,11 @@ if __name__ is '__main__':
     unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
 
     for epoch in range(125):
-        # TODO segmentation fault, core dumped, etc.
+        # TODO errors
+        # *** Error in `/usr/bin/python': double free or corruption (fasttop): 0x00007f96f8004830 ***
+        # *** Error in `/usr/bin/python': free(): invalid pointer: 0x00007fbecda65760 ***
+        # Segmentation fault (core dumped)
+
         # anneal learning rate
         if epoch in (75, 100):
             updater.learning_rate = updater.learning_rate * 0.1
@@ -117,5 +143,4 @@ if __name__ is '__main__':
             n_errors += np.count_nonzero(preds - labels)
             n_samples += len(data)
 
-        print n_errors, n_samples
         print 'epoch %d validation error %f' % (epoch, n_errors / n_samples)

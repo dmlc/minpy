@@ -116,7 +116,7 @@ class Sequential(Container):
         to_tuple = lambda results : results if isinstance(results, tuple) else (results,)
         forward_module = lambda args, module : to_tuple(module(*args))
         result = functools.reduce(forward_module, self._modules, args)
-        if len(result) is 1: result, = result
+        if len(result) == 1: result, = result
         return result
 
     def training(self):
