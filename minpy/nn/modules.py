@@ -18,31 +18,6 @@ class Identity(minpy.nn.model_builder.Layer):
         return X
 
 
-class FullyConnected(minpy.nn.model_builder.Layer):
-    _module_name = 'fully_connected'
-    def __init__(self, unit_number, init_configs=None, update_configs=None, name=None):
-        """ Fully-connected layer.
-
-        param int unit_number: number of hidden units.
-        """
-        params = ('weight', 'bias')
-        aux_params = None
-        super(FullyConnected, self).__init__(params, aux_params, name)
-
-        self._register_init_configs(init_configs)
-        self._register_update_configs(update_configs)
-
-        self._unit_number = unit_number
-       
-    def forward(self, input):
-        weight, bias = self._get_params(self.weight, self.bias)
-        return minpy.numpy.dot(input, weight) + bias
-
-    def param_shapes(self, input_shape):
-        N, D = input_shape
-        return {self.weight : (D, self._unit_number), self.bias : (self._unit_number,)}
-
-
 class ReLU(minpy.nn.model_builder.Layer):
     _module_name = 'ReLU'
     def __init__(self, name=None):
@@ -66,7 +41,7 @@ class Dropout(minpy.nn.model_builder.Layer):
         self._p = p
 
     def forward(self, data):
-        return layers.dropout(input, self._p)
+        return layers.dropout(data, self._p)
 
 
 class Logistic(minpy.nn.model_builder.Layer):
@@ -140,7 +115,6 @@ class Symbolic(minpy.nn.model_builder.Layer):
         
     def forward(self, **kwargs):
         # kwargs should contain ALL variables
-        # TODO multiple outputs
         if self._func is None:
             shapes = {key : value.shape for key, value in kwargs.items()}
             shapes.update(dict(zip(
@@ -156,6 +130,9 @@ class Symbolic(minpy.nn.model_builder.Layer):
         kwargs.update(dict(zip(self._module_param_names, self._get_params(*self._param_names))))
         kwargs.update(dict(zip(self._module_aux_param_names, self._get_aux_params(*self._aux_param_names))))
 
+        self._func.is_train = self._mode == 'training'
+
+        # returns multiple outputs (a tuple) for symbols yielding multiple outputs
         return self._func(**kwargs)
 
     def param_shapes(self, **kwargs):
@@ -164,7 +141,8 @@ class Symbolic(minpy.nn.model_builder.Layer):
         shapes = dict(zip(args, tuple(shapes)))
         for variable in self._variables:
             del shapes[variable]
-        shapes = dict(zip(self._param_names, shapes.values()))
+        local_to_global = dict(zip(self._module_param_names, self._param_names))
+        shapes = {local_to_global[name] : shape for name, shape in shapes.items()}
         return shapes
 
     def aux_param_shapes(self, **kwargs):
@@ -173,6 +151,7 @@ class Symbolic(minpy.nn.model_builder.Layer):
 
 
 class FullyConnected(Symbolic):
+    # TODO support inputting weight
     def __init__(self, *args, **kwargs):
         name = kwargs.get('name', None)
 
@@ -244,10 +223,8 @@ class Pooling(Symbolic):
 
 
 class BatchNorm(Symbolic):
+    # TODO training/inference mode
     def __init__(self, *args, **kwargs):
-        # TODO training/inference
-        # TODO interface (currently mxnet)
-
         name = kwargs.get('name', None)
 
         data = mxnet.symbol.Variable('data')

@@ -82,20 +82,20 @@ if __name__ == '__main__':
     import sys
     sys.settrace
 
-    '''
+    import time
+
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('--gpu_index', type=int, required=True)
-    parser.add_argument('--data_path', type=str, required=True)
+    parser.add_argument('--data_path', type=str, required=False)
     args = parser.parse_args()
-    '''
 
     resnet = ResNet(3, (16, 32, 64))
 
     updater = Updater(resnet, update_rule='sgd', learning_rate=0.1, momentem=0.9)
 
     from load_cifar10_data_iter import *
-    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=64)
+    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=64, path=args.data_path)
 
     '''
     from mxnet.io import NDArrayIter
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     '''
 
     from minpy.context import set_context, gpu
-    set_context(gpu(0))
+    set_context(gpu(args.gpu_index))
 
     resnet.training()
 
@@ -125,6 +125,9 @@ if __name__ == '__main__':
 
         # training
         train_data_iter.reset() # data iterator must be reset every epoch
+
+        t0 = time.time()
+
         for iteration, batch in enumerate(train_data_iter):
             data, labels = unpack_batch(batch)
             resnet.forward(data) # TODO only forward once
@@ -132,13 +135,15 @@ if __name__ == '__main__':
             updater(grad_dict)
             if (iteration + 1) % 100 == 0:
                 print 'epoch %d iteration %d loss %f' % (epoch, iteration + 1, loss[0])
+        
+        print 'epoch %d %f seconds consumed' % (epoch, time.time() - t0)
 
         # validation
         val_data_iter.reset() # data iterator must be reset every epoch
         n_errors, n_samples = 0.0, 0.0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            probs = resnet.forward(data, False)
+            probs = resnet.forward(data, True) # TODO training=False
             preds = np.argmax(probs, axis=1)
             n_errors += np.count_nonzero(preds - labels)
             n_samples += len(data)

@@ -1,8 +1,8 @@
-def load_cifar10_data_iter(batch_size=None):
+def load_cifar10_data_iter(batch_size=None, path=''):
     from mxnet.io import ImageRecordIter
 
-    train_record = 'train-data-iter'
-    val_record = 'val-data-iter'
+    train_record = '' + 'train-data-iter'
+    val_record = '' + 'val-data-iter'
 
     r_mean = 123.680
     g_mean = 116.779
