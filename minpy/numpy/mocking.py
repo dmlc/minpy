@@ -12,6 +12,7 @@ import importlib
 import minpy
 from minpy.array_variants import variants
 from minpy.dispatch.registry import Registry
+from minpy.dispatch.primitive_selector import PrimitiveSelector
 from minpy.primitive import Primitive
 from minpy.utils import log
 
@@ -67,17 +68,30 @@ class Module(object):
         """[Deprecated] Set policy for this module."""
         self.generate_attrs(policy)
 
-    def generate_attrs(self, policy):
+    def record_op_stat(self):
+        """Record Op Calling Statistics"""
+        self.generate_attrs(self.policy, True)
+
+    def show_op_stat(self):
+        """Show Op Calling Statistics"""
+        self.policy.show_op_stat()
+
+    def generate_attrs(self, policy, use_selector=False):
         """Generate attributes for this module"""
+        self.policy = policy
         # The latter will override the former, so set attributes in reverse priority order
         for k, val in self._old.items():
             setattr(self, k, val)
         for k in self._name_injector.keys():
             setattr(self, k, self._name_injector[k])
         for k, prims in self._registry._reg.items(): # pylint: disable= protected-access
-            prim_type = policy.decide(prims.values())
-            if prim_type is not None:
-                setattr(self, k, prims[prim_type])
+            if not use_selector:
+                prim_type = self.policy.decide(prims.values())
+                if prim_type is not None:
+                    setattr(self, k, prims[prim_type])
+            else:
+                fun = PrimitiveSelector(k, self)
+                setattr(self, k, fun)
         if '__all__' in dir(self._old):
             setattr(self, '__all__', self._old.__all__)
         setattr(self, '__registry__', self._registry)
