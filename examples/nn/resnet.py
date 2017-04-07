@@ -69,6 +69,7 @@ class ResNet(Model):
 
     @staticmethod
     def _shrinking_block(filter_number):
+        # TODO change
         return Sequential(
             ResNet._convolution(num_filter=filter_number, kernel=(3, 3), stride=(2, 2), pad=(1, 1)),
             Convolution(num_filter=filter_number, kernel=(1, 1), stride=(1, 1), pad=(0, 0)) \
@@ -137,7 +138,7 @@ if __name__ == '__main__':
         n_errors, n_samples = 0.0, 0.0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            probs = resnet.forward(data)
+            probs = resnet.forward(data, False)
             preds = np.argmax(probs, axis=1)
             n_errors += np.count_nonzero(preds - labels)
             n_samples += len(data)
