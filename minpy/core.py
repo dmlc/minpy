@@ -111,10 +111,21 @@ class Function(object):
         :return: A function that could be called (and differentiated) as normal primitive.
         """
         self._symbol = symbol
+        self._is_train = True
         self._input_shapes = input_shapes
         if input_shapes is not None:
             self._infer_shape(input_shapes)
         self._sym_name = name
+
+    @property
+    def is_train(self):
+        """ whether this forward is for evaluation purpose. """
+        return self._is_train
+
+    @is_train.setter
+    def is_train(self, value):
+        """ whether this forward is for evaluation purpose. """
+        self._is_train = value
 
     def _infer_shape(self, input_shapes):
         # Infer shapes of parameters and outputs.
@@ -147,10 +158,8 @@ class Function(object):
                 if arg is not None:
                     arg.copyto(executor_arg)
             # Forward computation.
-            # TODO(haoran): How to set `is_train` flag
-            executor.forward(is_train=True)
-            # TODO(haoran): Currently doesn't support multiple outputs.
-            return executor.outputs[0]
+            executor.forward(is_train=self._is_train)
+            return tuple(executor.outputs) if len(executor.outputs) > 1 else executor.outputs[0]
         # Set function name to be the given symbol name.
         func.__name__ = self._sym_name
 
