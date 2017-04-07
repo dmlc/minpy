@@ -71,10 +71,9 @@ class ResNet(Model):
     def _shrinking_block(filter_number):
         return Sequential(
             ResNet._convolution(num_filter=filter_number, kernel=(3, 3), stride=(2, 2), pad=(1, 1)),
-            Add(
-                Convolution(num_filter=filter_number, kernel=(1, 1), stride=(1, 1), pad=(0, 0)), # identity
-                ResNet._convolution(num_filter=filter_number, kernel=(3, 3), stride=(1, 1), pad=(1, 1)),
-            ),
+            Convolution(num_filter=filter_number, kernel=(1, 1), stride=(1, 1), pad=(0, 0)) \
+                + \
+            ResNet._convolution(num_filter=filter_number, kernel=(3, 3), stride=(1, 1), pad=(1, 1)),
         )
 
 

@@ -277,6 +277,7 @@ class Layer(Module):
 
         return self.forward(*args, **kwargs)
 
+    # TODO support scalar operation
     def __add__(self, other):
         return Add(self, other)
 
