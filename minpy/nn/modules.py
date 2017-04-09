@@ -25,8 +25,8 @@ class ReLU(minpy.nn.model_builder.Layer):
         """
         super(ReLU, self).__init__(name=name)
 
-    def forward(self, input, *args):
-        return minpy.nn.layers.relu(input)
+    def forward(self, X, *args):
+        return minpy.nn.layers.relu(X)
 
 
 class Dropout(minpy.nn.model_builder.Layer):
@@ -34,7 +34,7 @@ class Dropout(minpy.nn.model_builder.Layer):
     def __init__(self, p):
         """ Dropout layer
 
-        param p: the probability at which the outputs of neurons are dropped.
+        param p: probability of deactivating a neuron
         """
 
         super(Dropout, self).__init__()
@@ -51,8 +51,8 @@ class Logistic(minpy.nn.model_builder.Layer):
 
         super(Sigmoid, self).__init__()
 
-    def forward(self, input, *args):
-        return 1 / (1 + np.exp(-input))
+    def forward(self, X, *args):
+        return 1 / (1 + np.exp(-X))
 
 
 class Tanh(minpy.nn.model_builder.Layer):
@@ -62,23 +62,49 @@ class Tanh(minpy.nn.model_builder.Layer):
 
         super(Tanh, self).__init__()
 
-    def forward(self, input, *args):
-        return np.tanh(input)
+    def forward(self, X, *args):
+        return np.tanh(X)
 
 
 class Reshape(minpy.nn.model_builder.Layer):
+    _module_name = 'reshape'
     def __init__(self, shape):
-        """
+        """ Reshape.
         """
 
         super(Reshape, self).__init__()
-        self.shape = shape
+        self._shape = shape
 
-    def forward(self, input, *args):
-        return
+    def forward(self, X, *args):
+        return minpy.numpy.reshape(X, self._shape)
+
+
+class BatchReshape(minpy.nn.model_builder.Layer):
+    _module_name = 'batch_reshape'
+    def __init__(self, shape):
+        """ Batch reshape.
+        """
+
+        super(Reshape, self).__init__()
+        self._shape = shape
+
+    def forward(self, X, *args):
+        return minpy.numpy.reshape(X, X.shape[:1] + self._shape)
 
 
 class Flatten(minpy.nn.model_builder.Layer):
+    _module_name = 'flatten'
+    def __init__(self):
+        """ Flatten.
+        """
+
+        super(Flatten, self).__init__()
+
+    def forward(self, X):
+        return minpy.numpy.flatten(X)
+
+
+class BatchFlatten(minpy.nn.model_builder.Layer):
     _module_name = 'flatten'
     def __init__(self):
         """ Flatten.
@@ -151,7 +177,7 @@ class Symbolic(minpy.nn.model_builder.Layer):
 
 
 class FullyConnected(Symbolic):
-    # TODO support inputting weight
+    # TODO support providing weight as input
     def __init__(self, *args, **kwargs):
         name = kwargs.get('name', None)
 
