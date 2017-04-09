@@ -123,8 +123,6 @@ _get_shapes = lambda arrays : map(lambda array : array.shape, arrays)
 
 
 class Symbolic(minpy.nn.model_builder.Layer):
-    # TODO help!
-    # TODO simplify implementation by using Function interfaces
     _module_name = 'symbolic'
     def __init__(self, symbol, variables=None, init_configs=None, update_configs=None, name=None):
         self._symbol = symbol
@@ -270,3 +268,59 @@ class BatchNorm(Symbolic):
 
     def aux_param_shapes(self, input_shape):
         return super(BatchNorm, self).aux_param_shapes(data=input_shape)
+
+
+class RNN(Symbolic):
+    # TODO bidirectional
+    def __init__(self, num_hidden, act_type):
+        data = mxnet.symbol.Variable('data')
+        hidden = mxnet.symbol.Variable('hidden')
+        data = mxnet.symbol.FullyConnected(data=data, num_hidden=num_hidden, no_bias=True)
+        hidden = mxnet.symbol.FullyConnected(hidden=hidden, num_hidden=num_hidden)
+        network = mxnet.symbol.Activation(data + hidden, act_type=act_type)
+
+        super(RNN, self).__init__(network)
+        
+        # TODO default_init_configs
+    
+    def forward(self, data, hidden):
+        return super(RNN, self).forward(data=data, hidden=hidden)
+
+    def param_shapes(self, data_shape, hidden_shape):
+        return super(RNN, self).param_shapes(data=input_shape, hidden=hidden_shape)
+
+    def aux_param_shapes(self, input_shape):
+        return {}
+
+
+class LSTM(Symbolic):
+    def __init__(self, num_hidden, act_type):
+        data = mxnet.symbol.Variable('data')
+        hidden = mxnet.symbol.Variable('hidden')
+        data = mxnet.symbol.FullyConnected(data=data, num_hidden=4 * num_hidden, no_bias=True)
+        hidden = mxnet.symbol.FullyConnected(hidden=hidden, num_hidden=4 * num_hidden)
+        network = data + hidden
+
+        sliced = mxnet.symbol.SliceChannel(data=network, num_outputs=4, axis=1)
+        i = mxnet.symbol.Activation(sliced[0], act_type='sigmoid')
+        f = mxnet.symbol.Activation(sliced[1], act_type='sigmoid')
+        o = mxnet.symbol.Activation(sliced[2], act_type='sigmoid')
+        g = mxnet.symbol.Activation(sliced[3], act_type='tanh')
+
+        cell = Variable('cell')
+        next_cell = f * cell + i * g
+        next_hidden = o * mxnet.symbol.Activation(next_ceil, act_type='tanh')
+        symbol = mxnet.symbol.Group((next_hidden, next_cell))
+
+        super(LSTM, self).__init__(symbol)
+        
+        # TODO default_init_configs
+    
+    def forward(self, data, hidden, cell):
+        return super(LSTM, self).forward(data=data, hidden=hidden, cell=cell)
+
+    def param_shapes(self, data_shape, hidden_shape, cell_shape):
+        return super(LSTM, self).param_shapes(data=input_shape, hidden=hidden_shape, cell=cell_shape)
+
+    def aux_param_shapes(self, input_shape):
+        return {}
