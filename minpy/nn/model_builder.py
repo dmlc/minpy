@@ -27,6 +27,11 @@ def _module_prefix(module_name):
 def _is_array(array):
     return isinstance(array, (minpy.array.Array, numpy.ndarray))
 
+
+def _size(array):
+    return functools.reduce(operator.mul, array.shape, 1)
+
+
 class Module(object):
     # pylint: disable=too-few-public-methods
     """ Base class of module.
@@ -60,6 +65,16 @@ class Module(object):
 
     def __str__(self):
         return self._name
+
+    # TODO support scalar operation
+    def __add__(self, other):
+        return Add(self, other)
+
+    def __sub__(self, other):
+        return Sub(self, other)
+
+    def __mul__(self, other):
+        return Mul(self, other)
 
     def _affiliate_to(self, model):
         '''
@@ -279,16 +294,6 @@ class Layer(Module):
 
         return self.forward(*args, **kwargs)
 
-    # TODO support scalar operation
-    def __add__(self, other):
-        return Add(self, other)
-
-    def __sub__(self, other):
-        return Sub(self, other)
-
-    def __mul__(self, other):
-        return Mul(self, other)
-
     def _assign_param_names(self, *params):
         return tuple('%s_%s' % (self._name, param) for param in params)
     
@@ -448,13 +453,18 @@ class Model(minpy.nn.model.ModelBase):
 
         if isinstance(attr_value, Module):
             self._register_module(attr_value)
-        elif isinstance(attr_value, collections.Iterable) and \
-            all(isinstance(module, Module) for module in attr_value):
-            for module in attr_value:
-                self._register_module(module)
+        elif isinstance(attr_value, collections.Iterable):
+            self._register_iterable(attr_value)
 
         # TODO works for iterable, but probably problematic
         object.__setattr__(self, attr, attr_value)
+
+    def _register_iterable(self, iterable):
+        for element in iterable:
+            if isinstance(element, Module):
+                self._register_module(element)
+            elif isinstance(element, collections.Iterable):
+                self._register_iterable(element)
 
     def _register_module(self, module):
         # check duplication
@@ -521,6 +531,9 @@ class Model(minpy.nn.model.ModelBase):
             grad_tuple = current_tape.get_gradient(self.params.values(), loss)
 
         grad_dict = dict(zip(self.params.keys(), grad_tuple))
+        if isinstance(loss, minpy.array.Array) and _size(loss) == 1:
+            while isinstance(loss, minpy.array.Array): 
+                loss = loss[0]
 
         return grad_dict, loss
 
@@ -554,7 +567,7 @@ class _ConfigParser(object):
     
     def __getattr__(self, attr):
         attr_values = set(config[attr] for config in self._configs.values() if attr in config)
-        assert len(attr_values) is 1, Exception('Inconsistent or non-existent attribute.')
+        assert len(attr_values) == 1, Exception('Inconsistent or non-existent attribute.')
         return attr_values.pop()
 
     def __setattr__(self, attr, attr_value):

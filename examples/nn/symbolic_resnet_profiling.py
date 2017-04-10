@@ -26,14 +26,14 @@ class ResNet(Model):
         self._symbolic = Symbolic(network)
 
     def forward(self, data, mode='training'):
-        if mode == 'training': self.training()
-        elif mode == 'inference': self.inference()
+        if mode is 'training': self.training()
+        elif mode is 'inference': self.inference()
 
         return self._symbolic(data=data)
 
     @staticmethod
     def _convolution(**kwargs):
-        return Convolution(no_bias=True, **kwargs)
+        return Convolution(no_bias=True, cudnn_tune='limited_workspace', **kwargs)
 
     @staticmethod
     def _module(network, filter_number, shrink=False):
@@ -63,11 +63,11 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('--gpu_index', type=int, required=True)
-    parser.add_argument('--data_dir', type=str, required=False)
+    parser.add_argument('--data_path', type=str, required=False)
     args = parser.parse_args()
 
     from load_cifar10_data_iter import *
-    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=64, path=args.data_dir)
+    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=64, path=args.data_path)
 
     from minpy.context import set_context, gpu
     set_context(gpu(args.gpu_index))
@@ -83,20 +83,31 @@ if __name__ == '__main__':
             print 'epoch %d learning rate annealed to %f' % (epoch, updater.learning_rate)
 
         t0 = time.time()
+        forward_time, backward_time, updating_time = 0, 0, 0
 
         # training
-        train_data_iter.reset()
+        train_data_iter.reset() # data iterator must be reset every epoch
         for iteration, batch in enumerate(train_data_iter):
             data, labels = unpack_batch(batch)
+            t1 = time.time()
+            resnet.forward(data) # TODO only forward once
+            forward_time += time.time() - t1
+            t2 = time.time()
             grad_dict, loss = resnet.grad_and_loss(data, labels)
+            backward_time += time.time() - t2
+            t3 = time.time()
             updater(grad_dict)
+            updating_time += time.time() - t3
             if (iteration + 1) % 100 == 0:
                 print 'epoch %d iteration %d loss %f' % (epoch, iteration + 1, loss[0])
 
         print 'epoch %d %f seconds consumed' % (epoch, time.time() - t0)
+        print 'forward %f' % forward_time
+        print 'backward %f' % backward_time
+        print 'updating %f' % updating_time
 
         # validation
-        val_data_iter.reset()
+        val_data_iter.reset() # data iterator must be reset every epoch
         n_errors, n_samples = 0.0, 0.0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
@@ -106,3 +117,5 @@ if __name__ == '__main__':
             n_samples += len(data)
 
         print 'epoch %d validation error %f' % (epoch, n_errors / n_samples)
+
+        # TODO dump model

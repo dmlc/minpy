@@ -3,14 +3,18 @@ Hyper-parameters are identical to those detailed in "Deep Residual Learning for 
 """
 
 
+from random import random
 import minpy.numpy as np
 from minpy.nn.model_builder import *
 from minpy.nn.modules import *
 
 
-class ResNet(Model):
-    def __init__(self, block_number, filter_numbers):
-        super(ResNet, self).__init__(loss='softmax_loss')
+class StochasticDepthNetwork(Model):
+    def __init__(self, block_number, filter_numbers, p):
+        super(StochasticDepthNetwork, self).__init__(loss='softmax_loss')
+
+        self._block_number = block_number
+        self._p = p
 
         f0, f1, f2 = filter_numbers
 
@@ -31,7 +35,7 @@ class ResNet(Model):
         # register blocks preserving size of feature maps
         self._residual_blocks = tuple(
             tuple(
-                ResNet._residual_block(f) \
+                StochasticDepthNetwork._residual_block(f) \
                   for i in range(block_number)
             ) for f in filter_numbers
         )
@@ -51,8 +55,10 @@ class ResNet(Model):
 
         for shrink, residual in zip(self._shrinking_blocks, self._residual_blocks):
             data = shrink(data)
-            for r in residual:
-                data = data + r(data)
+            for index, r in enumerate(residual):
+                p_block = 1 - (index + 1.0) / self._block_number * (1 - self._p)
+                if random() < p_block:
+                    data = data + r(data)
 
         return self._to_scores(data)
 
@@ -69,8 +75,8 @@ class ResNet(Model):
     @staticmethod
     def _residual_block(f):
         residual = Sequential(
-            ResNet._convolution(num_filter=f),
-            ResNet._convolution(num_filter=f),
+            StochasticDepthNetwork._convolution(num_filter=f),
+            StochasticDepthNetwork._convolution(num_filter=f),
         )
         return residual
 
@@ -78,10 +84,10 @@ class ResNet(Model):
     def _shrinking_block(f):
         return Sequential(
             Sequential(
-                ResNet._convolution(num_filter=f, stride=(2, 2)),
-                ResNet._convolution(num_filter=f),
+                StochasticDepthNetwork._convolution(num_filter=f, stride=(2, 2)),
+                StochasticDepthNetwork._convolution(num_filter=f),
             ) + \
-            ResNet._convolution(num_filter=f, kernel=(1, 1), stride=(2, 2), pad=(0, 0))
+            StochasticDepthNetwork._convolution(num_filter=f, kernel=(1, 1), stride=(2, 2), pad=(0, 0))
         )
 
 
@@ -101,7 +107,7 @@ if __name__ == '__main__':
     from minpy.context import set_context, gpu
     set_context(gpu(args.gpu_index))
 
-    model = ResNet(3, (16, 32, 64))
+    model = StochasticDepthNetwork(6, (16, 32, 64), 0.1)
     updater = Updater(model, update_rule='sgd', learning_rate=0.1, momentem=0.9)
     
     epoch_number = 0

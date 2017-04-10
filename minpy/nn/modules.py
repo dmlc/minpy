@@ -157,7 +157,7 @@ class Symbolic(minpy.nn.model_builder.Layer):
 
         self._func.is_train = self._mode == 'training'
 
-        # returns multiple outputs (a tuple) for symbols yielding multiple outputs
+        # returns a tuple of arrays for symbols yielding multiple outputs
         return self._func(**kwargs)
 
     def param_shapes(self, **kwargs):
