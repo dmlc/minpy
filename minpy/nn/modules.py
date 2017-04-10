@@ -85,7 +85,7 @@ class BatchReshape(minpy.nn.model_builder.Layer):
         """ Batch reshape.
         """
 
-        super(Reshape, self).__init__()
+        super(BatchReshape, self).__init__()
         self._shape = shape
 
     def forward(self, X, *args):
@@ -101,7 +101,8 @@ class Flatten(minpy.nn.model_builder.Layer):
         super(Flatten, self).__init__()
 
     def forward(self, X):
-        return minpy.numpy.flatten(X)
+        size = functools.reduce(operator.mul, X.shape, 1)
+        return minpy.numpy.reshape(X, (size,))
 
 
 class BatchFlatten(minpy.nn.model_builder.Layer):
@@ -110,7 +111,7 @@ class BatchFlatten(minpy.nn.model_builder.Layer):
         """ Flatten.
         """
 
-        super(Flatten, self).__init__()
+        super(BatchFlatten, self).__init__()
 
     def forward(self, X):
         N = X.shape[0]
@@ -273,11 +274,16 @@ class BatchNorm(Symbolic):
 class RNN(Symbolic):
     # TODO bidirectional
     def __init__(self, num_hidden, act_type):
+        """ Perform one step of Elman RNN.
+            param str act_type: 'relu', 'sigmoid', 'softrelu' or 'tanh'.
+        """
+
         data = mxnet.symbol.Variable('data')
         hidden = mxnet.symbol.Variable('hidden')
         data = mxnet.symbol.FullyConnected(data=data, num_hidden=num_hidden, no_bias=True)
-        hidden = mxnet.symbol.FullyConnected(hidden=hidden, num_hidden=num_hidden)
-        network = mxnet.symbol.Activation(data + hidden, act_type=act_type)
+        hidden = mxnet.symbol.FullyConnected(data=hidden, num_hidden=num_hidden)
+        network = data + hidden
+        network = mxnet.symbol.Activation(data=network, act_type=act_type)
 
         super(RNN, self).__init__(network)
         
@@ -295,21 +301,23 @@ class RNN(Symbolic):
 
 class LSTM(Symbolic):
     def __init__(self, num_hidden, act_type):
+        """ One step of LSTM.
+        """
         data = mxnet.symbol.Variable('data')
         hidden = mxnet.symbol.Variable('hidden')
         data = mxnet.symbol.FullyConnected(data=data, num_hidden=4 * num_hidden, no_bias=True)
-        hidden = mxnet.symbol.FullyConnected(hidden=hidden, num_hidden=4 * num_hidden)
+        hidden = mxnet.symbol.FullyConnected(data=hidden, num_hidden=4 * num_hidden)
         network = data + hidden
 
         sliced = mxnet.symbol.SliceChannel(data=network, num_outputs=4, axis=1)
-        i = mxnet.symbol.Activation(sliced[0], act_type='sigmoid')
-        f = mxnet.symbol.Activation(sliced[1], act_type='sigmoid')
-        o = mxnet.symbol.Activation(sliced[2], act_type='sigmoid')
-        g = mxnet.symbol.Activation(sliced[3], act_type='tanh')
+        i = mxnet.symbol.Activation(data=sliced[0], act_type='sigmoid')
+        f = mxnet.symbol.Activation(data=sliced[1], act_type='sigmoid')
+        o = mxnet.symbol.Activation(data=sliced[2], act_type='sigmoid')
+        g = mxnet.symbol.Activation(data=sliced[3], act_type='tanh')
 
         cell = Variable('cell')
         next_cell = f * cell + i * g
-        next_hidden = o * mxnet.symbol.Activation(next_ceil, act_type='tanh')
+        next_hidden = o * mxnet.symbol.Activation(data=next_ceil, act_type='tanh')
         symbol = mxnet.symbol.Group((next_hidden, next_cell))
 
         super(LSTM, self).__init__(symbol)
@@ -317,6 +325,7 @@ class LSTM(Symbolic):
         # TODO default_init_configs
     
     def forward(self, data, hidden, cell):
+        # returns next_hidden, next_cell
         return super(LSTM, self).forward(data=data, hidden=hidden, cell=cell)
 
     def param_shapes(self, data_shape, hidden_shape, cell_shape):

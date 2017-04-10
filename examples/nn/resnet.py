@@ -30,13 +30,13 @@ class ResNet(Model):
         # compute class scores from feature maps
         self._to_scores = Sequential(
             Pooling(pool_type='avg', kernel=(8, 8), stride=(1, 1), pad=(0, 0)),
-            Flatten(),
+            BatchFlatten(),
             FullyConnected(num_hidden=10),
         )
     
-    def forward(self, data, training=True):
-        if training: self.training()
-        else: self.inference()
+    def forward(self, data, mode='training'):
+        if mode is 'training': self.training()
+        elif mode is 'inference': self.inference()
 
         out = data
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('--gpu_index', type=int, required=True)
-    parser.add_argument('--data_path', type=str, required=False)
+    parser.add_argument('--data_dir', type=str, required=False)
     args = parser.parse_args()
 
     resnet = ResNet(3, (16, 32, 64))
@@ -95,20 +95,10 @@ if __name__ == '__main__':
     updater = Updater(resnet, update_rule='sgd', learning_rate=0.1, momentem=0.9)
 
     from load_cifar10_data_iter import *
-    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=64, path=args.data_path)
-
-    '''
-    from mxnet.io import NDArrayIter
-    import numpy as np
-    train_data_iter = NDArrayIter(np.random.normal(0, 1, (50000, 3, 32, 32)), np.random.choice(np.arange(10), (50000,)))
-    val_data_iter = NDArrayIter(np.random.normal(0, 1, (10000, 3, 32, 32)), np.random.choice(np.arange(10), (10000,)))
-    import minpy.numpy as np
-    '''
+    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=64, path=args.data_dir)
 
     from minpy.context import set_context, gpu
     set_context(gpu(args.gpu_index))
-
-    resnet.training()
 
     unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
 
@@ -124,13 +114,12 @@ if __name__ == '__main__':
             print 'epoch %d learning rate annealed to %f' % (epoch, updater.learning_rate)
 
         # training
-        train_data_iter.reset() # data iterator must be reset every epoch
+        train_data_iter.reset()
 
         t0 = time.time()
 
         for iteration, batch in enumerate(train_data_iter):
             data, labels = unpack_batch(batch)
-            resnet.forward(data) # TODO only forward once
             grad_dict, loss = resnet.grad_and_loss(data, labels)
             updater(grad_dict)
             if (iteration + 1) % 100 == 0:
@@ -139,7 +128,7 @@ if __name__ == '__main__':
         print 'epoch %d %f seconds consumed' % (epoch, time.time() - t0)
 
         # validation
-        val_data_iter.reset() # data iterator must be reset every epoch
+        val_data_iter.reset()
         n_errors, n_samples = 0.0, 0.0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)

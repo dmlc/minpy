@@ -5,6 +5,8 @@ import operator
 
 import numpy
 
+import minpy.array
+import minpy.tape
 import minpy.core
 import minpy.nn.init
 import minpy.nn.layers
@@ -295,6 +297,8 @@ class Layer(Module):
         self._model_aux_params = model.aux_params
         model._update_configs.update(self._update_configs)
 
+        self._model = model
+
     @staticmethod
     def _get_default_init_config(param_name):
         if 'weight' in param_name:
@@ -318,6 +322,7 @@ class Layer(Module):
                 init_config = self._init_configs[name]
                 self._model_params[name] = \
                     getattr(minpy.nn.init, init_config['init_rule'])(shape, init_config)
+            self._model_params[name].mark_for_bp(self._model._tape)
 
         # register update_configs in model
         
@@ -432,6 +437,8 @@ class Model(minpy.nn.model.ModelBase):
         elif callable(loss):
             self.loss = loss
 
+        self._tape = None
+
     def __setattr__(self, attr, attr_value):
         '''
             All modules containing states modified by model (e.g. parameters,
@@ -490,19 +497,36 @@ class Model(minpy.nn.model.ModelBase):
         
     # TODO multiple inputs to forward and loss function
     def grad_and_loss(self, data, labels):
-        def loss(*args):
-            predictions = self.forward(data)
-            return self.loss(predictions, labels)
-     
-        param_names = tuple(self.params.keys())
-        param_values = tuple(self.params.values())
-        grad_func = minpy.core.grad_and_loss(loss, range(len(self.params)))
-        grad_list, loss = grad_func(*param_values)
-        grad_dict = dict(zip(param_names, grad_list))
+        """
+            param data: an array or a tuple of arrays
+            param labels: an array or a tuple of arrays
+        """
+        if not isinstance(data, tuple): data = (data,)
+        if not isinstance(labels, tuple): labels = (labels,)
+
+        with minpy.tape.tape() as current_tape:
+            self._tape = current_tape
+
+            current_tape.start_recording()
+
+            for param in self.params.values():
+                param.mark_for_bp(current_tape)
+
+            predictions = self.forward(*data, mode='training')
+            if not isinstance(predictions, tuple): predictions = (predictions,)
+            loss = self.loss(*(predictions + labels)) # self.loss should only yield one loss
+
+            current_tape.stop_recording()
+
+            grad_tuple = current_tape.get_gradient(self.params.values(), loss)
+
+        grad_dict = dict(zip(self.params.keys(), grad_tuple))
 
         return grad_dict, loss
-    
+
+
     # TODO load/save (inherited method)
+
 
     def training(self):
         # training mode
