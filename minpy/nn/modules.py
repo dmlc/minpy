@@ -290,6 +290,7 @@ class RNN(Symbolic):
         # TODO default_init_configs
     
     def forward(self, data, hidden):
+        if hidden is None: hidden = minpy.numpy.zeros(data.shape)
         return super(RNN, self).forward(data=data, hidden=hidden)
 
     def param_shapes(self, data_shape, hidden_shape):
@@ -317,14 +318,17 @@ class LSTM(Symbolic):
 
         cell = Variable('cell')
         next_cell = f * cell + i * g
-        next_hidden = o * mxnet.symbol.Activation(data=next_ceil, act_type='tanh')
+        next_hidden = o * mxnet.symbol.Activation(data=next_ceil, act_type=act_type)
         symbol = mxnet.symbol.Group((next_hidden, next_cell))
 
         super(LSTM, self).__init__(symbol)
         
         # TODO default_init_configs
     
-    def forward(self, data, hidden, cell):
+    def forward(self, data, hidden=None, cell=None):
+        if hidden is None: hidden = minpy.numpy.zeros(data.shape)
+        if cell is None: cell = minpy.numpy.zeros(data.shape)
+
         # returns next_hidden, next_cell
         return super(LSTM, self).forward(data=data, hidden=hidden, cell=cell)
 

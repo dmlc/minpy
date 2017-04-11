@@ -427,6 +427,7 @@ class Layer(Module):
 
 
 class Model(minpy.nn.model.ModelBase):
+    # TODO detach/resume (parameter, layer)
     # TODO check duplicated layers
     def __init__(self, loss=None):
         super(Model, self).__init__()
@@ -504,9 +505,28 @@ class Model(minpy.nn.model.ModelBase):
     def forward_batch(self):
         # TODO eliminate?
         raise NotImplementedError()
-        
-    # TODO multiple inputs to forward and loss function
+
+
+#   def grad_and_loss(self, data, labels, forward=None, loss=None, data_grad_req=False, labels_grad_req=False):
+    """
+    param data: an array or a tuple of arrays
+    param labels: an array or a tuple of arrays
+    param forward: forward function (self.forward by default)
+    param loss: a function or a tuple of function (self.loss by default)
+        (if isinstance(loss, tuple), gradients are computed w.r.t. results of ALL loss functions)
+    param data_grad_req: indicating whether gradient is required for inputs
+        if isinstance(data_grad_req, bool): whether gradient is required for ALL inputs
+        if isinstance(data_grad_req, int):
+            data_grad_req is the index of the input in `data` that requires gradients
+        if isinstance(data_grad_req, iterable): 
+            data_grad_req is an iterable of indices corresponding to inputs in `data` that requires gradients
+    param labels_grad_req: usage is identical to data_grad_req
+    """
+
     def grad_and_loss(self, data, labels):
+        # TODO specify forward
+        # TODO multiple loss outputs
+        # TODO multiple inputs to forward and loss function
         """
             param data: an array or a tuple of arrays
             param labels: an array or a tuple of arrays

@@ -102,7 +102,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     from load_cifar10_data_iter import *
-    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=64, path=args.data_dir)
+    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
 
     from minpy.context import set_context, gpu
     set_context(gpu(args.gpu_index))
@@ -144,4 +144,4 @@ if __name__ == '__main__':
             errors += np.count_nonzero(predictions - labels)
             samples += len(data)
 
-        print 'epoch %d validation error %f' % (epoch, errors / float(samples))
+        print 'epoch %d validation error %f' % (epoch_number, errors / float(samples))
