@@ -88,16 +88,7 @@ class ResNet(Model):
 unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
 
 
-def trace(*args):
-    try: open('resnet.py', 'r').close()
-    except: pass
-    return trace
-
-
 if __name__ == '__main__':
-    import sys
-    sys.settrace(trace)
-
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('--data_dir', type=str, required=True)

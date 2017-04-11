@@ -281,22 +281,31 @@ class RNN(Symbolic):
         data = mxnet.symbol.Variable('data')
         hidden = mxnet.symbol.Variable('hidden')
         data = mxnet.symbol.FullyConnected(data=data, num_hidden=num_hidden, no_bias=True)
-        hidden = mxnet.symbol.FullyConnected(data=hidden, num_hidden=num_hidden)
+        hidden = mxnet.symbol.FullyConnected(data=hidden, num_hidden=num_hidden, name='HH')
         network = data + hidden
         network = mxnet.symbol.Activation(data=network, act_type=act_type)
 
-        super(RNN, self).__init__(network)
+        super(RNN, self).__init__(network, ('data', 'hidden'))
+
+        self._register_init_configs({self.HH_weight : {'value' : minpy.numpy.eye(num_hidden)}})
+
+        self._num_hidden = num_hidden
         
         # TODO default_init_configs
     
     def forward(self, data, hidden):
-        if hidden is None: hidden = minpy.numpy.zeros(data.shape)
+        if hidden is None:
+            N, D = data.shape
+            hidden = minpy.numpy.zeros((N, self._num_hidden))
         return super(RNN, self).forward(data=data, hidden=hidden)
 
-    def param_shapes(self, data_shape, hidden_shape):
-        return super(RNN, self).param_shapes(data=input_shape, hidden=hidden_shape)
+    def param_shapes(self, data_shape, hidden_shape=None):
+        if hidden_shape is None:
+            N, D = data_shape
+            hidden_shape = (N, self._num_hidden)
+        return super(RNN, self).param_shapes(data=data_shape, hidden=hidden_shape)
 
-    def aux_param_shapes(self, input_shape):
+    def aux_param_shapes(self, *args):
         return {}
 
 
@@ -316,24 +325,35 @@ class LSTM(Symbolic):
         o = mxnet.symbol.Activation(data=sliced[2], act_type='sigmoid')
         g = mxnet.symbol.Activation(data=sliced[3], act_type='tanh')
 
-        cell = Variable('cell')
+        cell = mxnet.symbol.Variable('cell')
         next_cell = f * cell + i * g
-        next_hidden = o * mxnet.symbol.Activation(data=next_ceil, act_type=act_type)
+        next_hidden = o * mxnet.symbol.Activation(data=next_cell, act_type=act_type)
         symbol = mxnet.symbol.Group((next_hidden, next_cell))
 
-        super(LSTM, self).__init__(symbol)
-        
+        super(LSTM, self).__init__(symbol, ('data', 'hidden', 'cell'))
+
+        self._num_hidden = num_hidden
+
         # TODO default_init_configs
     
     def forward(self, data, hidden=None, cell=None):
-        if hidden is None: hidden = minpy.numpy.zeros(data.shape)
-        if cell is None: cell = minpy.numpy.zeros(data.shape)
+        N, D = data.shape
+        if hidden is None: hidden = minpy.numpy.zeros((N, self._num_hidden))
+        if cell is None: cell = minpy.numpy.zeros((N, self._num_hidden))
 
         # returns next_hidden, next_cell
         return super(LSTM, self).forward(data=data, hidden=hidden, cell=cell)
 
-    def param_shapes(self, data_shape, hidden_shape, cell_shape):
-        return super(LSTM, self).param_shapes(data=input_shape, hidden=hidden_shape, cell=cell_shape)
+    def param_shapes(self, data_shape, hidden_shape=None, cell_shape=None):
+        if hidden_shape is None:
+            N, D = data_shape
+            hidden_shape = (N, self._num_hidden)
 
-    def aux_param_shapes(self, input_shape):
+        if cell_shape is None:
+            N, D = data_shape
+            cell_shape = (N, self._num_hidden)
+
+        return super(LSTM, self).param_shapes(data=data_shape, hidden=hidden_shape, cell=cell_shape)
+
+    def aux_param_shapes(self, *args):
         return {}
