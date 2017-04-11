@@ -88,7 +88,18 @@ class ResNet(Model):
 unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
 
 
+def trace(frame, event, _):
+    try:
+        with open('log', 'a') as f:
+            f.write('%s: %s@%d\n' % (event, frame.f_code.co_filename, frame.f_lineno))
+    except: pass
+    return trace
+
+
 if __name__ == '__main__':
+    import sys
+    sys.settrace(trace)
+
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('--data_dir', type=str, required=True)
@@ -127,6 +138,9 @@ if __name__ == '__main__':
 
             if iteration_number % 100 == 0:
                 print 'iteration %d loss %f' % (iteration_number, loss)
+
+            try: open('log', 'w').close()
+            except: pass
         
         # validation
         val_data_iter.reset()

@@ -507,13 +507,14 @@ class Model(minpy.nn.model.ModelBase):
         raise NotImplementedError()
 
 
-#   def grad_and_loss(self, data, labels, forward=None, loss=None, data_grad_req=False, labels_grad_req=False):
+#   def grad_and_loss(self, data, labels, forward=None, loss=None, data_grad_req=False, labels_grad_req=False, upstream=None):
     """
     param data: an array or a tuple of arrays
     param labels: an array or a tuple of arrays
     param forward: forward function (self.forward by default)
     param loss: a function or a tuple of function (self.loss by default)
         (if isinstance(loss, tuple), gradients are computed w.r.t. results of ALL loss functions)
+        self.loss is by default an identity function.
     param data_grad_req: indicating whether gradient is required for inputs
         if isinstance(data_grad_req, bool): whether gradient is required for ALL inputs
         if isinstance(data_grad_req, int):
@@ -521,6 +522,9 @@ class Model(minpy.nn.model.ModelBase):
         if isinstance(data_grad_req, iterable): 
             data_grad_req is an iterable of indices corresponding to inputs in `data` that requires gradients
     param labels_grad_req: usage is identical to data_grad_req
+    param upstream: an array or a tuple of arrays
+        if upstream is an array: specify upstream w.r.t. the ONLY output of loss
+        if upstream is a tuple: specify upstream w.r.t. ALL outputs of loss function(s)
     """
 
     def grad_and_loss(self, data, labels):
@@ -550,11 +554,13 @@ class Model(minpy.nn.model.ModelBase):
 
             grad_tuple = current_tape.get_gradient(self.params.values(), loss)
 
+        # self._tape = None
+
         grad_dict = dict(zip(self.params.keys(), grad_tuple))
         if isinstance(loss, minpy.array.Array) and _size(loss) == 1:
             while isinstance(loss, minpy.array.Array): 
                 loss = loss[0]
-
+        
         return grad_dict, loss
 
 
