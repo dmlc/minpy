@@ -49,13 +49,21 @@ unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy()
 if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('--data_dir', type=str, required=True)
+    parser.add_argument('--data_dir', type=str)
     parser.add_argument('--gpu_index', type=int, default=0)
     args = parser.parse_args()
 
+    '''
     from examples.utils.data_utils import get_CIFAR10_data
     data = get_CIFAR10_data(args.data_dir)
-    
+    '''
+
+    data = {}
+    data['X_train'] = np.random.normal(0, 1, (50000, 3, 32, 32))
+    data['y_train'] = np.random.choice(np.arange(10), 50000)
+    data['X_test'] = np.random.normal(0, 1, (10000, 3, 32, 32))
+    data['y_test'] = np.random.choice(np.arange(10), 10000)
+ 
     from minpy.nn.io import NDArrayIter
     batch_size = 64
     train_data_iter = NDArrayIter(data=data['X_train'], label=data['y_train'], batch_size=batch_size, shuffle=True)
