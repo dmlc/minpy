@@ -1,8 +1,3 @@
-"""
-Hyper-parameters are identical to those detailed in "Deep Residual Learning for Image Recognition".
-"""
-
-
 import minpy.numpy as np
 from minpy.nn.model_builder import *
 from minpy.nn.modules import *
@@ -88,26 +83,30 @@ class ResNet(Model):
 unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
 
 
-def trace(frame, event, _):
-    try:
-        with open('log', 'a') as f:
-            f.write('%s: %s@%d\n' % (event, frame.f_code.co_filename, frame.f_lineno))
-    except: pass
-    return trace
-
-
 if __name__ == '__main__':
-    import sys
-    sys.settrace(trace)
-
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('--data_dir', type=str, required=True)
+    parser.add_argument('--data_dir', type=str)
     parser.add_argument('--gpu_index', type=int, default=0)
     args = parser.parse_args()
 
-    from load_cifar10_data_iter import *
-    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
+    '''
+    from examples.utils.data_utils import get_CIFAR10_data
+    data = get_CIFAR10_data(args.data_dir)
+    for key, value in data.items():
+        print key, value.shape
+    '''
+    
+    data = {}
+    data['X_train'] = np.random.normal(0, 1, (50000, 3, 32, 32))
+    data['y_train'] = np.random.choice(np.arange(10), 50000)
+    data['X_test'] = np.random.normal(0, 1, (10000, 3, 32, 32))
+    data['y_test'] = np.random.choice(np.arange(10), 10000)
+ 
+    from minpy.nn.io import NDArrayIter
+    batch_size = 64
+    train_data_iter = NDArrayIter(data=data['X_train'], label=data['y_train'], batch_size=batch_size, shuffle=True)
+    val_data_iter = NDArrayIter(data=data['X_test'], label=data['y_test'], batch_size=batch_size, shuffle=False)
 
     from minpy.context import set_context, gpu
     set_context(gpu(args.gpu_index))
@@ -139,9 +138,6 @@ if __name__ == '__main__':
             if iteration_number % 100 == 0:
                 print 'iteration %d loss %f' % (iteration_number, loss)
 
-            try: open('log', 'w').close()
-            except: pass
-        
         # validation
         val_data_iter.reset()
         errors, samples = 0, 0

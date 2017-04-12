@@ -276,7 +276,6 @@ class Layer(Module):
     def __call__(self, *args, **kwargs):
         # initialize only if self is bound to a model
         if self._model_params is not None and self._model_aux_params is not None:
-            # child classes should not replace this method
             arg_shapes = tuple(arg.shape for arg in args if _is_array(arg))
             kwarg_shapes = \
                 {key : value.shape for key, value in kwargs.items() if _is_array(value)}
