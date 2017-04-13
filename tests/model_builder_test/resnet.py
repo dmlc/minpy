@@ -93,8 +93,6 @@ if __name__ == '__main__':
     '''
     from examples.utils.data_utils import get_CIFAR10_data
     data = get_CIFAR10_data(args.data_dir)
-    for key, value in data.items():
-        print key, value.shape
     '''
     
     data = {}
