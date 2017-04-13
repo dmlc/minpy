@@ -185,8 +185,11 @@ class Function(object):
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
                         for name in self._symbol.list_arguments()]
+        aux_args = {name: kwargs[name]
+                    for name in self._symbol.list_auxiliary_states()
+                    if name in kwargs}
         prim = self._create_prim()
-        return prim.call(args=ordered_args, kwargs={})
+        return prim.call(args=ordered_args, kwargs=aux_args)
 
     # pylint: disable= missing-docstring
     def get_params(self):
