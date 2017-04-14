@@ -200,6 +200,31 @@ class FullyConnected(Symbolic):
         return {}
 
 
+class Embedding(Symbolic):
+    # TODO support providing weight as input
+    def __init__(self, *args, **kwargs):
+        name = kwargs.get('name', None)
+
+        data = mxnet.symbol.Variable('data')
+        fully_connected = mxnet.symbol.FullyConnected(data, *args, **kwargs)
+
+        super(Embedding, self).__init__(fully_connected)
+
+        init_configs = kwargs.get('init_configs', None)
+        self._register_init_configs(init_configs)
+        update_configs = kwargs.get('update_configs', None)
+        self._register_update_configs(update_configs)
+
+    def forward(self, data):
+        return super(Embedding, self).forward(data=data)
+
+    def param_shapes(self, input_shape):
+        return super(Embedding, self).param_shapes(data=input_shape)
+
+    def aux_param_shapes(self, input_shape):
+        return {}
+
+
 class Convolution(Symbolic):
     def __init__(self, *args, **kwargs):
         # TODO interface (currently mxnet)
