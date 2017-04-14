@@ -88,18 +88,7 @@ class ResNet(Model):
 unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
 
 
-def trace(frame, event, _):
-    try:
-        with open('log', 'a') as f:
-            f.write('%s: %s@%d\n' % (event, frame.f_code.co_filename, frame.f_lineno))
-    except: pass
-    return trace
-
-
 if __name__ == '__main__':
-    import sys
-    sys.settrace(trace)
-
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('--data_dir', type=str, required=True)
@@ -107,7 +96,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     from load_cifar10_data_iter import *
-    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
+    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=256, path=args.data_dir)
 
     from minpy.context import set_context, gpu
     set_context(gpu(args.gpu_index))
@@ -147,7 +136,7 @@ if __name__ == '__main__':
         errors, samples = 0, 0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            scores = model.forward(data, True) # TODO training=False
+            scores = model.forward(data, False) # TODO training=False
             predictions = np.argmax(scores, axis=1)
             errors += np.count_nonzero(predictions - labels)
             samples += len(data)

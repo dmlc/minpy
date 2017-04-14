@@ -152,11 +152,13 @@ class Function(object):
 
         # pylint: disable= missing-docstring
         # Define raw forward function.
-        def func(*args):
+        def func(*args, **kwargs):
             # Set Data & Parameters
             for arg, executor_arg in zip(args, executor.arg_arrays):
                 if arg is not None:
                     arg.copyto(executor_arg)
+            for key, value in kwargs.items():
+                value.copyto(executor.aux_dict[key])
             # Forward computation.
             executor.forward(is_train=self._is_train)
             return tuple(executor.outputs) if len(executor.outputs) > 1 else executor.outputs[0]
@@ -164,7 +166,7 @@ class Function(object):
         func.__name__ = self._sym_name
 
         # Define gradient function generator.
-        def grad_wrapper(ans, *args): # pylint: disable= unused-argument
+        def grad_wrapper(ans, *args, **kwargs): # pylint: disable= unused-argument
             def grad_func(g):
                 executor.backward(out_grads=g)
                 ret = executor.grad_arrays
