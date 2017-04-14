@@ -157,6 +157,7 @@ class Function(object):
             for arg, executor_arg in zip(args, executor.arg_arrays):
                 if arg is not None:
                     arg.copyto(executor_arg)
+            self._aux_dict = kwargs
             for key, value in kwargs.items():
                 value.copyto(executor.aux_dict[key])
             # Forward computation.
@@ -170,6 +171,8 @@ class Function(object):
             def grad_func(g):
                 executor.backward(out_grads=g)
                 ret = executor.grad_arrays
+                for key, value in executor.aux_dict.items():
+                    value.copyto(self._aux_dict[key])
                 return ret
 
             return grad_func

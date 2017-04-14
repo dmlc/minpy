@@ -136,7 +136,7 @@ if __name__ == '__main__':
         errors, samples = 0, 0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            scores = model.forward(data, False) # TODO training=False
+            scores = model.forward(data, 'inference')
             predictions = np.argmax(scores, axis=1)
             errors += np.count_nonzero(predictions - labels)
             samples += len(data)
