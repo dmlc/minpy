@@ -206,9 +206,9 @@ class Embedding(Symbolic):
         name = kwargs.get('name', None)
 
         data = mxnet.symbol.Variable('data')
-        fully_connected = mxnet.symbol.FullyConnected(data, *args, **kwargs)
+        embedding = mxnet.symbol.Embedding(data, *args, **kwargs)
 
-        super(Embedding, self).__init__(fully_connected)
+        super(Embedding, self).__init__(embedding)
 
         init_configs = kwargs.get('init_configs', None)
         self._register_init_configs(init_configs)
