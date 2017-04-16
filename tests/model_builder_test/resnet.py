@@ -11,16 +11,15 @@ class ResNet(Model):
 
         # register blocks reducing size of feature maps
         self._shrinking_blocks = (
-            Sequential(
-                BatchNorm(fix_gamma=False),
-                self._convolution(num_filter=f0),
+            Convolution(
+                num_filter = f0,
+                kernel     = (3, 3),
+                stride     = (1, 1),
+                pad        = (1, 1),
+                no_bias    = True,
             ),
             self._shrinking_block(f1),
-            Sequential(
-                self._shrinking_block(f2),
-                BatchNorm(fix_gamma=False),
-                ReLU(),
-            )
+            self._shrinking_block(f2),
         )
 
         # register blocks preserving size of feature maps
@@ -33,6 +32,8 @@ class ResNet(Model):
 
         # compute class scores from feature maps
         self._to_scores = Sequential(
+            BatchNorm(fix_gamma=False),
+            ReLU(),
             Pooling(pool_type='avg', kernel=(8, 8), stride=(1, 1)),
             BatchFlatten(),
             FullyConnected(num_hidden=10),
@@ -72,12 +73,9 @@ class ResNet(Model):
     @staticmethod
     def _shrinking_block(f):
         return Sequential(
-            Sequential(
-                ResNet._convolution(num_filter=f, stride=(2, 2)),
-                ResNet._convolution(num_filter=f),
-            ) + \
-            ResNet._convolution(num_filter=f, kernel=(1, 1), stride=(2, 2), pad=(0, 0))
-        )
+            ResNet._convolution(num_filter=f, stride=(2, 2)),
+            ResNet._convolution(num_filter=f),
+        ) + ResNet._convolution(num_filter=f, kernel=(1, 1), stride=(2, 2), pad=(0, 0))
 
 
 unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
@@ -93,20 +91,17 @@ if __name__ == '__main__':
     '''
     from examples.utils.data_utils import get_CIFAR10_data
     data = get_CIFAR10_data(args.data_dir)
-    '''
-    
-    data = {}
-    data['X_train'] = np.random.normal(0, 1, (50000, 3, 32, 32))
-    data['y_train'] = np.random.choice(np.arange(10), 50000)
-    data['X_test'] = np.random.normal(0, 1, (10000, 3, 32, 32))
-    data['y_test'] = np.random.choice(np.arange(10), 10000)
- 
+
     from minpy.nn.io import NDArrayIter
-    batch_size = 64
+    batch_size = 128
     train_data_iter = NDArrayIter(data=data['X_train'], label=data['y_train'], batch_size=batch_size, shuffle=True)
     val_data_iter = NDArrayIter(data=data['X_test'], label=data['y_test'], batch_size=batch_size, shuffle=False)
+    '''
 
-    from minpy.context import set_context, gpu
+    from load_cifar10_data_iter import *
+    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
+
+    from minpy.context import set_context, cpu, gpu
     set_context(gpu(args.gpu_index))
 
     model = ResNet(3, (16, 32, 64))
@@ -141,7 +136,7 @@ if __name__ == '__main__':
         errors, samples = 0, 0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            scores = model.forward(data, True) # TODO training=False
+            scores = model.forward(data, 'inference') # TODO training=False
             predictions = np.argmax(scores, axis=1)
             errors += np.count_nonzero(predictions - labels)
             samples += len(data)

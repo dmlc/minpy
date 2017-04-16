@@ -145,21 +145,24 @@ class Function(object):
         for i, aux_name in enumerate(self._symbol.list_auxiliary_states()):
             self._aux_shapes[aux_name] = aux_shapes[i]
 
-    def _create_prim(self):
+    def _create_prim(self, global_dict):
         dev = current_context().as_mxnet_context()
         executor = self._symbol.simple_bind(dev, 'write', **self._input_shapes)
         arg_names = self._symbol.list_arguments()
+        aux_state_names = self._symbol.list_auxiliary_states()
 
         # pylint: disable= missing-docstring
         # Define raw forward function.
-        def func(*args, **kwargs):
+        def func(*args):
             # Set Data & Parameters
-            for arg, executor_arg in zip(args, executor.arg_arrays):
+            for arg, executor_arg in zip(args[:len(arg_names)], executor.arg_arrays):
                 if arg is not None:
                     arg.copyto(executor_arg)
-            self._aux_dict = kwargs
-            for key, value in kwargs.items():
-                value.copyto(executor.aux_dict[key])
+
+            for aux, executor_aux in zip(args[len(arg_names):], executor.aux_arrays):
+                if aux is not None:
+                    aux.copyto(executor_aux)
+
             # Forward computation.
             executor.forward(is_train=self._is_train)
             return tuple(executor.outputs) if len(executor.outputs) > 1 else executor.outputs[0]
@@ -167,19 +170,23 @@ class Function(object):
         func.__name__ = self._sym_name
 
         # Define gradient function generator.
-        def grad_wrapper(ans, *args, **kwargs): # pylint: disable= unused-argument
+        def grad_wrapper(ans, *args): # pylint: disable= unused-argument
             def grad_func(g):
                 executor.backward(out_grads=g)
+
+                for aux, executor_aux in zip(global_dict['aux_states'], executor.aux_arrays):
+                    if aux is not None:
+                        aux[:] = executor_aux
+
                 ret = executor.grad_arrays
-                for key, value in executor.aux_dict.items():
-                    value.copyto(self._aux_dict[key])
+                ret += [0] * len(aux_state_names)
                 return ret
 
             return grad_func
 
         # Create primitives.
         prim = Primitive(func, ArrayType.MXNET)
-        prim.def_multiple_grad(grad_wrapper, tuple(range(len(arg_names))))
+        prim.def_multiple_grad(grad_wrapper, tuple(range(len(arg_names) + len(aux_state_names))))
         return prim
         # pylint: enable= missing-docstring
 
@@ -190,11 +197,10 @@ class Function(object):
         # list.
         ordered_args = [(kwargs[name] if name in kwargs else None)
                         for name in self._symbol.list_arguments()]
-        aux_args = {name: kwargs[name]
-                    for name in self._symbol.list_auxiliary_states()
-                    if name in kwargs}
-        prim = self._create_prim()
-        return prim.call(args=ordered_args, kwargs=aux_args)
+        ordered_aux_states = [(kwargs[name] if name in kwargs else None)
+                        for name in self._symbol.list_auxiliary_states()]
+        prim = self._create_prim({'aux_states' : ordered_aux_states})
+        return prim.call(args=ordered_args + ordered_aux_states, kwargs={})
 
     # pylint: disable= missing-docstring
     def get_params(self):

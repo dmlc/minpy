@@ -1,81 +1,58 @@
+from mxnet.symbol import *
 import minpy.numpy as np
-from minpy.nn.model_builder import *
-from minpy.nn.modules import *
+from minpy.nn.model_builder import Model, Updater
+from minpy.nn.modules import Symbolic
 
 
 class ResNet(Model):
-    def __init__(self, block_number, filter_numbers):
+    def __init__(self, block_number):
         super(ResNet, self).__init__(loss='softmax_loss')
 
-        f0, f1, f2 = filter_numbers
+        network = Variable('data')
+        network = ResNet._convolution(data=network, num_filter=16)
 
-        # register blocks reducing size of feature maps
-        self._shrinking_blocks = (
-            Convolution(
-                num_filter = f0,
-                kernel     = (3, 3),
-                stride     = (1, 1),
-                pad        = (1, 1),
-                no_bias    = True,
-            ),
-            self._shrinking_block(f1),
-            self._shrinking_block(f2),
-        )
+        for filter_number in (16, 32):
+            for i in range(block_number): network = self._module(network, filter_number)
+            network = self._module(network, filter_number * 2, shrink=True)
 
-        # register blocks preserving size of feature maps
-        self._residual_blocks = tuple(
-            tuple(
-                ResNet._residual_block(f) \
-                  for i in range(block_number)
-            ) for f in filter_numbers
-        )
+        for i in range(block_number): network = self._module(network, 64)
 
-        # compute class scores from feature maps
-        self._to_scores = Sequential(
-            BatchNorm(fix_gamma=False),
-            ReLU(),
-            Pooling(pool_type='avg', kernel=(8, 8), stride=(1, 1)),
-            BatchFlatten(),
-            FullyConnected(num_hidden=10),
-        )
-    
+        network = Activation(data=network, act_type='relu')
+        network = BatchNorm(data=network, fix_gamma=False)
+        network = Pooling(data=network, pool_type='avg', kernel=(8, 8), stride=(1, 1), pad=(0, 0))
+        network = Flatten(data=network)
+        network = FullyConnected(data=network, num_hidden=10)
+
+        self._symbolic = Symbolic(network)
+
     def forward(self, data, mode='training'):
         if mode == 'training': self.training()
         elif mode == 'inference': self.inference()
 
-        data = data
-
-        for shrink, residual in zip(self._shrinking_blocks, self._residual_blocks):
-            data = shrink(data)
-            for r in residual:
-                data = data + r(data)
-
-        return self._to_scores(data)
+        return self._symbolic(data=data)
 
     @staticmethod
     def _convolution(**kwargs):
         defaults = {'kernel' : (3, 3), 'stride' : (1, 1), 'pad' : (1, 1), 'no_bias' : True}
         defaults.update(kwargs)
-        return Sequential(
-            BatchNorm(fix_gamma=False),
-            ReLU(),
-            Convolution(**defaults),
-        )
+        return Convolution(**defaults)
 
     @staticmethod
-    def _residual_block(f):
-        residual = Sequential(
-            ResNet._convolution(num_filter=f),
-            ResNet._convolution(num_filter=f),
-        )
-        return residual
+    def _module(network, f, shrink=False):
+        # TODO shrink
+        if shrink: identity = \
+            ResNet._convolution(data=network, num_filter=f, kernel=(1, 1), stride=(2, 2), pad=(0, 0))
+        else: identity = network
 
-    @staticmethod
-    def _shrinking_block(f):
-        return Sequential(
-            ResNet._convolution(num_filter=f, stride=(2, 2)),
-            ResNet._convolution(num_filter=f),
-        ) + ResNet._convolution(num_filter=f, kernel=(1, 1), stride=(2, 2), pad=(0, 0))
+        residual = BatchNorm(data=network, fix_gamma=False)
+        residual = Activation(data=residual, act_type='relu')
+        stride = (2, 2) if shrink else (1, 1)
+        residual = ResNet._convolution(data=residual, num_filter=f, stride=stride)
+        residual = BatchNorm(data=residual, fix_gamma=False)
+        residual = Activation(data=residual, act_type='relu')
+        residual = ResNet._convolution(data=residual, num_filter=f)
+
+        return identity + residual
 
 
 unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
@@ -88,23 +65,25 @@ if __name__ == '__main__':
     parser.add_argument('--gpu_index', type=int, default=0)
     args = parser.parse_args()
 
+    from load_cifar10_data_iter import *
+    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
+
     '''
     from examples.utils.data_utils import get_CIFAR10_data
     data = get_CIFAR10_data(args.data_dir)
+    '''
 
+    '''
     from minpy.nn.io import NDArrayIter
     batch_size = 128
     train_data_iter = NDArrayIter(data=data['X_train'], label=data['y_train'], batch_size=batch_size, shuffle=True)
     val_data_iter = NDArrayIter(data=data['X_test'], label=data['y_test'], batch_size=batch_size, shuffle=False)
     '''
 
-    from load_cifar10_data_iter import *
-    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
-
-    from minpy.context import set_context, cpu, gpu
+    from minpy.context import set_context, gpu
     set_context(gpu(args.gpu_index))
 
-    model = ResNet(3, (16, 32, 64))
+    model = ResNet(3)
     updater = Updater(model, update_rule='sgd', learning_rate=0.1, momentem=0.9)
     
     epoch_number = 0
@@ -127,11 +106,14 @@ if __name__ == '__main__':
             data, labels = unpack_batch(batch)
             grad_dict, loss = model.grad_and_loss(data, labels)
             updater(grad_dict)
+#           print model.aux_params['symbolic0_batchnorm15_moving_mean']
 
             if iteration_number % 100 == 0:
                 print 'iteration %d loss %f' % (iteration_number, loss)
+                print model.aux_params['symbolic0_batchnorm15_moving_mean']
 
         # validation
+        print model.aux_params['symbolic0_batchnorm15_moving_mean']
         val_data_iter.reset()
         errors, samples = 0, 0
         for batch in val_data_iter:

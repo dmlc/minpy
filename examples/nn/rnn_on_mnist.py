@@ -3,6 +3,7 @@ from minpy.nn.model_builder import *
 from minpy.nn.modules import *
 
 
+# TODO SLOW
 class RNNModel(Model):
     def __init__(self, hidden_state_size, activation='tanh'):
         super(RNNModel, self).__init__(loss='softmax_loss')
