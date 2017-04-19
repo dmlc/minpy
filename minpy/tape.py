@@ -83,15 +83,18 @@ class Tape(object):
             for sub_result in result:
                 self._result_grad_records[sub_result.id].append(grad_rec)
 
-    def _set_gradient_target(self, target):
+    def _set_gradient_target(self, target, upstream=None):
         """Set gradient targets to ones."""
         # Set gradient target for one.
         if isinstance(target, array.Value):
-            self._grads[target.id] = array.wrap(1.0 if isinstance(
-                target, array.Number) else numpy.ones(target.shape))
+            if upstream is None:
+                self._grads[target.id] = array.wrap(1.0 if isinstance(
+                    target, array.Number) else numpy.ones(target.shape))
+            else:
+                self._grads[target.id] = array.wrap(upstream)
         else:
-            for sub_target in target:
-                self._set_gradient_target(sub_target)
+            for sub_target, sub_upstream in zip(target, upstream):
+                self._set_gradient_target(sub_target, sub_upstream)
 
     def _cumulate_gradient(self, arr, grad):
         """Cumulate gradients belonging to the same array.
@@ -155,7 +158,7 @@ class Tape(object):
             self._result_grad_records.pop(arrid, None)
         # pylint: enable= too-many-nested-blocks, too-many-branches
 
-    def get_gradient(self, origin, target):
+    def get_gradient(self, origin, target, upstream=None):
         """Get gradient of the specified array.
 
         This will first set the gradients of target (using value 1.0) and
@@ -203,7 +206,7 @@ class Tape(object):
         origin_id = set(arr.id for arr in origin)
 
         # Set gradient target.
-        self._set_gradient_target(target)
+        self._set_gradient_target(target, upstream)
 
         # Initialize bfs queue.
         bfs_queue = collections.deque()

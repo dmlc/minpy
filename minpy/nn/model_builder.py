@@ -273,9 +273,13 @@ class Layer(Module):
 
         self._mode = 'training' # training/inference
 
+        self._initialized = False
+
     def __call__(self, *args, **kwargs):
         # initialize only if self is bound to a model
-        if self._model_params is not None and self._model_aux_params is not None:
+        if not self._initialized and \
+            self._model_params is not None and self._model_aux_params is not None:
+
             arg_shapes = tuple(arg.shape for arg in args if _is_array(arg))
             kwarg_shapes = \
                 {key : value.shape for key, value in kwargs.items() if _is_array(value)}
@@ -288,8 +292,7 @@ class Layer(Module):
             aux_param_shapes = self.aux_param_shapes(*arg_shapes, **kwarg_shapes)
             self._init_aux_params(aux_param_shapes)
 
-        # reset
-        self.__call__ = self.forward
+            self._initialized = True
 
         return self.forward(*args, **kwargs)
 
@@ -317,6 +320,8 @@ class Layer(Module):
             return {'init_rule' : 'constant', 'value' : 0}
         elif 'moving_var' in param_name:
             return {'init_rule' : 'constant', 'value' : 1}
+        else:
+            return {'init_rule' : 'constant', 'value' : 0}
  
     def _init_params(self, param_shapes):
         # param_shapes: dict
@@ -326,7 +331,9 @@ class Layer(Module):
                 init_config = self._init_configs[name]
                 self._model_params[name] = \
                     getattr(minpy.nn.init, init_config['init_rule'])(shape, init_config)
-            self._model_params[name].mark_for_bp(self._model._tape)
+            tape = self._model._tape
+            if tape is not None and tape.is_recording:
+                self._model.attach(name, self._model_params[name])
 
         # register update_configs in model
         
@@ -439,8 +446,11 @@ class Model(minpy.nn.model.ModelBase):
 
         if isinstance(loss, str):
             self.loss = getattr(minpy.nn.layers, loss)
-        elif callable(loss):
+        elif callable(loss) or \
+            isinstance(loss, collections.Iterable) and all(callable(item) for item in loss):
             self.loss = loss
+        elif loss is not None: raise Exception()
+        else: self.loss = None
 
         self._tape = None
 
@@ -506,25 +516,95 @@ class Model(minpy.nn.model.ModelBase):
         raise NotImplementedError()
 
 
-#   def grad_and_loss(self, data, labels, forward=None, loss=None, data_grad_req=False, labels_grad_req=False, upstream=None):
-    """
-    param data: an array or a tuple of arrays
-    param labels: an array or a tuple of arrays
-    param forward: forward function (self.forward by default)
-    param loss: a function or a tuple of function (self.loss by default)
-        (if isinstance(loss, tuple), gradients are computed w.r.t. results of ALL loss functions)
-        self.loss is by default an identity function.
-    param data_grad_req: indicating whether gradient is required for inputs
-        if isinstance(data_grad_req, bool): whether gradient is required for ALL inputs
-        if isinstance(data_grad_req, int):
-            data_grad_req is the index of the input in `data` that requires gradients
-        if isinstance(data_grad_req, iterable): 
-            data_grad_req is an iterable of indices corresponding to inputs in `data` that requires gradients
-    param labels_grad_req: usage is identical to data_grad_req
-    param upstream: an array or a tuple of arrays
-        if upstream is an array: specify upstream w.r.t. the ONLY output of loss
-        if upstream is a tuple: specify upstream w.r.t. ALL outputs of loss function(s)
-    """
+    def __call__(self, data, labels, forward=None, loss=None, upstream=None):
+        """
+        param data: positional arguments of forward
+        param labels: positional arguments of loss, except beginning one (which are predictions)
+        param forward: forward function (self.forward by default)
+        param loss: a function or a tuple of function
+        """
+        if not isinstance(data, tuple): data = (data,)
+        data = tuple(map(minpy.array.wrap, data))
+
+        self._bp_name_list = []
+        self._bp_array_list = []
+        self._bp_index_dict = {}
+
+        # TODO side effects
+        self._tape = minpy.tape.Tape()
+        minpy.tape.Tape.global_tape = self._tape
+
+        self._tape.start_recording()
+
+        for key, value in self.params.items():
+            self.attach(key, value)
+
+        predictions = self.forward(*data, mode='training')
+        if not isinstance(predictions, tuple): predictions = (predictions,)
+
+        if loss is None: loss = self.loss
+        if callable(loss):
+            if not isinstance(labels, tuple): labels = (labels,)
+            labels = tuple(map(minpy.array.wrap, labels))
+            self._loss_values = self.loss(*(predictions + labels))
+        elif isinstance(loss, collections.Iterable):
+            self._loss_values = []
+            for loss, args in zip(loss, labels):
+                if not isinstance(args, tuple): args = (args,)
+                self._loss_values.append(loss(*(predictions + args)))
+        else: raise Exception()
+
+        self._tape.stop_recording()
+        minpy.tape.Tape.global_tape = None
+
+        if isinstance(loss, list):
+            loss_values = tuple(self._reduce_array(value) for value in self._loss_values)
+        else:
+            loss_values = self._reduce_array(self._loss_values)
+       
+        return loss_values
+
+    def backward(self, upstream=None):
+        wrapped_sources = map(minpy.array.wrap, self._bp_array_list)
+        if isinstance(self._loss_values, tuple):
+            wrapped_targets = map(minpy.array.wrap, self._loss_values)
+        else: wrapped_targets = minpy.array.wrap(self._loss_values)
+        grad_tuple = self._tape.get_gradient(wrapped_sources, wrapped_targets, upstream)
+        grad_dict = dict(zip(self._bp_name_list, grad_tuple))
+        return grad_dict
+
+    @staticmethod
+    def _reduce_array(array):
+        if isinstance(array, minpy.array.Array) and _size(array) == 1:
+            while isinstance(array, minpy.array.Array): 
+                array = array[0]
+        return array
+
+    def attach(self, name, array):
+        if self._tape is None or not self._tape.is_recording:
+            raise Exception()
+        array.mark_for_bp(self._tape)
+        self._bp_name_list.append(name)
+        self._bp_index_dict[name] = len(self._bp_name_list) - 1
+        self._bp_array_list.append(array)
+
+    def detach(self, name):
+        index = self._bp_index_dict[name]
+        del self._bp_name_list[index]
+        self._bp_array_list[index]._bp_timestamp = -1
+        del self._bp_array_list[index]
+    
+    def detach_graph(self):
+        # TODO detach subgraph
+        return
+
+    def grad(self):
+        """
+        param upstream: an array or a tuple of arrays
+            if upstream is an array: specify upstream w.r.t. the ONLY output of loss
+            if upstream is a tuple: specify upstream w.r.t. ALL outputs of loss function(s)
+        """
+        return
 
     def grad_and_loss(self, data, labels):
         # TODO specify forward
@@ -536,31 +616,6 @@ class Model(minpy.nn.model.ModelBase):
         """
         if not isinstance(data, tuple): data = (data,)
         if not isinstance(labels, tuple): labels = (labels,)
-
-        with minpy.tape.tape() as current_tape:
-            self._tape = current_tape
-
-            current_tape.start_recording()
-
-            for param in self.params.values():
-                param.mark_for_bp(current_tape)
-
-            predictions = self.forward(*data, mode='training')
-            if not isinstance(predictions, tuple): predictions = (predictions,)
-            loss = self.loss(*(predictions + labels)) # self.loss should only yield one loss
-
-            current_tape.stop_recording()
-
-            grad_tuple = current_tape.get_gradient(self.params.values(), loss)
-
-        # self._tape = None
-
-        grad_dict = dict(zip(self.params.keys(), grad_tuple))
-        if isinstance(loss, minpy.array.Array) and _size(loss) == 1:
-            while isinstance(loss, minpy.array.Array): 
-                loss = loss[0]
-        
-        return grad_dict, loss
 
 
     # TODO load/save (inherited method)

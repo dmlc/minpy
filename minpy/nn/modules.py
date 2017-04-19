@@ -9,6 +9,22 @@ import minpy.nn.layers
 import minpy.nn.model_builder
 
 
+class Variable(minpy.nn.model_builder.Layer):
+    _module_name = 'variable'
+    def __init__(self, shape, init_configs=None, update_configs=None, name=None):
+        self._shape = shape
+        params = ('variable',)
+        aux_params = None
+        super(Variable, self).__init__(params, aux_params, name)
+        self._register_init_configs(init_configs)
+        self._register_update_configs(update_configs)
+
+    def forward(self):
+        return self._get_param(self.variable)
+
+    def param_shapes(self, *args):
+        return {self.variable : self._shape}
+
 class Identity(minpy.nn.model_builder.Layer):
     _module_name = 'identity'
     def __init__(self, name=None):
