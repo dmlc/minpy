@@ -25,6 +25,7 @@ class Variable(minpy.nn.model_builder.Layer):
     def param_shapes(self, *args):
         return {self.variable : self._shape}
 
+
 class Identity(minpy.nn.model_builder.Layer):
     _module_name = 'identity'
     def __init__(self, name=None):
@@ -65,7 +66,7 @@ class Logistic(minpy.nn.model_builder.Layer):
         """ Logistic function.
         """
 
-        super(Sigmoid, self).__init__()
+        super(Logistic, self).__init__()
 
     def forward(self, X, *args):
         return 1 / (1 + np.exp(-X))

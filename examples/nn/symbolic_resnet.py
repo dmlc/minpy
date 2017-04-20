@@ -104,7 +104,8 @@ if __name__ == '__main__':
                 updater.learning_rate = updater.learning_rate * 0.1
                
             data, labels = unpack_batch(batch)
-            grad_dict, loss = model.grad_and_loss(data, labels)
+            loss = model(data, labels)
+            grad_dict = model.backward()
             updater(grad_dict)
 
             if iteration_number % 100 == 0:

@@ -438,19 +438,12 @@ class Model(minpy.nn.model.ModelBase):
     def __init__(self, loss=None):
         super(Model, self).__init__()
 
-        # TODO layers are responsible for placing param update configs here once param is placed in params
+        self.loss = loss
+
         self._update_configs = {}
 
-        self._modules = set() # references to all registered modules
+        self._modules = set()      # references to all registered modules
         self._module_names = set() # names of all registered modules
-
-        if isinstance(loss, str):
-            self.loss = getattr(minpy.nn.layers, loss)
-        elif callable(loss) or \
-            isinstance(loss, collections.Iterable) and all(callable(item) for item in loss):
-            self.loss = loss
-        elif loss is not None: raise Exception()
-        else: self.loss = None
 
         self._tape = None
 
@@ -466,13 +459,13 @@ class Model(minpy.nn.model.ModelBase):
         elif isinstance(attr_value, collections.Iterable):
             self._register_iterable(attr_value)
 
-        # TODO works for iterable, but probably problematic
         object.__setattr__(self, attr, attr_value)
 
     def _register_iterable(self, iterable):
         for element in iterable:
             if isinstance(element, Module):
                 self._register_module(element)
+            elif isinstance(element, str): continue
             elif isinstance(element, collections.Iterable):
                 self._register_iterable(element)
 
@@ -516,69 +509,95 @@ class Model(minpy.nn.model.ModelBase):
         raise NotImplementedError()
 
 
-    def __call__(self, data, labels, forward=None, loss=None, upstream=None):
+    def __call__(
+        self,
+        forward_args   = None,
+        forward_kwargs = None,
+        labels         = None,
+        loss_kwargs    = None,
+        forward        = None,
+        loss           = None,
+        reduce_array   = True,
+    ):
         """
-        param data: positional arguments of forward
-        param labels: positional arguments of loss, except beginning one (which are predictions)
+        param forward_args: an array or a tuple of arrays
+        param forward_kwargs: a dict containing kwargs for forward function
+        param labels: an array or a tuple of arrays
+        param loss_kwargs: a dict containing kwargs for loss function
         param forward: forward function (self.forward by default)
-        param loss: a function or a tuple of function
+        param loss: a str or a callable (self.loss by default)
+        param reduce_array: whether to return a float value for resultant arrays of size 1
+
+        Recommended form of forward function:
+        def forward(array_0, ..., array_n, mode='training', *kwargs):
+            pass
+
+        Recommended form of loss function:
+        def loss(prediction_0, ..., prediction_n, label_0, ..., label_n, *kwargs):
+            pass
         """
-        if not isinstance(data, tuple): data = (data,)
-        data = tuple(map(minpy.array.wrap, data))
 
         self._bp_name_list = []
         self._bp_array_list = []
         self._bp_index_dict = {}
 
-        # TODO side effects
         self._tape = minpy.tape.Tape()
         minpy.tape.Tape.global_tape = self._tape
-
         self._tape.start_recording()
 
         for key, value in self.params.items():
             self.attach(key, value)
 
-        predictions = self.forward(*data, mode='training')
-        if not isinstance(predictions, tuple): predictions = (predictions,)
+        if forward_args is None: forward_args = tuple()
+        elif not isinstance(forward_args, tuple): forward_args = (forward_args,)
+        forward_args = tuple(map(minpy.array.wrap, forward_args))
+        if forward_kwargs is None: forward_kwargs = {}
+        forward_kwargs['mode'] = 'training'
+
+        if forward is None: forward = self.forward
+        predictions = forward(*forward_args, **forward_kwargs)
 
         if loss is None: loss = self.loss
-        if callable(loss):
-            if not isinstance(labels, tuple): labels = (labels,)
-            labels = tuple(map(minpy.array.wrap, labels))
-            self._loss_values = self.loss(*(predictions + labels))
-        elif isinstance(loss, collections.Iterable):
-            self._loss_values = []
-            for loss, args in zip(loss, labels):
-                if not isinstance(args, tuple): args = (args,)
-                self._loss_values.append(loss(*(predictions + args)))
-        else: raise Exception()
+        if loss is None: self._results = predictions
+        else:
+            if isinstance(loss, str): loss = getattr(minpy.nn.layers, loss)
+
+            if callable(loss):
+                if not isinstance(predictions, tuple): predictions = (predictions,)
+                if not isinstance(labels, tuple): labels = (labels,)
+                labels = tuple(map(minpy.array.wrap, labels))
+
+                args = predictions + labels
+                kwargs = loss_kwargs if loss_kwargs else {}
+
+                self._results = loss(*args, **kwargs)
 
         self._tape.stop_recording()
         minpy.tape.Tape.global_tape = None
 
-        if isinstance(loss, list):
-            loss_values = tuple(self._reduce_array(value) for value in self._loss_values)
-        else:
-            loss_values = self._reduce_array(self._loss_values)
-       
-        return loss_values
+        if reduce_array:
+            if isinstance(self._results, collections.Iterable):
+                results = map(self._reduce_array, self._results)
+            else: results = self._reduce_array(self._results)
+        else: results = self._results
 
-    def backward(self, upstream=None):
-        wrapped_sources = map(minpy.array.wrap, self._bp_array_list)
-        if isinstance(self._loss_values, tuple):
-            wrapped_targets = map(minpy.array.wrap, self._loss_values)
-        else: wrapped_targets = minpy.array.wrap(self._loss_values)
-        grad_tuple = self._tape.get_gradient(wrapped_sources, wrapped_targets, upstream)
-        grad_dict = dict(zip(self._bp_name_list, grad_tuple))
-        return grad_dict
+        return results
 
     @staticmethod
     def _reduce_array(array):
         if isinstance(array, minpy.array.Array) and _size(array) == 1:
-            while isinstance(array, minpy.array.Array): 
+            while isinstance(array, minpy.array.Array):
                 array = array[0]
         return array
+
+    def backward(self, upstream=None):
+        wrapped_sources = map(minpy.array.wrap, self._bp_array_list)
+        if isinstance(self._results, tuple):
+            wrapped_targets = map(minpy.array.wrap, self._results)
+        else: wrapped_targets = minpy.array.wrap(self._results)
+        grad_tuple = self._tape.get_gradient(wrapped_sources, wrapped_targets)
+        grad_dict = dict(zip(self._bp_name_list, grad_tuple))
+        return grad_dict
 
     def attach(self, name, array):
         if self._tape is None or not self._tape.is_recording:
@@ -588,11 +607,15 @@ class Model(minpy.nn.model.ModelBase):
         self._bp_index_dict[name] = len(self._bp_name_list) - 1
         self._bp_array_list.append(array)
 
+        return self
+
     def detach(self, name):
         index = self._bp_index_dict[name]
         del self._bp_name_list[index]
         self._bp_array_list[index]._bp_timestamp = -1
         del self._bp_array_list[index]
+
+        return self
     
     def detach_graph(self):
         # TODO detach subgraph
@@ -647,11 +670,11 @@ class _ConfigParser(object):
     
     def __getattr__(self, attr):
         attr_values = set(config[attr] for config in self._configs.values() if attr in config)
-        assert len(attr_values) == 1, Exception('Inconsistent or non-existent attribute.')
+        assert len(attr_values) == 1, 'Inconsistent or non-existent attribute.'
         return attr_values.pop()
 
     def __setattr__(self, attr, attr_value):
-        # alter configurations globally
+        # modify configurations globally
         for config in self._configs.values():
             config[attr] = attr_value
 
@@ -659,7 +682,7 @@ class _ConfigParser(object):
         return _ConfigParser._ParamRef(self._configs[param_name])
 
     def __setitem__(self, param_name, configs):
-        # alter configurations corresponding to a parameter completely
+        # modify configurations corresponding to a parameter completely
         assert isinstance(configs, dict)
         self._configs[param_name] = copy.deepcopy(configs)
 
