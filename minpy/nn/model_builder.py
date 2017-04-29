@@ -28,6 +28,10 @@ def _is_array(array):
     return isinstance(array, (minpy.array.Array, numpy.ndarray))
 
 
+def _is_generic_minpy_array(array):
+    return isinstance(array, (minpy.array.Array, minpy.array.Number))
+
+
 def _size(array):
     return functools.reduce(operator.mul, array.shape, 1)
 
@@ -242,14 +246,14 @@ class Layer(Module):
         for param, param_name in zip(params, self._param_names):
             setattr(self, param, param_name)
         # TODO Is it necessary to bind one layer to multiple models?
-        self._model_params = None # a reference to model.params
 
         if aux_params is None: aux_params = tuple()
         self._module_aux_param_names = aux_params                     # local aux param names
         self._aux_param_names = self._assign_param_names(*aux_params) # global aux param names (identifiable in model)
         for aux_param, aux_param_name in zip(aux_params, self._aux_param_names):
             setattr(self, '_%s' % aux_param, aux_param_name)
-        self._model_aux_params = None
+
+        self._model = None
 
         # default init configs
         default_init_configs = \
@@ -276,10 +280,9 @@ class Layer(Module):
         self._initialized = False
 
     def __call__(self, *args, **kwargs):
+        assert bool(self._model), 'A layer must be bound to a model.'
         # initialize only if self is bound to a model
-        if not self._initialized and \
-            self._model_params is not None and self._model_aux_params is not None:
-
+        if not self._initialized:
             arg_shapes = tuple(arg.shape for arg in args if _is_array(arg))
             kwarg_shapes = \
                 {key : value.shape for key, value in kwargs.items() if _is_array(value)}
@@ -292,7 +295,7 @@ class Layer(Module):
             aux_param_shapes = self.aux_param_shapes(*arg_shapes, **kwarg_shapes)
             self._init_aux_params(aux_param_shapes)
 
-            self._initialized = True
+            self._to_initialized = True
 
         return self.forward(*args, **kwargs)
 
@@ -300,10 +303,7 @@ class Layer(Module):
         return tuple('%s_%s' % (self._name, param) for param in params)
     
     def _affiliate_to(self, model):
-        self._model_params = model.params
-        self._model_aux_params = model.aux_params
         model._update_configs.update(self._update_configs)
-
         self._model = model
 
     @staticmethod
@@ -327,13 +327,13 @@ class Layer(Module):
         # param_shapes: dict
         for name, shape in param_shapes.items():
             # init only if param is absent (to support pre-loading params)
-            if name not in self._model_params:
+            if name not in self._model.params:
                 init_config = self._init_configs[name]
-                self._model_params[name] = \
+                self._model.params[name] = \
                     getattr(minpy.nn.init, init_config['init_rule'])(shape, init_config)
             tape = self._model._tape
-            if tape is not None and tape.is_recording:
-                self._model.attach(name, self._model_params[name])
+            if self._model._attach_all and self._model._is_recording:
+                self._model.attach(name, self._model.params[name])
 
         # register update_configs in model
         
@@ -341,26 +341,26 @@ class Layer(Module):
         # aux_param_shapes: dict
         for name, shape in aux_param_shapes.items():
             # init only if aux param is absent (to support pre-loading aux params)
-            if name not in self._model_aux_params:
+            if name not in self._model.aux_params:
                 init_config = self._init_configs[name]
-                self._model_aux_params[name] = \
+                self._model.aux_params[name] = \
                     getattr(minpy.nn.init, init_config['init_rule'])(shape, init_config)
 
     def _get_param(self, param_name):
         # should not be called prior to calling __call__ for the first time
-        return self._model_params[param_name]
+        return self._model.params[param_name]
 
     def _get_params(self, *param_names):
         # should not be called prior to calling __call__ for the first time
-        return tuple(self._model_params[param_name] for param_name in param_names)
+        return tuple(self._model.params[param_name] for param_name in param_names)
 
     def _get_aux_param(self, aux_param_name):
         # should not be called prior to calling __call__ for the first time
-        return self._model_aux_params[aux_param_name]
+        return self._model.aux_params[aux_param_name]
 
     def _get_aux_params(self, *aux_param_names):
         # should not be called prior to calling __call__ for the first time
-        return tuple(self._model_aux_params[aux_param_name] for aux_param_name in aux_param_names)
+        return tuple(self._model.aux_params[aux_param_name] for aux_param_name in aux_param_names)
 
     def _parse_param_configs(self, configs):
         '''
@@ -438,7 +438,7 @@ class Model(minpy.nn.model.ModelBase):
     def __init__(self, loss=None):
         super(Model, self).__init__()
 
-        self.loss = loss
+        if loss is not None: self.loss = loss
 
         self._update_configs = {}
 
@@ -446,6 +446,12 @@ class Model(minpy.nn.model.ModelBase):
         self._module_names = set() # names of all registered modules
 
         self._tape = None
+
+        self._attach_all = True
+
+    @property
+    def _is_recording(self):
+        return bool(self._tape) and self._tape.is_recording
 
     def __setattr__(self, attr, attr_value):
         '''
@@ -517,7 +523,8 @@ class Model(minpy.nn.model.ModelBase):
         loss_kwargs    = None,
         forward        = None,
         loss           = None,
-        reduce_array   = True,
+        attach_all     = True,
+        reduce_array   = False,
     ):
         """
         param forward_args: an array or a tuple of arrays
@@ -526,6 +533,7 @@ class Model(minpy.nn.model.ModelBase):
         param loss_kwargs: a dict containing kwargs for loss function
         param forward: forward function (self.forward by default)
         param loss: a str or a callable (self.loss by default)
+        param attach_all: whether to attach all parameters to bp chain
         param reduce_array: whether to return a float value for resultant arrays of size 1
 
         Recommended form of forward function:
@@ -545,8 +553,10 @@ class Model(minpy.nn.model.ModelBase):
         minpy.tape.Tape.global_tape = self._tape
         self._tape.start_recording()
 
-        for key, value in self.params.items():
-            self.attach(key, value)
+        self._attach_all = attach_all
+        if attach_all:
+            for key, value in self.params.items():
+                self.attach(key, value)
 
         if forward_args is None: forward_args = tuple()
         elif not isinstance(forward_args, tuple): forward_args = (forward_args,)
@@ -556,6 +566,12 @@ class Model(minpy.nn.model.ModelBase):
 
         if forward is None: forward = self.forward
         predictions = forward(*forward_args, **forward_kwargs)
+
+        assert _is_generic_minpy_array(predictions) and (
+            all(_is_generic_minpy_array(p) for p in predictions) \
+                if isinstance(predictions, collections.Iterable) else True
+        ), \
+            'Forward function must return an array or an iterable of arrays.'
 
         if loss is None: loss = self.loss
         if loss is None: self._results = predictions
@@ -585,8 +601,8 @@ class Model(minpy.nn.model.ModelBase):
 
     @staticmethod
     def _reduce_array(array):
-        if isinstance(array, minpy.array.Array) and _size(array) == 1:
-            while isinstance(array, minpy.array.Array):
+        if _is_generic_minpy_array(array) and _size(array) == 1:
+            while _is_generic_minpy_array(array):
                 array = array[0]
         return array
 

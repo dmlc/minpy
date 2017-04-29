@@ -105,7 +105,7 @@ if __name__ == '__main__':
     if args.gpu_index < 0: set_context(cpu())
     else: set_context(gpu(args.gpu_index))
 
-    model = ResNet(8, (16, 32, 64))
+    model = ResNet(3, (16, 32, 64))
     updater = Updater(model, update_rule='sgd', learning_rate=0.1, momentem=0.9)
     
     epoch_number = 0
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
         for iteration, batch in enumerate(train_data_iter):
             iteration_number += 1
-            if iteration_number > 640000:
+            if iteration_number > 64000:
                 terminated = True
                 break
             if iteration_number in (32000, 48000):
@@ -134,7 +134,6 @@ if __name__ == '__main__':
                 print 'iteration %d loss %f' % (iteration_number, loss)
 
         # validation
-        '''
         val_data_iter.reset()
         errors, samples = 0, 0
         for batch in val_data_iter:
@@ -145,4 +144,3 @@ if __name__ == '__main__':
             samples += len(data)
 
         print 'epoch %d validation error %f' % (epoch_number, errors / float(samples))
-        '''
