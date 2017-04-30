@@ -1,11 +1,12 @@
-import minpy.numpy as np
+import numpy as np
+import mxnet as mx
 from minpy.nn.model_builder import *
 from minpy.nn.modules import *
 
 
 class ResNet(Model):
     def __init__(self, block_number, filter_numbers):
-        super(ResNet, self).__init__(loss='softmax_loss')
+        super(ResNet, self).__init__(loss='Softmax')
 
         f0, f1, f2 = filter_numbers
 
@@ -39,10 +40,8 @@ class ResNet(Model):
             FullyConnected(num_hidden=10),
         )
     
+    @Model.decorator
     def forward(self, data, mode='training'):
-        if mode == 'training': self.training()
-        elif mode == 'inference': self.inference()
-
         data = data
 
         for shrink, residual in zip(self._shrinking_blocks, self._residual_blocks):
@@ -78,7 +77,7 @@ class ResNet(Model):
         ) + ResNet._convolution(num_filter=f, kernel=(1, 1), stride=(2, 2), pad=(0, 0))
 
 
-unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
+unpack_batch = lambda batch : (batch.data[0], batch.label[0])
 
 
 if __name__ == '__main__':
@@ -88,6 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu_index', type=int, default=0)
     args = parser.parse_args()
 
+    # TODO data iterator ending batch issue
     '''
     from examples.utils.data_utils import get_CIFAR10_data
     data = get_CIFAR10_data(args.data_dir)
@@ -101,9 +101,10 @@ if __name__ == '__main__':
     from load_cifar10_data_iter import *
     train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
 
-    from minpy.context import set_context, cpu, gpu
-    if args.gpu_index < 0: set_context(cpu())
-    else: set_context(gpu(args.gpu_index))
+    import mxnet as mx
+    from mxnet.context import Context
+    if args.gpu_index > 0: Context.default_ctx = mx.gpu(args.gpu_index)
+    else: Context.default_ctx = mx.cpu()
 
     model = ResNet(3, (16, 32, 64))
     updater = Updater(model, update_rule='sgd', learning_rate=0.1, momentem=0.9)
@@ -138,9 +139,9 @@ if __name__ == '__main__':
         errors, samples = 0, 0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            scores = model.forward(data, 'inference')
-            predictions = np.argmax(scores, axis=1)
-            errors += np.count_nonzero(predictions - labels)
-            samples += len(data)
+            scores = model.forward(data, mode='inference')
+            predictions = mx.nd.argmax(scores, axis=1)
+            errors += np.count_nonzero((predictions - labels).asnumpy())
+            samples += data.shape[0]
 
         print 'epoch %d validation error %f' % (epoch_number, errors / float(samples))

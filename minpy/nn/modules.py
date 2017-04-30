@@ -1,15 +1,81 @@
-import functools
-import operator
+import mxnet.ndarray as _nd
+import mxnet.symbol as _symbol
 
-import mxnet.symbol
-
-import minpy.array
-import minpy.numpy
-import minpy.nn.layers
-import minpy.nn.model_builder
+from minpy.nn.model_builder import Layer as _Layer
 
 
-class Variable(minpy.nn.model_builder.Layer):
+class _Operatorized(_Layer):
+    _module_name = 'operatorized'
+
+    def __init__(self, operator_name, **kwargs):
+        init_configs = kwargs.pop('init_configs', None)
+        update_configs = kwargs.pop('update_configs', None)
+        name = kwargs.pop('name', None)
+
+        variables = kwargs.pop('variables', None)
+        self._variables = ('data',) if variables is None else variables
+        
+        self._kwargs = dict(kwargs)
+
+        kwargs.update({v : _symbol.Variable(v) for v in self._variables})
+
+        self._symbol = getattr(_symbol, operator_name)(**kwargs)
+        self._operator = getattr(_nd, operator_name)
+
+        self._module_name = operator_name.lower()
+        prefix = self._module_name + '_'
+        eliminate_prefix = lambda name : name.replace(prefix, '')
+
+        params = set(symbol.list_arguments())
+        params = params.difference(set(self._variables))
+        params = tuple(map(eliminate_prefix, params))
+
+        aux_params = tuple(symbol.list_auxiliary_states())
+        aux_params = tuple(map(eliminate_prefix, aux_params))
+
+        super(Symbolic, self).__init__(params, aux_params, name)
+    
+    def forward(self, *args, **kwargs):
+        is_array = lambda array : isinstance(array, _nd.NDArray)
+
+        kwarg_dict = dict(zip(self._variables, filter(is_array, args))) 
+        for key, value in kwargs.items():
+            if is_array(value): kwarg_dict[key] = value
+        
+        kwarg_dict.update(dict(zip(self._module_param_names, self._get_params(*self._param_names))))
+        kwarg_dict.update(dict(zip(self._module_aux_param_names, self._get_aux_params(*self._aux_param_names))))
+
+        kwarg_dict.update(self._kwargs)
+
+        return self._operator(**kwarg_dict)
+
+'''
+criterion:
+    1. an operator is parameterized
+    2. an operator fits into frameworks of containers, especially Sequential
+'''
+
+for _name in (
+    'Activation',
+    'BatchNorm', # TODO BatchNorm statistics
+    'Convolution',
+    'Deconvolution',
+    'Dropout',
+    'Embedding',
+    'FullyConnected',
+    'LeakyReLU',
+    'Pooling',
+):
+    print _name
+    globals()[_name] = lambda **kwargs : _Operatorized(_name, **kwargs)
+
+
+globals()['ReLU'] = lambda _ : _Operatorized('Activation', act_type='relu')
+globals()['Sigmoid'] = lambda _ : _Operatorized('Activation', act_type='sigmoid')
+globals()['Tanh'] = lambda _ : _Operatorized('Activation', act_type='tanh')
+
+
+class Variable(_Layer):
     _module_name = 'variable'
     def __init__(self, shape, init_configs=None, update_configs=None, name=None):
         self._shape = shape
@@ -26,7 +92,7 @@ class Variable(minpy.nn.model_builder.Layer):
         return {self.variable : self._shape}
 
 
-class Identity(minpy.nn.model_builder.Layer):
+class Identity(_Layer):
     _module_name = 'identity'
     def __init__(self, name=None):
         super(Identity, self).__init__(name)
@@ -34,32 +100,17 @@ class Identity(minpy.nn.model_builder.Layer):
     def forward(self, X):
         return X
 
-
-class ReLU(minpy.nn.model_builder.Layer):
-    _module_name = 'ReLU'
-    def __init__(self, name=None):
-        """ Rectified linear unit.
-        """
-        super(ReLU, self).__init__(name=name)
-
-    def forward(self, X, *args):
-        return minpy.nn.layers.relu(X)
-
-
-class Reshape(minpy.nn.model_builder.Layer):
+class Reshape(_Layer):
     _module_name = 'reshape'
     def __init__(self, shape):
-        """ Reshape.
-        """
-
         super(Reshape, self).__init__()
         self._shape = shape
 
     def forward(self, X, *args):
-        return minpy.numpy.reshape(X, self._shape)
+        return X.reshape(self._shape)
 
 
-class BatchReshape(minpy.nn.model_builder.Layer):
+class BatchReshape(_Layer):
     _module_name = 'batch_reshape'
     def __init__(self, shape):
         """ Batch reshape.
@@ -69,41 +120,29 @@ class BatchReshape(minpy.nn.model_builder.Layer):
         self._shape = shape
 
     def forward(self, X, *args):
-        return minpy.numpy.reshape(X, X.shape[:1] + self._shape)
+        return X.reshape(X.shape[:1] + self._shape)
 
 
-class Flatten(minpy.nn.model_builder.Layer):
+class Flatten(_Layer):
     _module_name = 'flatten'
     def __init__(self):
-        """ Flatten.
-        """
-
         super(Flatten, self).__init__()
 
     def forward(self, X):
-        size = functools.reduce(operator.mul, X.shape, 1)
-        return minpy.numpy.reshape(X, (size,))
+        return X.reshape((X.size,))
 
 
-class BatchFlatten(minpy.nn.model_builder.Layer):
+class BatchFlatten(_Layer):
     _module_name = 'flatten'
     def __init__(self):
-        """ Flatten.
-        """
-
         super(BatchFlatten, self).__init__()
 
     def forward(self, X):
-        N = X.shape[0]
-        D = functools.reduce(operator.mul, X.shape[1:], 1)
-        return minpy.numpy.reshape(X, (N, D))
+        return X.reshape((X[0].size,))
 
 
-# TODO use it
-_get_shapes = lambda arrays : map(lambda array : array.shape, arrays)
-
-
-class Symbolic(minpy.nn.model_builder.Layer):
+'''
+class Symbolic(_Layer):
     _module_name = 'symbolic'
     def __init__(self, symbol, variables=None, init_configs=None, update_configs=None, name=None):
         self._symbol = symbol
@@ -116,29 +155,20 @@ class Symbolic(minpy.nn.model_builder.Layer):
 
         super(Symbolic, self).__init__(params, aux_params, name)
 
-        self._func = None
+        self._executor = None
         
     def forward(self, **kwargs):
-        # kwargs should contain ALL variables
-        if self._func is None:
-            shapes = {key : value.shape for key, value in kwargs.items()}
-            shapes.update(dict(zip(
-                self._module_param_names,
-                _get_shapes(self._get_params(*self._param_names))
-            )))
-            shapes.update(dict(zip(
-                self._module_aux_param_names,
-                _get_shapes(self._get_aux_params(*self._aux_param_names))
-            )))
-            self._func = minpy.core.Function(self._symbol, shapes)
+        contexts = set(map(kwargs.values(), lambda array : array.shape))
+        assert len(contexts) == 1
 
-        kwargs.update(dict(zip(self._module_param_names, self._get_params(*self._param_names))))
-        kwargs.update(dict(zip(self._module_aux_param_names, self._get_aux_params(*self._aux_param_names))))
+        if self._executor is None:
+            args = dict(kwargs)
+            args.update(dict(zip(self._param_names, self._get_params(*self._param_names))))
+            aux_states = dict(zip(self._aux_param_names, self._get_aux_params(*self._aux_param_names)))
 
-        self._func.is_train = self._mode == 'training'
-
-        # returns a tuple of arrays for symbols yielding multiple outputs
-        return self._func(**kwargs)
+        outputs = executor.forward()
+        if len(outputs) == 1: return outputs[0]
+        else: return tuple(outputs)
 
     def param_shapes(self, **kwargs):
         args = self._symbol.list_arguments()
@@ -154,7 +184,8 @@ class Symbolic(minpy.nn.model_builder.Layer):
         _, _, shapes = self._symbol.infer_shape(**kwargs)
         return dict(zip(self._aux_param_names, tuple(shapes)))
 
-class Dropout(minpy.nn.model_builder.Layer):
+
+class Dropout(_Layer):
     _module_name = 'dropout'
     def __init__(self, p):
         """ Dropout layer
@@ -167,28 +198,6 @@ class Dropout(minpy.nn.model_builder.Layer):
 
     def forward(self, data):
         return layers.dropout(data, self._p)
-
-
-class Logistic(minpy.nn.model_builder.Layer):
-    def __init__(self):
-        """ Logistic function.
-        """
-
-        super(Logistic, self).__init__()
-
-    def forward(self, X, *args):
-        return 1 / (1 + np.exp(-X))
-
-
-class Tanh(Symbolic):
-    def __init__(self):
-        """ Hyperbolic tangent function.
-        """
-
-        super(Tanh, self).__init__()
-
-    def forward(self, X, *args):
-        return np.tanh(X)
 
 
 class FullyConnected(Symbolic):
@@ -398,3 +407,4 @@ class LSTM(Symbolic):
 
     def aux_param_shapes(self, *args):
         return {}
+'''

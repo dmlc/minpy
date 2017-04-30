@@ -1,7 +1,8 @@
 """ Initializer codes """
-import numpy
-import minpy.numpy as np
-import minpy.numpy.random as npr
+from functools import reduce as _reduce
+from operator import mul as _mul
+
+import mxnet.ndarray as _nd
 
 # pylint: disable=no-member
 
@@ -24,14 +25,11 @@ def xavier(shape, _):
 
     """
 
+    fan_in = _reduce(_mul, shape[1:]) if len(shape) > 1 else 0
     fan_out = shape[0]
-    if len(shape) > 1:
-        fan_in = numpy.prod(shape[1:])
-    else:
-        fan_in = 0
-    var = numpy.sqrt(6.0 / (fan_out + fan_in))
-    ret = npr.randn(*shape) * var
-    return ret
+
+    scale = (6.0 / (fan_in + fan_out)) ** 0.5
+    return _nd.random_normal(scale=var, shape=shape)
 
 
 def constant(shape, config):
@@ -50,9 +48,8 @@ def constant(shape, config):
         Initialized array of size `shape` and with the value `value`
 
     """
-    config.setdefault('value', 0.0)
-    val = config['value']
-    return np.ones(shape) * val
+
+    return _nd.ones(shape) * config.setdefault('value', 0.0)
 
 
 def gaussian(shape, config):
@@ -71,11 +68,9 @@ def gaussian(shape, config):
         Initialized array of size `shape`
 
     """
-    config.setdefault('mu', 0.0)
-    config.setdefault('stdvar', 0.001)
-    stdvar = config['stdvar']
-    meanvar = config['mu']
-    return npr.randn(*shape) * stdvar + meanvar
+    mu = config.setdefault('mu', 0.0)
+    stdvar = config.setdefault('stdvar', 0.001)
+    return _nd.random_normal(loc=mu, scale=stdvar, shape=shape)
 
 
 def custom(shape, config):
@@ -98,6 +93,6 @@ def custom(shape, config):
         Initialized array of size `shape`, or an array of zeros if no function was provided.
 
     """
-    func = config.setdefault('function', np.zeros)
+    func = config.setdefault('function', _nd.zeros)
     ret = func(shape)
     return ret

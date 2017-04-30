@@ -1,17 +1,11 @@
-import collections
-import copy
-import functools
-import operator
+from functools import reduce as _reduce
+import operator as _operator
 
-import numpy
+import mxnet.ndarray as _nd
+import mxnet.contrib.autograd as _autograd
 
-import minpy.array
-import minpy.tape
-import minpy.core
-import minpy.nn.init
-import minpy.nn.layers
-import minpy.nn.model
-import minpy.nn.optim
+import minpy.nn.init as _init
+import minpy.nn.model as _model
 
 
 _module_counter = {}
@@ -25,15 +19,12 @@ def _module_prefix(module_name):
 
 
 def _is_array(array):
-    return isinstance(array, (minpy.array.Array, numpy.ndarray))
+    return isinstance(array, mxnet.NDArray)
 
 
-def _is_generic_minpy_array(array):
-    return isinstance(array, (minpy.array.Array, minpy.array.Number))
-
-
-def _size(array):
-    return functools.reduce(operator.mul, array.shape, 1)
+from collections import Iterable as _Iterable
+def _is_iterable(instance):
+    return isinstance(instance, _Iterable)
 
 
 class Module(object):
@@ -136,7 +127,7 @@ class Sequential(Container):
         # It is recommended that all forward functions, especially those in Sequential, only receive positional arguments.
         to_tuple = lambda results : results if isinstance(results, tuple) else (results,)
         forward_module = lambda args, module : to_tuple(module(*args))
-        result = functools.reduce(forward_module, self._modules, args)
+        result = _reduce(forward_module, self._modules, args)
         if len(result) == 1: result, = result
         return result
 
@@ -189,19 +180,19 @@ class Binary(Parallel):
 class Add(Binary):
     _module_name = 'add'
     def __init__(self, left, right, name=None):
-        super(Add, self).__init__(left, right, operator.add, name)
+        super(Add, self).__init__(left, right, _operator.add, name)
 
 
 class Sub(Binary):
     _module_name = 'sub'
     def __init__(self, left, right, name=None):
-        super(Sub, self).__init__(left, right, operator.sub, name)
+        super(Sub, self).__init__(left, right, _operator.sub, name)
 
 
 class Mul(Binary):
     _module_name = 'mul'
     def __init__(self, left, right, name=None):
-        super(Mul, self).__init__(left, right, operator.mul, name)
+        super(Mul, self).__init__(left, right, _operator.mul, name)
 
 
 # TODO div etc.
@@ -330,9 +321,8 @@ class Layer(Module):
             if name not in self._model.params:
                 init_config = self._init_configs[name]
                 self._model.params[name] = \
-                    getattr(minpy.nn.init, init_config['init_rule'])(shape, init_config)
-            tape = self._model._tape
-            if self._model._attach_all and self._model._is_recording:
+                    getattr(_init, init_config['init_rule'])(shape, init_config)
+            if self._model._attach_all:
                 self._model.attach(name, self._model.params[name])
 
         # register update_configs in model
@@ -344,7 +334,7 @@ class Layer(Module):
             if name not in self._model.aux_params:
                 init_config = self._init_configs[name]
                 self._model.aux_params[name] = \
-                    getattr(minpy.nn.init, init_config['init_rule'])(shape, init_config)
+                    getattr(_init, init_config['init_rule'])(shape, init_config)
 
     def _get_param(self, param_name):
         # should not be called prior to calling __call__ for the first time
@@ -432,26 +422,27 @@ class Layer(Module):
         return {}
 
 
-class Model(minpy.nn.model.ModelBase):
+class Model(_model.ModelBase):
     # TODO detach/resume (parameter, layer)
     # TODO check duplicated layers
-    def __init__(self, loss=None):
+    def __init__(self, loss=None, attach_all=True):
+        """
+        param loss: LinearRegression, LogisticRegression, MAERegression, Softmax, SVM
+        """
+
         super(Model, self).__init__()
 
-        if loss is not None: self.loss = loss
+        if isinstance(loss, str):
+            self.loss = getattr(_nd, loss + 'Output')
+        elif callable(loss):
+            self.loss = loss
 
         self._update_configs = {}
 
         self._modules = set()      # references to all registered modules
         self._module_names = set() # names of all registered modules
 
-        self._tape = None
-
-        self._attach_all = True
-
-    @property
-    def _is_recording(self):
-        return bool(self._tape) and self._tape.is_recording
+        self._attach_all = attach_all
 
     def __setattr__(self, attr, attr_value):
         '''
@@ -465,7 +456,7 @@ class Model(minpy.nn.model.ModelBase):
             _register_model(self, attr_value)
         elif isinstance(attr_value, Module):
             self._register_module(attr_value)
-        elif isinstance(attr_value, collections.Iterable):
+        elif _is_iterable(attr_value):
             self._register_iterable(attr_value)
 
         object.__setattr__(self, attr, attr_value)
@@ -489,7 +480,7 @@ class Model(minpy.nn.model.ModelBase):
             if isinstance(element, Module):
                 self._register_module(element)
             elif isinstance(element, str): continue
-            elif isinstance(element, collections.Iterable):
+            elif _is_iterable(element):
                 self._register_iterable(element)
 
     # disable several inherited attributes and methods
@@ -521,151 +512,32 @@ class Model(minpy.nn.model.ModelBase):
         # TODO eliminate?
         raise NotImplementedError()
 
-
-    def __call__(
-        self,
-        forward_args   = None,
-        forward_kwargs = None,
-        labels         = None,
-        loss_kwargs    = None,
-        forward        = None,
-        loss           = None,
-        attach_all     = True,
-        reduce_array   = False,
-    ):
-        """
-        param forward_args: an array or a tuple of arrays
-        param forward_kwargs: a dict containing kwargs for forward function
-        param labels: an array or a tuple of arrays
-        param loss_kwargs: a dict containing kwargs for loss function
-        param forward: forward function (self.forward by default)
-        param loss: a str or a callable (self.loss by default)
-        param attach_all: whether to attach all parameters to bp chain
-        param reduce_array: whether to return a float value for resultant arrays of size 1
-
-        Recommended form of forward function:
-        def forward(array_0, ..., array_n, mode='training', *kwargs):
-            pass
-
-        Recommended form of loss function:
-        def loss(prediction_0, ..., prediction_n, label_0, ..., label_n, *kwargs):
-            pass
-        """
-
-        self._bp_name_list = []
-        self._bp_array_list = []
-        self._bp_index_dict = {}
-
-        self._tape = minpy.tape.Tape()
-        minpy.tape.Tape.global_tape = self._tape
-        self._tape.start_recording()
-
-        self._attach_all = attach_all
-        if attach_all:
-            for key, value in self.params.items():
-                self.attach(key, value)
-
-        if forward_args is None: forward_args = tuple()
-        elif not isinstance(forward_args, tuple): forward_args = (forward_args,)
-        forward_args = tuple(map(minpy.array.wrap, forward_args))
-        if forward_kwargs is None: forward_kwargs = {}
-        forward_kwargs['mode'] = 'training'
-
-        if forward is None: forward = self.forward
-        predictions = forward(*forward_args, **forward_kwargs)
-
-        assert _is_generic_minpy_array(predictions) and (
-            all(_is_generic_minpy_array(p) for p in predictions) \
-                if isinstance(predictions, collections.Iterable) else True
-        ), \
-            'Forward function must return an array or an iterable of arrays.'
-
-        if loss is None: loss = self.loss
-        if loss is None: self._results = predictions
-        else:
-            if isinstance(loss, str): loss = getattr(minpy.nn.layers, loss)
-
-            if callable(loss):
-                if not isinstance(predictions, tuple): predictions = (predictions,)
-                if not isinstance(labels, tuple): labels = (labels,)
-                labels = tuple(map(minpy.array.wrap, labels))
-
-                args = predictions + labels
-                kwargs = loss_kwargs if loss_kwargs else {}
-
-                self._results = loss(*args, **kwargs)
-
-        self._tape.stop_recording()
-        minpy.tape.Tape.global_tape = None
-
-        if reduce_array:
-            if isinstance(self._results, collections.Iterable):
-                results = map(self._reduce_array, self._results)
-            else: results = self._reduce_array(self._results)
-        else: results = self._results
-
-        return results
-
     @staticmethod
-    def _reduce_array(array):
-        if _is_generic_minpy_array(array) and _size(array) == 1:
-            while _is_generic_minpy_array(array):
-                array = array[0]
-        return array
-
-    def backward(self, upstream=None):
-        wrapped_sources = map(minpy.array.wrap, self._bp_array_list)
-        if isinstance(self._results, tuple):
-            wrapped_targets = map(minpy.array.wrap, self._results)
-        else: wrapped_targets = minpy.array.wrap(self._results)
-        grad_tuple = self._tape.get_gradient(wrapped_sources, wrapped_targets)
-        grad_dict = dict(zip(self._bp_name_list, grad_tuple))
-        return grad_dict
+    def decorator(forward):
+        def wrapped(self, *args, **kwargs):
+            is_train = kwargs.get('is_train', False)
+            if is_train: self.training()
+            else: self.inference()
+            with _autograd.TrainingStateScope(is_train):
+                return self.forward(*args, **kwargs)
+        return wrapped
 
     def attach(self, name, array):
-        if self._tape is None or not self._tape.is_recording:
-            raise Exception()
-        array.mark_for_bp(self._tape)
-        self._bp_name_list.append(name)
-        self._bp_index_dict[name] = len(self._bp_name_list) - 1
-        self._bp_array_list.append(array)
-
+        if name not in self.grad_dict:
+            self.grad_dict[name] = _nd.zeros(array.shape)
+            _autograd.mark_variables((array,), (self.grad_dict[name],))
         return self
 
     def detach(self, name):
-        index = self._bp_index_dict[name]
-        del self._bp_name_list[index]
-        self._bp_array_list[index]._bp_timestamp = -1
-        del self._bp_array_list[index]
-
-        return self
-    
-    def detach_graph(self):
-        # TODO detach subgraph
-        return
+        raise NotImplementedError()
 
     def grad(self):
-        """
-        param upstream: an array or a tuple of arrays
-            if upstream is an array: specify upstream w.r.t. the ONLY output of loss
-            if upstream is a tuple: specify upstream w.r.t. ALL outputs of loss function(s)
-        """
-        return
+        raise NotImplementedError()
 
     def grad_and_loss(self, data, labels):
-        # TODO specify forward
-        # TODO multiple loss outputs
-        # TODO multiple inputs to forward and loss function
-        """
-            param data: an array or a tuple of arrays
-            param labels: an array or a tuple of arrays
-        """
-        if not isinstance(data, tuple): data = (data,)
-        if not isinstance(labels, tuple): labels = (labels,)
-
+        raise NotImplementedError()
 
     # TODO load/save (inherited method)
-
 
     def training(self):
         # training mode
@@ -707,7 +579,7 @@ class _ConfigParser(object):
     def __setitem__(self, param_name, configs):
         # modify configurations corresponding to a parameter completely
         assert isinstance(configs, dict)
-        self._configs[param_name] = copy.deepcopy(configs)
+        self._configs[param_name] = dict(configs)
 
     def keys(self):
         return self._configs.keys()
@@ -722,7 +594,7 @@ class _ConfigParser(object):
 class Updater(_ConfigParser):
     def __init__(self, model, **kwargs):
         # duplicate so that there could be multiple updaters for one model
-        configs = copy.deepcopy(model._update_configs)
+        configs = dict(model._update_configs)
         super(Updater, self).__init__(configs)
         object.__setattr__(self, '_model', model)
 
@@ -737,8 +609,8 @@ class Updater(_ConfigParser):
         """
         for param_name, grad in grad_dict.items():
             param = self._model.params[param_name]
-            update_rule = self._configs[param_name]['update_rule']
+            update_rule = self._configs[param_name]['update_rule'] + 'update'
             update_config = self._configs[param_name]
             self._model.params[param_name], _update_config = \
-                getattr(minpy.nn.optim, update_rule)(param, grad, update_config)
+                getattr(_nd, update_rule)(weight=param, grad=grad, **update_config)
             update_config.update(_update_config)
