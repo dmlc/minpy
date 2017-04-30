@@ -46,43 +46,6 @@ class ReLU(minpy.nn.model_builder.Layer):
         return minpy.nn.layers.relu(X)
 
 
-class Dropout(minpy.nn.model_builder.Layer):
-    _module_name = 'dropout'
-    def __init__(self, p):
-        """ Dropout layer
-
-        param p: probability of deactivating a neuron
-        """
-
-        super(Dropout, self).__init__()
-        self._p = p
-
-    def forward(self, data):
-        return layers.dropout(data, self._p)
-
-
-class Logistic(minpy.nn.model_builder.Layer):
-    def __init__(self):
-        """ Logistic function.
-        """
-
-        super(Logistic, self).__init__()
-
-    def forward(self, X, *args):
-        return 1 / (1 + np.exp(-X))
-
-
-class Tanh(minpy.nn.model_builder.Layer):
-    def __init__(self):
-        """ Hyperbolic tangent function.
-        """
-
-        super(Tanh, self).__init__()
-
-    def forward(self, X, *args):
-        return np.tanh(X)
-
-
 class Reshape(minpy.nn.model_builder.Layer):
     _module_name = 'reshape'
     def __init__(self, shape):
@@ -190,6 +153,42 @@ class Symbolic(minpy.nn.model_builder.Layer):
     def aux_param_shapes(self, **kwargs):
         _, _, shapes = self._symbol.infer_shape(**kwargs)
         return dict(zip(self._aux_param_names, tuple(shapes)))
+
+class Dropout(minpy.nn.model_builder.Layer):
+    _module_name = 'dropout'
+    def __init__(self, p):
+        """ Dropout layer
+
+        param p: probability of deactivating a neuron
+        """
+
+        super(Dropout, self).__init__()
+        self._p = p
+
+    def forward(self, data):
+        return layers.dropout(data, self._p)
+
+
+class Logistic(minpy.nn.model_builder.Layer):
+    def __init__(self):
+        """ Logistic function.
+        """
+
+        super(Logistic, self).__init__()
+
+    def forward(self, X, *args):
+        return 1 / (1 + np.exp(-X))
+
+
+class Tanh(Symbolic):
+    def __init__(self):
+        """ Hyperbolic tangent function.
+        """
+
+        super(Tanh, self).__init__()
+
+    def forward(self, X, *args):
+        return np.tanh(X)
 
 
 class FullyConnected(Symbolic):
