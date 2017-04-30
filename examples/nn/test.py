@@ -1,13 +1,11 @@
 import mxnet as mx
 from mxnet.symbol import *
+from minpy.nn.layers import softmax_loss
 
 context = mx.gpu(0)
 
 data_shape = (128, 3, 32, 32)
 def bind(symbol, context=context, shape=None):
-#   if context is None: context = mx.gpu(0)
-    if context is None: context = mx.cpu()
-
     global data_shape
     if shape is None: shape = data_shape
     symbol = symbol(Variable('data', shape=shape))
@@ -43,7 +41,7 @@ def backward(sequence, gradient):
         executor.backward(out_grads=gradient)
         gradient = executor.grad_dict['data']
 
-N = 6
+N = 12
 network = convolution_module(num_filter=16)
 for i in range(N):
     network.extend(convolution_module(num_filter=16))
@@ -66,13 +64,19 @@ loss = loss_symbol.simple_bind(context)
 
 import numpy as np
 
-X = mx.nd.random_normal(0, 1, (50000, 3, 32, 32), mx.cpu())
-Y = mx.nd.array(np.random.choice(np.arange(10), (50000,)), mx.cpu())
+X = mx.nd.random_normal(0, 1, (50000, 3, 32, 32), context)
+Y = mx.nd.array(np.random.choice(np.arange(10), (50000,)), context)
 iterator = mx.io.NDArrayIter(data=X, label=Y, batch_size=128)
 
-for i in range(64000):
-    if (i + 1) % 100 == 0: print i + 1
-    scores = forward(network, X)
-    loss.forward(data=scores, labels=Y, is_train=True)
-    loss.backward()
-    backward(network, loss.grad_dict['data'])
+while True:
+    iterator.reset()
+    for i, batch in enumerate(iterator):
+        data, labels = batch.data[0], batch.label[0]
+        scores = forward(network, data)
+        results = loss.forward(data=scores, labels=labels, is_train=True)
+        softmax_loss(results[0].asnumpy(), labels.asnumpy())
+        loss.backward()
+        backward(network, loss.grad_dict['data'])
+
+        if (i + 1) % 100 == 0:
+            print i + 1

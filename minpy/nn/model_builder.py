@@ -460,20 +460,19 @@ class Model(minpy.nn.model.ModelBase):
         '''
         # TODO training/inference
 
-        if isinstance(attr_value, Module):
+        if isinstance(attr_value, Model):
+            # caution: user must ensure that there is no duplicated parameter name
+            _register_model(self, attr_value)
+        elif isinstance(attr_value, Module):
             self._register_module(attr_value)
         elif isinstance(attr_value, collections.Iterable):
             self._register_iterable(attr_value)
 
         object.__setattr__(self, attr, attr_value)
 
-    def _register_iterable(self, iterable):
-        for element in iterable:
-            if isinstance(element, Module):
-                self._register_module(element)
-            elif isinstance(element, str): continue
-            elif isinstance(element, collections.Iterable):
-                self._register_iterable(element)
+    def _register_model(self, model):
+        model.attach = lambda _, name, array : self.attach(name, array)
+        model.detach = lambda _, name : self.detach(name)
 
     def _register_module(self, module):
         # check duplication
@@ -484,6 +483,14 @@ class Model(minpy.nn.model.ModelBase):
         self._module_names.add(module.name)
         
         module._affiliate_to(self)
+
+    def _register_iterable(self, iterable):
+        for element in iterable:
+            if isinstance(element, Module):
+                self._register_module(element)
+            elif isinstance(element, str): continue
+            elif isinstance(element, collections.Iterable):
+                self._register_iterable(element)
 
     # disable several inherited attributes and methods
     # TODO cannot set attribute
