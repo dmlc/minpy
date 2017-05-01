@@ -98,15 +98,14 @@ if __name__ == '__main__':
 
     train_data_iter, test_data_iter = load_mnist(args)
 
-    model = SophisticatedLSTM(128)
+    model = SophisticatedLSTM(args.num_hidden)
     updater = Updater(model, update_rule='sgd_momentum', lr=0.1, momentum=0.9)
     
-    tft = 0
-    ift = 0
-    bt = 0
+    tft = 0 # training forward
+    ift = 0 # inference forward
+    bt = 0 # backward
 
     for i, batch in enumerate(train_data_iter):
-
         data, labels = unpack_batch(batch)
 
         t0 = time()
@@ -122,16 +121,12 @@ if __name__ == '__main__':
         updater(model.grad_dict)
 
         if (i + 1) % 100 == 0:
-            loss_value = cross_entropy(loss, labels)
-            print 'i %d loss %f' % (i, loss_value)
-
             print tft, bt
 
     tft /= (i + 1)
     bt /= (i + 1)
 
     test_data_iter.reset()
-    errors, samples = 0, 0
     for i, batch in enumerate(test_data_iter):
         data, labels = unpack_batch(batch)
         
@@ -139,13 +134,8 @@ if __name__ == '__main__':
         scores = model.forward(data)
         ift += time() - t0
 
-        predictions = np.argmax(scores, axis=1)
-        errors += np.count_nonzero(predictions - labels)
-        samples += data.shape[0]
-
-    print 'validation error %f' % errors / float(samples)
-
+    print ift
     ift /= (i + 1)
 
     import cPickle as pickle
-    pickle.dump((tft, ift, bt,), open('sophisticated-lstm-%d' % args.num_hidden, 'w'))
+    pickle.dump((tft, ift, bt,), open('time/sophisticated-lstm-%d' % args.num_hidden, 'w'))

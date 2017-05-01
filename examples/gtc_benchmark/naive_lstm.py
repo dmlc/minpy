@@ -86,7 +86,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--gpu_index', type=int, default=0)
-    parser.add_argument('--rnn', type=str, default='RNN')
+    parser.add_argument('--num_hidden', type=int, required=True)
     args = parser.parse_args()
 
     from mxnet.context import Context
@@ -98,46 +98,43 @@ if __name__ == '__main__':
 
     train_data_iter, test_data_iter = load_mnist(args)
 
-    model = NaiveLSTM(128)
+    model = NaiveLSTM(args.num_hidden)
     updater = Updater(model, update_rule='sgd_momentum', lr=0.1, momentum=0.9)
     
-    forward_time = 0
-    backward_time = 0
+    tft = 0 # training forward
+    ift = 0 # inference forward
+    bt = 0 # backward
 
-    iteration_number = 0
-    for epoch_number in range(50):
-        for iteration, batch in enumerate(train_data_iter):
-            iteration_number += 1
+    for i, batch in enumerate(train_data_iter):
+        data, labels = unpack_batch(batch)
 
-            data, labels = unpack_batch(batch)
+        t0 = time()
+        predictions = model.forward(data, is_train=True)
+        tft += time() - t0
 
-            t0 = time()
-            predictions = model.forward(data, is_train=True)
-            forward_time += time() - t0
+        loss = model.loss(predictions, labels, is_train=True)
 
-            loss = model.loss(predictions, labels, is_train=True)
+        t0 = time()
+        autograd.compute_gradient((loss,))
+        bt += time() - t0
 
-            t0 = time()
-            autograd.compute_gradient((loss,))
-            backward_time += time() - t0
+        updater(model.grad_dict)
 
-            updater(model.grad_dict)
+        if (i + 1) % 100 == 0:
+            print tft, bt
 
-            if iteration_number % 100 == 0:
-                loss_value = cross_entropy(loss, labels)
-                print 'iteration %d loss %f' % (iteration_number, loss_value)
+    tft /= (i + 1)
+    bt /= (i + 1)
 
-                print forward_time, backward_time
-                forward_time = 0
-                backward_time = 0
+    test_data_iter.reset()
+    for i, batch in enumerate(test_data_iter):
+        data, labels = unpack_batch(batch)
 
-        test_data_iter.reset()
-        errors, samples = 0, 0
-        for batch in test_data_iter:
-            data, labels = unpack_batch(batch)
-            scores = model.forward(data)
-            predictions = np.argmax(scores, axis=1)
-            errors += np.count_nonzero(predictions - labels)
-            samples += data.shape[0]
+        t0 = time()
+        scores = model.forward(data)
+        ift += time() - t0
 
-        print 'epoch %d validation error %f' % (epoch_number, errors / float(samples))
+    ift /= (i + 1)
+
+    import cPickle as pickle
+    pickle.dump((tft, ift, bt,), open('time/naive-lstm-%d' % args.num_hidden, 'w'))
