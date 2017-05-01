@@ -3,11 +3,12 @@ import mxnet as mx
 import mxnet.contrib.autograd as autograd
 from minpy.nn.model_builder import *
 from minpy.nn.modules import *
+from minpy.nn.utils import cross_entropy
 
 
 class ResNet(Model):
     def __init__(self, block_number, filter_numbers):
-        super(ResNet, self).__init__(loss='Softmax')
+        super(ResNet, self).__init__()
 
         f0, f1, f2 = filter_numbers
 
@@ -34,16 +35,15 @@ class ResNet(Model):
 
         # compute class scores from feature maps
         self._to_scores = Sequential(
-# TODO BatchNorm fails
-#           BatchNorm(fix_gamma=False),
+            BatchNorm(fix_gamma=False),
             ReLU(),
             Pooling(pool_type='avg', kernel=(8, 8), stride=(1, 1)),
             BatchFlatten(),
             FullyConnected(num_hidden=10),
         )
     
-#   @Model.decorator
-    def forward(self, data, is_train=False):
+    @Model.decorator
+    def forward(self, data):
         data = data
 
         for shrink, residual in zip(self._shrinking_blocks, self._residual_blocks):
@@ -53,12 +53,16 @@ class ResNet(Model):
 
         return self._to_scores(data)
 
+    @Model.decorator
+    def loss(self, data, labels):
+        return mx.nd.SoftmaxOutput(data, labels, normalization='batch')
+
     @staticmethod
     def _convolution(**kwargs):
         defaults = {'kernel' : (3, 3), 'stride' : (1, 1), 'pad' : (1, 1), 'no_bias' : True}
         defaults.update(kwargs)
         return Sequential(
-#           BatchNorm(fix_gamma=False),
+            BatchNorm(fix_gamma=False),
             ReLU(),
             Convolution(**defaults),
         )
@@ -97,18 +101,16 @@ if __name__ == '__main__':
     val_data_iter = NDArrayIter(data=data['X_test'], label=data['y_test'], batch_size=batch_size, shuffle=False)
     '''
 
-    import mxnet as mx
     from mxnet.context import Context
-
     context = mx.cpu() if args.gpu_index < 0 else mx.gpu(args.gpu_index)
     Context.default_ctx = context
+
+    unpack_batch = lambda batch : \
+        (batch.data[0].as_in_context(context), batch.label[0].as_in_context(context))
 
     from load_cifar10_data_iter import *
     train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
     
-    unpack_batch = lambda batch : \
-        (batch.data[0].as_in_context(context), batch.label[0].as_in_context(context))
-
     model = ResNet(3, (16, 32, 64))
     updater = Updater(model, update_rule='sgd_momentum', lr=0.1, momentum=0.9)
     
@@ -117,35 +119,32 @@ if __name__ == '__main__':
     terminated = False
 
     while not terminated:
-        # training
         epoch_number += 1
-        train_data_iter.reset()
 
+        train_data_iter.reset()
         for iteration, batch in enumerate(train_data_iter):
             iteration_number += 1
             if iteration_number > 64000:
                 terminated = True
                 break
             if iteration_number in (32000, 48000):
-                updater.learning_rate = updater.learning_rate * 0.1
+                updater.lr = updater.lr * 0.1
                
             data, labels = unpack_batch(batch)
-            with autograd.train():
-                predictions = model.forward(data, is_train=True)
-                loss = model.loss(predictions, labels)
-#               loss = model.loss(predictions, labels, is_train=True)
-                autograd.compute_gradient((loss,))
+            predictions = model.forward(data, is_train=True)
+            loss = model.loss(predictions, labels, is_train=True)
+            autograd.compute_gradient((loss,))
             updater(model.grad_dict)
 
-            if iteration_number % 10 == 0:
-                print 'iteration %d loss %f' % (iteration_number, loss.asnumpy()[0])
+            if iteration_number % 100 == 0:
+                loss_value = cross_entropy(loss, labels)
+                print 'iteration %d loss %f' % (iteration_number, loss_value)
 
-        # validation
         val_data_iter.reset()
         errors, samples = 0, 0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            scores = model.forward(data, is_train=False)
+            scores = model.forward(data)
             predictions = mx.nd.argmax(scores, axis=1)
             errors += np.count_nonzero((predictions - labels).asnumpy())
             samples += data.shape[0]

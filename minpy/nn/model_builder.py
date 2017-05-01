@@ -269,12 +269,13 @@ class Layer(Module):
 
         self._mode = 'training' # training/inference
 
-        self._to_initialize = True
+        self._to_initialize = bool(params) or bool(aux_params)
 
     def __call__(self, *args, **kwargs):
-        assert bool(self._model), 'A layer must be bound to a model.'
         # initialize only if self is bound to a model
         if self._to_initialize:
+            assert bool(self._model), 'A parameterized layer must be bound to a model.'
+
             array_args = tuple(filter(_is_array, args))
             array_kwargs = {key : value for key, value in kwargs.items() if is_array(value)}
 
@@ -329,9 +330,10 @@ class Layer(Module):
             # init only if param is absent (to support pre-loading params)
             if name not in self._model.params:
                 init_config = self._init_configs[name]
-                self._model.params[name] = \
-                    getattr(_init, init_config['init_rule'])(shape, init_config) \
-                    .as_in_context(context)
+                with _autograd.test_section():
+                    self._model.params[name] = \
+                        getattr(_init, init_config['init_rule'])(shape, init_config) \
+                        .as_in_context(context)
             if self._model._attach_all:
                 self._model.attach(name, self._model.params[name])
 
@@ -343,24 +345,21 @@ class Layer(Module):
             # init only if aux param is absent (to support pre-loading aux params)
             if name not in self._model.aux_params:
                 init_config = self._init_configs[name]
-                self._model.aux_params[name] = \
-                    getattr(_init, init_config['init_rule'])(shape, init_config) \
-                    .as_in_context(context)
+                with _autograd.test_section():
+                    self._model.aux_params[name] = \
+                        getattr(_init, init_config['init_rule'])(shape, init_config) \
+                        .as_in_context(context)
 
     def _get_param(self, param_name):
-        # should not be called prior to calling __call__ for the first time
         return self._model.params[param_name]
 
     def _get_params(self, *param_names):
-        # should not be called prior to calling __call__ for the first time
         return tuple(self._model.params[param_name] for param_name in param_names)
 
     def _get_aux_param(self, aux_param_name):
-        # should not be called prior to calling __call__ for the first time
         return self._model.aux_params[aux_param_name]
 
     def _get_aux_params(self, *aux_param_names):
-        # should not be called prior to calling __call__ for the first time
         return tuple(self._model.aux_params[aux_param_name] for aux_param_name in aux_param_names)
 
     def _parse_param_configs(self, configs):
@@ -446,13 +445,7 @@ class Model(_model.ModelBase):
         if isinstance(loss, str):
             loss = getattr(_nd, loss + 'Output')
         if callable(loss):
-            self.loss = loss
-            '''
-            def _(*args, **kwargs):
-                with _autograd.TrainingStateScope(kwargs.pop('is_train', False)):
-                    return loss(*args, **kwargs)
-            self.loss = _
-            '''
+            self.loss = Model.decorator(loss)
 
         self._update_configs = {}
 
@@ -532,13 +525,13 @@ class Model(_model.ModelBase):
         raise NotImplementedError()
 
     @staticmethod
-    def decorator(forward):
+    def decorator(f):
         def wrapped(self, *args, **kwargs):
-            is_train = kwargs.get('is_train', False)
+            is_train = kwargs.pop('is_train', False)
             if is_train: self.training()
             else: self.inference()
             with _autograd.TrainingStateScope(is_train):
-                return forward(self, *args, **kwargs)
+                return f(self, *args, **kwargs)
         return wrapped
 
     def attach(self, name, array):
