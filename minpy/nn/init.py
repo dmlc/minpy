@@ -29,7 +29,7 @@ def xavier(shape, _):
     fan_out = shape[0]
 
     scale = (6.0 / (fan_in + fan_out)) ** 0.5
-    return _nd.random_normal(scale=var, shape=shape)
+    return _nd.random_normal(scale=scale, shape=shape)
 
 
 def constant(shape, config):

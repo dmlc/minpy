@@ -1,5 +1,6 @@
 import numpy as np
 import mxnet as mx
+import mxnet.contrib.autograd as autograd
 from minpy.nn.model_builder import *
 from minpy.nn.modules import *
 
@@ -33,15 +34,16 @@ class ResNet(Model):
 
         # compute class scores from feature maps
         self._to_scores = Sequential(
-            BatchNorm(fix_gamma=False),
+# TODO BatchNorm fails
+#           BatchNorm(fix_gamma=False),
             ReLU(),
             Pooling(pool_type='avg', kernel=(8, 8), stride=(1, 1)),
             BatchFlatten(),
             FullyConnected(num_hidden=10),
         )
     
-    @Model.decorator
-    def forward(self, data, mode='training'):
+#   @Model.decorator
+    def forward(self, data, is_train=False):
         data = data
 
         for shrink, residual in zip(self._shrinking_blocks, self._residual_blocks):
@@ -56,7 +58,7 @@ class ResNet(Model):
         defaults = {'kernel' : (3, 3), 'stride' : (1, 1), 'pad' : (1, 1), 'no_bias' : True}
         defaults.update(kwargs)
         return Sequential(
-            BatchNorm(fix_gamma=False),
+#           BatchNorm(fix_gamma=False),
             ReLU(),
             Convolution(**defaults),
         )
@@ -77,9 +79,6 @@ class ResNet(Model):
         ) + ResNet._convolution(num_filter=f, kernel=(1, 1), stride=(2, 2), pad=(0, 0))
 
 
-unpack_batch = lambda batch : (batch.data[0], batch.label[0])
-
-
 if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
@@ -98,16 +97,20 @@ if __name__ == '__main__':
     val_data_iter = NDArrayIter(data=data['X_test'], label=data['y_test'], batch_size=batch_size, shuffle=False)
     '''
 
-    from load_cifar10_data_iter import *
-    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
-
     import mxnet as mx
     from mxnet.context import Context
-    if args.gpu_index > 0: Context.default_ctx = mx.gpu(args.gpu_index)
-    else: Context.default_ctx = mx.cpu()
+
+    context = mx.cpu() if args.gpu_index < 0 else mx.gpu(args.gpu_index)
+    Context.default_ctx = context
+
+    from load_cifar10_data_iter import *
+    train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
+    
+    unpack_batch = lambda batch : \
+        (batch.data[0].as_in_context(context), batch.label[0].as_in_context(context))
 
     model = ResNet(3, (16, 32, 64))
-    updater = Updater(model, update_rule='sgd', learning_rate=0.1, momentem=0.9)
+    updater = Updater(model, update_rule='sgd_momentum', lr=0.1, momentum=0.9)
     
     epoch_number = 0
     iteration_number = 0
@@ -127,19 +130,22 @@ if __name__ == '__main__':
                 updater.learning_rate = updater.learning_rate * 0.1
                
             data, labels = unpack_batch(batch)
-            loss = model(data, labels=labels)
-            grad_dict = model.backward()
-            updater(grad_dict)
+            with autograd.train():
+                predictions = model.forward(data, is_train=True)
+                loss = model.loss(predictions, labels)
+#               loss = model.loss(predictions, labels, is_train=True)
+                autograd.compute_gradient((loss,))
+            updater(model.grad_dict)
 
-            if iteration_number % 100 == 0:
-                print 'iteration %d loss %f' % (iteration_number, loss)
+            if iteration_number % 10 == 0:
+                print 'iteration %d loss %f' % (iteration_number, loss.asnumpy()[0])
 
         # validation
         val_data_iter.reset()
         errors, samples = 0, 0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            scores = model.forward(data, mode='inference')
+            scores = model.forward(data, is_train=False)
             predictions = mx.nd.argmax(scores, axis=1)
             errors += np.count_nonzero((predictions - labels).asnumpy())
             samples += data.shape[0]

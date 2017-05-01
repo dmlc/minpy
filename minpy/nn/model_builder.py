@@ -5,6 +5,7 @@ import mxnet.ndarray as _nd
 import mxnet.contrib.autograd as _autograd
 
 import minpy.nn.init as _init
+import minpy.nn.optim as _optim
 import minpy.nn.model as _model
 
 
@@ -19,7 +20,7 @@ def _module_prefix(module_name):
 
 
 def _is_array(array):
-    return isinstance(array, mxnet.NDArray)
+    return isinstance(array, _nd.NDArray)
 
 
 from collections import Iterable as _Iterable
@@ -268,25 +269,33 @@ class Layer(Module):
 
         self._mode = 'training' # training/inference
 
-        self._initialized = False
+        self._to_initialize = True
 
     def __call__(self, *args, **kwargs):
         assert bool(self._model), 'A layer must be bound to a model.'
         # initialize only if self is bound to a model
-        if not self._initialized:
-            arg_shapes = tuple(arg.shape for arg in args if _is_array(arg))
-            kwarg_shapes = \
-                {key : value.shape for key, value in kwargs.items() if _is_array(value)}
+        if self._to_initialize:
+            array_args = tuple(filter(_is_array, args))
+            array_kwargs = {key : value for key, value in kwargs.items() if is_array(value)}
+
+            get_shape = lambda array : array.shape
+            arg_shapes = tuple(map(get_shape, array_args))
+            kwarg_shapes = dict(zip(array_kwargs.keys(), tuple(map(get_shape, array_kwargs.values()))))
+
+            get_context = lambda array : array.context
+            contexts = set(map(get_context, args + tuple(kwargs.values())))
+            context = contexts.pop()
+            assert not contexts, ''
 
             # initialize params
             param_shapes = self.param_shapes(*arg_shapes, **kwarg_shapes)
-            self._init_params(param_shapes)
+            self._init_params(param_shapes, context)
 
             # initialize aux params
             aux_param_shapes = self.aux_param_shapes(*arg_shapes, **kwarg_shapes)
-            self._init_aux_params(aux_param_shapes)
+            self._init_aux_params(aux_param_shapes, context)
 
-            self._to_initialized = True
+            self._to_initialize = False
 
         return self.forward(*args, **kwargs)
 
@@ -314,27 +323,29 @@ class Layer(Module):
         else:
             return {'init_rule' : 'constant', 'value' : 0}
  
-    def _init_params(self, param_shapes):
+    def _init_params(self, param_shapes, context):
         # param_shapes: dict
         for name, shape in param_shapes.items():
             # init only if param is absent (to support pre-loading params)
             if name not in self._model.params:
                 init_config = self._init_configs[name]
                 self._model.params[name] = \
-                    getattr(_init, init_config['init_rule'])(shape, init_config)
+                    getattr(_init, init_config['init_rule'])(shape, init_config) \
+                    .as_in_context(context)
             if self._model._attach_all:
                 self._model.attach(name, self._model.params[name])
 
         # register update_configs in model
         
-    def _init_aux_params(self, aux_param_shapes):
+    def _init_aux_params(self, aux_param_shapes, context):
         # aux_param_shapes: dict
         for name, shape in aux_param_shapes.items():
             # init only if aux param is absent (to support pre-loading aux params)
             if name not in self._model.aux_params:
                 init_config = self._init_configs[name]
                 self._model.aux_params[name] = \
-                    getattr(_init, init_config['init_rule'])(shape, init_config)
+                    getattr(_init, init_config['init_rule'])(shape, init_config) \
+                    .as_in_context(context)
 
     def _get_param(self, param_name):
         # should not be called prior to calling __call__ for the first time
@@ -433,14 +444,22 @@ class Model(_model.ModelBase):
         super(Model, self).__init__()
 
         if isinstance(loss, str):
-            self.loss = getattr(_nd, loss + 'Output')
-        elif callable(loss):
+            loss = getattr(_nd, loss + 'Output')
+        if callable(loss):
             self.loss = loss
+            '''
+            def _(*args, **kwargs):
+                with _autograd.TrainingStateScope(kwargs.pop('is_train', False)):
+                    return loss(*args, **kwargs)
+            self.loss = _
+            '''
 
         self._update_configs = {}
 
         self._modules = set()      # references to all registered modules
         self._module_names = set() # names of all registered modules
+
+        self.grad_dict = {}
 
         self._attach_all = attach_all
 
@@ -519,7 +538,7 @@ class Model(_model.ModelBase):
             if is_train: self.training()
             else: self.inference()
             with _autograd.TrainingStateScope(is_train):
-                return self.forward(*args, **kwargs)
+                return forward(self, *args, **kwargs)
         return wrapped
 
     def attach(self, name, array):
@@ -609,8 +628,9 @@ class Updater(_ConfigParser):
         """
         for param_name, grad in grad_dict.items():
             param = self._model.params[param_name]
-            update_rule = self._configs[param_name]['update_rule'] + 'update'
+            update_rule = self._configs[param_name].pop('update_rule')
             update_config = self._configs[param_name]
             self._model.params[param_name], _update_config = \
-                getattr(_nd, update_rule)(weight=param, grad=grad, **update_config)
+                getattr(_optim, update_rule)(param, grad, update_config)
+            self._configs[param_name]['update_rule'] = update_rule
             update_config.update(_update_config)

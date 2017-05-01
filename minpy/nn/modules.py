@@ -19,21 +19,21 @@ class _Operatorized(_Layer):
 
         kwargs.update({v : _symbol.Variable(v) for v in self._variables})
 
-        self._symbol = getattr(_symbol, operator_name)(**kwargs)
+        self._symbol = getattr(_symbol, operator_name)(name='symbol', **kwargs)
         self._operator = getattr(_nd, operator_name)
 
         self._module_name = operator_name.lower()
-        prefix = self._module_name + '_'
-        eliminate_prefix = lambda name : name.replace(prefix, '')
 
-        params = set(symbol.list_arguments())
+        eliminate_prefix = lambda name : name.replace('symbol_', '')
+
+        params = set(self._symbol.list_arguments())
         params = params.difference(set(self._variables))
         params = tuple(map(eliminate_prefix, params))
 
-        aux_params = tuple(symbol.list_auxiliary_states())
+        aux_params = tuple(self._symbol.list_auxiliary_states())
         aux_params = tuple(map(eliminate_prefix, aux_params))
 
-        super(Symbolic, self).__init__(params, aux_params, name)
+        super(_Operatorized, self).__init__(params, aux_params, name)
     
     def forward(self, *args, **kwargs):
         is_array = lambda array : isinstance(array, _nd.NDArray)
@@ -44,10 +44,31 @@ class _Operatorized(_Layer):
         
         kwarg_dict.update(dict(zip(self._module_param_names, self._get_params(*self._param_names))))
         kwarg_dict.update(dict(zip(self._module_aux_param_names, self._get_aux_params(*self._aux_param_names))))
-
+        
         kwarg_dict.update(self._kwargs)
 
         return self._operator(**kwarg_dict)
+
+   # TODO merge param_shapes and aux_param_shapes?
+    def param_shapes(self, *args, **kwargs):
+        kwargs.update(dict(zip(self._variables, args)))
+        shapes, _, _ = self._symbol.infer_shape(**kwargs)
+
+        shapes = dict(zip(self._symbol.list_arguments(), tuple(shapes)))
+        for variable in self._variables:
+            del shapes[variable]
+        for param_name, shape in shapes.items():
+            shapes[param_name.replace('symbol_', '')] = shapes.pop(param_name)
+        local_to_global = dict(zip(self._module_param_names, self._param_names))
+        shapes = {local_to_global[name] : shape for name, shape in shapes.items()}
+        return shapes
+
+    # TODO
+    def aux_param_shapes(self, *args, **kwargs):
+        kwargs.update(dict(zip(self._variables, args)))
+        _, _, shapes = self._symbol.infer_shape(**kwargs)
+        return dict(zip(self._aux_param_names, tuple(shapes)))
+
 
 '''
 criterion:
@@ -55,7 +76,8 @@ criterion:
     2. an operator fits into frameworks of containers, especially Sequential
 '''
 
-for _name in (
+'''
+_operators = (
     'Activation',
     'BatchNorm', # TODO BatchNorm statistics
     'Convolution',
@@ -65,14 +87,16 @@ for _name in (
     'FullyConnected',
     'LeakyReLU',
     'Pooling',
-):
-    print _name
-    globals()[_name] = lambda **kwargs : _Operatorized(_name, **kwargs)
+)
+'''
 
-
-globals()['ReLU'] = lambda _ : _Operatorized('Activation', act_type='relu')
-globals()['Sigmoid'] = lambda _ : _Operatorized('Activation', act_type='sigmoid')
-globals()['Tanh'] = lambda _ : _Operatorized('Activation', act_type='tanh')
+globals()['BatchNorm'] = lambda **kwargs : _Operatorized('BatchNorm', **kwargs) # TODO BatchNorm statistics
+globals()['Convolution'] = lambda **kwargs : _Operatorized('Convolution', **kwargs)
+globals()['FullyConnected'] = lambda **kwargs : _Operatorized('FullyConnected', **kwargs)
+globals()['Pooling'] = lambda **kwargs : _Operatorized('Pooling', **kwargs)
+globals()['ReLU'] = lambda : _Operatorized('Activation', act_type='relu')
+globals()['Sigmoid'] = lambda : _Operatorized('Activation', act_type='sigmoid')
+globals()['Tanh'] = lambda : _Operatorized('Activation', act_type='tanh')
 
 
 class Variable(_Layer):
@@ -113,9 +137,6 @@ class Reshape(_Layer):
 class BatchReshape(_Layer):
     _module_name = 'batch_reshape'
     def __init__(self, shape):
-        """ Batch reshape.
-        """
-
         super(BatchReshape, self).__init__()
         self._shape = shape
 
@@ -138,7 +159,7 @@ class BatchFlatten(_Layer):
         super(BatchFlatten, self).__init__()
 
     def forward(self, X):
-        return X.reshape((X[0].size,))
+        return X.reshape((X.shape[0], X[0].size,))
 
 
 '''
