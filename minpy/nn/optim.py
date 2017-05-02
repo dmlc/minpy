@@ -90,32 +90,6 @@ def rmsprop(w, dw, config=None):
     config.setdefault('n', _nd.zeros_like(w))
 
     _nd.rmsprop_update(w, dw, out=w, **config)
-    return x, config
-
-
-def rmspropalex(w, dw, config=None):
-    """
-    http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
-
-    config format:
-    - n: Moving average of second moments of gradients.
-    - g: NDArray
-    - delta: NDArray
-    - lr: Scalar learning rate.
-    - gamma1: Scalar between 0 and 1 giving the decay rate for the squared
-                  gradient cache.
-    - gamma2:
-    - epsilon: Small scalar used for smoothing to avoid dividing by zero.
-    - wd: 
-    - rescale_grad:
-    - clip_gradient:
-    - clip_weights:
-    """
-    if config is None:
-        config = {}
-    config.setdefault('n', _nd.zeros_like(w))
-
-    raise NotImplementedError() # TODO
 
     return w, config
 
@@ -139,8 +113,9 @@ def adam(w, dw, config=None):
 
     if config is None:
         config = {}
-    config.setdefault('mean', np.zeros_like(w))
-    config.setdefault('var', np.zeros_like(w))
+    config.setdefault('mean', _nd.zeros_like(w))
+    config.setdefault('var', _nd.zeros_like(w))
 
     _nd.adam_update(w, dw, out=w, **config)
-    return next_x, config
+
+    return w, config

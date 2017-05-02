@@ -1,17 +1,21 @@
-"""
-Hyper-parameters are identical to those detailed in "Deep Residual Learning for Image Recognition".
-"""
+'''
+Deep Networks with Stochastic Depth
+https://arxiv.org/abs/1603.09382
+'''
 
 
 from random import random
-import minpy.numpy as np
+import numpy as np
+import mxnet as mx
+import mxnet.contrib.autograd as autograd
 from minpy.nn.model_builder import *
 from minpy.nn.modules import *
+from minpy.nn.utils import cross_entropy
 
 
 class StochasticDepthNetwork(Model):
     def __init__(self, block_number, filter_numbers, p):
-        super(StochasticDepthNetwork, self).__init__(loss='softmax_loss')
+        super(StochasticDepthNetwork, self).__init__()
 
         self._block_number = block_number
         self._p = p
@@ -47,10 +51,8 @@ class StochasticDepthNetwork(Model):
             FullyConnected(num_hidden=10),
         )
     
-    def forward(self, data, mode='training'):
-        if mode is 'training': self.training()
-        elif mode is 'inference': self.inference()
-
+    @Model.decorator
+    def forward(self, data):
         data = data
 
         for shrink, residual in zip(self._shrinking_blocks, self._residual_blocks):
@@ -61,6 +63,10 @@ class StochasticDepthNetwork(Model):
                     data = data + r(data)
 
         return self._to_scores(data)
+
+    @Model.decorator
+    def loss(self, data, labels):
+        return mx.nd.SoftmaxOutput(data, labels, normalization='batch')
 
     @staticmethod
     def _convolution(**kwargs):
@@ -91,9 +97,6 @@ class StochasticDepthNetwork(Model):
         )
 
 
-unpack_batch = lambda batch : (batch.data[0].asnumpy(), batch.label[0].asnumpy())
-
-
 if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
@@ -104,44 +107,49 @@ if __name__ == '__main__':
     from load_cifar10_data_iter import *
     train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
 
-    from minpy.context import set_context, gpu
-    set_context(gpu(args.gpu_index))
+    from mxnet.context import Context
+    context = mx.cpu() if args.gpu_index < 0 else mx.gpu(args.gpu_index)
+    Context.default_ctx = context
 
-    model = StochasticDepthNetwork(6, (16, 32, 64), 0.1)
-    updater = Updater(model, update_rule='sgd', learning_rate=0.1, momentem=0.9)
+    unpack_batch = lambda batch : \
+        (batch.data[0].as_in_context(context), batch.label[0].as_in_context(context))
+
+    model = StochasticDepthNetwork(16, (16, 32, 64), 0.1)
+    updater = Updater(model, update_rule='adam', lr=1e-3)
     
     epoch_number = 0
     iteration_number = 0
     terminated = False
 
     while not terminated:
-        # training
         epoch_number += 1
-        train_data_iter.reset()
 
+        train_data_iter.reset()
         for iteration, batch in enumerate(train_data_iter):
             iteration_number += 1
-            if iteration_number > 64000:
+            if epoch_number > 500:
                 terminated = True
                 break
-            if iteration_number in (32000, 48000):
-                updater.learning_rate = updater.learning_rate * 0.1
+            if epoch_number in (250, 375):
+                updater.lr = updater.lr * 0.1
                
             data, labels = unpack_batch(batch)
-            grad_dict, loss = model.grad_and_loss(data, labels)
-            updater(grad_dict)
+            predictions = model.forward(data, is_train=True)
+            loss = model.loss(predictions, labels, is_train=True)
+            autograd.compute_gradient((loss,))
+            updater(model.grad_dict)
 
             if iteration_number % 100 == 0:
-                print 'iteration %d loss %f' % (iteration_number, loss)
+                loss_value = cross_entropy(loss, labels)
+                print 'iteration %d loss %f' % (iteration_number, loss_value)
         
-        # validation
         val_data_iter.reset()
         errors, samples = 0, 0
         for batch in val_data_iter:
             data, labels = unpack_batch(batch)
-            scores = model.forward(data, 'inference')
-            predictions = np.argmax(scores, axis=1)
-            errors += np.count_nonzero(predictions - labels)
-            samples += len(data)
+            scores = model.forward(data)
+            predictions = mx.nd.argmax(scores, axis=1)
+            errors += np.count_nonzero((predictions - labels).asnumpy())
+            samples += data.shape[0]
 
         print 'epoch %d validation error %f' % (epoch_number, errors / float(samples))
