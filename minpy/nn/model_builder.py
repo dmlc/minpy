@@ -283,10 +283,9 @@ class Layer(Module):
             arg_shapes = tuple(map(get_shape, array_args))
             kwarg_shapes = dict(zip(array_kwargs.keys(), tuple(map(get_shape, array_kwargs.values()))))
 
-            get_context = lambda array : array.context
-            contexts = set(map(get_context, args + tuple(kwargs.values())))
-            context = contexts.pop()
-            assert not contexts, ''
+            contexts = [arr.context for arr in args + tuple(kwargs.values())]
+            assert len(contexts) != 0, ''
+            context = contexts[0]
 
             # initialize params
             param_shapes = self.param_shapes(*arg_shapes, **kwarg_shapes)
@@ -330,7 +329,7 @@ class Layer(Module):
             # init only if param is absent (to support pre-loading params)
             if name not in self._model.params:
                 init_config = self._init_configs[name]
-                with _autograd.test_section():
+                with _autograd.test():
                     self._model.params[name] = \
                         getattr(_init, init_config['init_rule'])(shape, init_config) \
                         .as_in_context(context)
@@ -345,7 +344,7 @@ class Layer(Module):
             # init only if aux param is absent (to support pre-loading aux params)
             if name not in self._model.aux_params:
                 init_config = self._init_configs[name]
-                with _autograd.test_section():
+                with _autograd.test():
                     self._model.aux_params[name] = \
                         getattr(_init, init_config['init_rule'])(shape, init_config) \
                         .as_in_context(context)

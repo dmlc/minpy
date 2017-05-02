@@ -2,7 +2,7 @@
 import six.moves.cPickle as pickle
 import numpy as np
 import os, sys, random
-from scipy.misc import imread
+from imread import imread
 
 def load_CIFAR_batch(filename):
     """ load single batch of cifar """

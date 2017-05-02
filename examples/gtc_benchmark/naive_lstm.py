@@ -44,6 +44,7 @@ class NaiveLSTM(Model):
         h = mx.nd.zeros((N, self._num_hidden))
         c = mx.nd.zeros((N, self._num_hidden))
 
+        print('sequence length', L)
         for i in range(L):
             patch = mx.nd.slice_axis(data, axis=1, begin=i, end=(i + 1))
             h, c = self._step(patch, h, c)
@@ -76,7 +77,7 @@ if __name__ == '__main__':
         batch_size = args.batch_size,
         data_dir   = args.data_dir,
         normalize  = True,
-        shape      = (784 / args.patch, args.patch),
+        shape      = (784 // args.patch, args.patch),
     )
 
     model = NaiveLSTM(args.num_hidden)
@@ -102,7 +103,7 @@ if __name__ == '__main__':
         updater(model.grad_dict)
 
         if (i + 1) % 100 == 0:
-            print tft, bt
+            print(tft, bt)
 
     tft /= (i + 1)
     bt /= (i + 1)
