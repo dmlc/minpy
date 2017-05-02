@@ -28,7 +28,7 @@ class _Operatorized(_Layer):
 
         params = set(self._symbol.list_arguments())
         params = params.difference(set(self._variables))
-        params = tuple(map(eliminate_prefix, params))
+        params = tuple(name.replace('symbol_', '') for name in params)
 
         aux_params = tuple(self._symbol.list_auxiliary_states())
         aux_params = tuple(map(eliminate_prefix, aux_params))
@@ -89,7 +89,6 @@ globals()['Pooling'] = lambda **kwargs : _Operatorized('Pooling', **kwargs)
 globals()['ReLU'] = lambda : _Operatorized('Activation', act_type='relu')
 globals()['Sigmoid'] = lambda : _Operatorized('Activation', act_type='sigmoid')
 globals()['Tanh'] = lambda : _Operatorized('Activation', act_type='tanh')
-
 
 class Variable(_Layer):
     _module_name = 'variable'
@@ -153,6 +152,20 @@ class BatchFlatten(_Layer):
     def forward(self, X):
         return X.reshape((X.shape[0], X[0].size,))
 
+class FullyConnectedND(_Layer):
+    _module_name = 'fullyconnected-nd'
+    def __init__(self, num_hidden, name=None):
+        super(FullyConnectedND, self).__init__(params=('weight', 'bias'))
+        self._num_hidden = num_hidden
+    def forward(self, X):
+        if len(X.shape) > 2:
+            X = _nd.flatten(X)
+        return _nd.dot(X, self._model.params[self.weight]) + self._model.params[self.bias]
+    def param_shapes(self, xshape):
+        indim = 1
+        for i in range(1, len(xshape)):
+            indim *= xshape[i]
+        return {self.weight : (indim, self._num_hidden), self.bias : (self._num_hidden,)}
 
 '''
 class RNN(Symbolic):
