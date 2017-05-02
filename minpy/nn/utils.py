@@ -1,6 +1,7 @@
 import numpy as _np
 import mxnet.ndarray as _nd
 
+
 def _np_decorator(f):
     def wrapped(*args, **kwargs):
         convert = lambda array : array.asnumpy() if isinstance(array, _nd.NDArray) else array
@@ -10,6 +11,7 @@ def _np_decorator(f):
 
     return wrapped
         
+
 @_np_decorator
 def cross_entropy(p, labels):
     labels = labels.astype(_np.int)

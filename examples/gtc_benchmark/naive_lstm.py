@@ -5,6 +5,7 @@ import mxnet.contrib.autograd as autograd
 from minpy.nn.model_builder import *
 from minpy.nn.modules import *
 from minpy.nn.utils import cross_entropy
+from examples.utils.data_utils import get_MNIST_data
 
 
 class NaiveLSTM(Model):
@@ -54,39 +55,14 @@ class NaiveLSTM(Model):
         return mx.nd.SoftmaxOutput(data, labels, normalization='batch')
 
 
-def load_mnist(args):
-    from joblib import load
-    data = load(args.data_dir + 'mnist.dat')
-    samples = 50000
-    train_data, test_data = data['train_data'][:samples], data['test_data'][:samples]
-    unpack_batch = lambda batch : (batch.data[0], batch.label[0])
-
-    eps = 1e-5
-    train_data = (train_data - train_data.mean(axis=0)) / (train_data.std(axis=0) + eps)
-    test_data = (test_data - test_data.mean(axis=0)) / (test_data.std(axis=0) + eps)
-
-    N, D = train_data.shape
-    patch_size = 7
-    sequence_length = D / patch_size
-    train_data = train_data.reshape((N, sequence_length, patch_size))
-
-    N, _ = test_data.shape
-    test_data = test_data.reshape((N, sequence_length, patch_size))
-
-    from mxnet.io import NDArrayIter
-    batch_size = 64
-    train_data_iter = NDArrayIter(train_data, data['train_label'][:samples], batch_size, shuffle=True)
-    test_data_iter = NDArrayIter(test_data, data['test_label'][:samples], batch_size, shuffle=False)
-
-    return train_data_iter, test_data_iter
-
-
 if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
+    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--gpu_index', type=int, default=0)
     parser.add_argument('--num_hidden', type=int, required=True)
+    parser.add_argument('--patch', type=int, default=7)
     args = parser.parse_args()
 
     from mxnet.context import Context
@@ -96,7 +72,12 @@ if __name__ == '__main__':
     unpack_batch = lambda batch : \
         (batch.data[0].as_in_context(context), batch.label[0].as_in_context(context))
 
-    train_data_iter, test_data_iter = load_mnist(args)
+    train_data_iter, test_data_iter = get_MNIST_data(
+        batch_size = args.batch_size,
+        data_dir   = args.data_dir,
+        normalize  = True,
+        shape      = (784 / args.patch, args.patch),
+    )
 
     model = NaiveLSTM(args.num_hidden)
     updater = Updater(model, update_rule='sgd_momentum', lr=0.1, momentum=0.9)

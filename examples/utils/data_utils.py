@@ -258,3 +258,27 @@ def load_models(models_dir):
             except pickle.UnpicklingError:
                 continue
     return models
+
+
+def get_MNIST_data(**kwargs):
+    from joblib import load
+    data = load(kwargs['data_dir'] + 'mnist.dat')
+
+    if kwargs.get('normalize', True):
+        epsilon = 1e-5
+        mean = np.mean(data['train_data'], axis=0)
+        std = np.std(data['train_data'], axis=0)
+        for key, value in data.items():
+            if 'data' in key: data[key] = (value - mean) / (std + epsilon)
+
+    if 'shape' in kwargs:
+        for key, value in data.items():
+            if 'data' in key:
+                data[key] = value.reshape((len(value),) + kwargs['shape'])
+
+    from mxnet.io import NDArrayIter
+    batch_size = kwargs['batch_size']
+    training = NDArrayIter(data['train_data'], data['train_label'], batch_size, shuffle=True)
+    test = NDArrayIter(data['test_data'], data['test_label'], batch_size, shuffle=False)
+
+    return training, test

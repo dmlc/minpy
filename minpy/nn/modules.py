@@ -75,25 +75,17 @@ criterion:
     1. an operator is parameterized
     2. an operator fits into frameworks of containers, especially Sequential
 '''
-
-'''
-_operators = (
-    'Activation',
-    'BatchNorm', # TODO BatchNorm statistics
-    'Convolution',
-    'Deconvolution',
-    'Dropout',
-    'Embedding',
-    'FullyConnected',
-    'LeakyReLU',
-    'Pooling',
-)
-'''
-
-globals()['BatchNorm'] = lambda **kwargs : _Operatorized('BatchNorm', **kwargs) # TODO BatchNorm statistics
+globals()['Activation'] = lambda **kwargs : _Operatorized('Activation', **kwargs)
+globals()['BatchNorm'] = lambda **kwargs : _Operatorized('BatchNorm', **kwargs)
 globals()['Convolution'] = lambda **kwargs : _Operatorized('Convolution', **kwargs)
+globals()['Deconvolution'] = lambda **kwargs : _Operatorized('Deconvolution', **kwargs)
+globals()['Dropout'] = lambda **kwargs : _Operatorized('Dropout', **kwargs)
+globals()['Embedding'] = lambda **kwargs : _Operatorized('Embedding', **kwargs)
 globals()['FullyConnected'] = lambda **kwargs : _Operatorized('FullyConnected', **kwargs)
+globals()['LeakyReLU'] = lambda **kwargs : _Operatorized('LeakyReLU', **kwargs)
 globals()['Pooling'] = lambda **kwargs : _Operatorized('Pooling', **kwargs)
+
+# grammar sugar
 globals()['ReLU'] = lambda : _Operatorized('Activation', act_type='relu')
 globals()['Sigmoid'] = lambda : _Operatorized('Activation', act_type='sigmoid')
 globals()['Tanh'] = lambda : _Operatorized('Activation', act_type='tanh')
@@ -163,185 +155,6 @@ class BatchFlatten(_Layer):
 
 
 '''
-class Symbolic(_Layer):
-    _module_name = 'symbolic'
-    def __init__(self, symbol, variables=None, init_configs=None, update_configs=None, name=None):
-        self._symbol = symbol
-
-        params = set(symbol.list_arguments())
-        self._variables = ('data',) if variables is None else variables
-        params = params.difference(set(self._variables))
-        params = tuple(params)
-        aux_params = tuple(symbol.list_auxiliary_states())
-
-        super(Symbolic, self).__init__(params, aux_params, name)
-
-        self._executor = None
-        
-    def forward(self, **kwargs):
-        contexts = set(map(kwargs.values(), lambda array : array.shape))
-        assert len(contexts) == 1
-
-        if self._executor is None:
-            args = dict(kwargs)
-            args.update(dict(zip(self._param_names, self._get_params(*self._param_names))))
-            aux_states = dict(zip(self._aux_param_names, self._get_aux_params(*self._aux_param_names)))
-
-        outputs = executor.forward()
-        if len(outputs) == 1: return outputs[0]
-        else: return tuple(outputs)
-
-    def param_shapes(self, **kwargs):
-        args = self._symbol.list_arguments()
-        shapes, _, _ = self._symbol.infer_shape(**kwargs)
-        shapes = dict(zip(args, tuple(shapes)))
-        for variable in self._variables:
-            del shapes[variable]
-        local_to_global = dict(zip(self._module_param_names, self._param_names))
-        shapes = {local_to_global[name] : shape for name, shape in shapes.items()}
-        return shapes
-
-    def aux_param_shapes(self, **kwargs):
-        _, _, shapes = self._symbol.infer_shape(**kwargs)
-        return dict(zip(self._aux_param_names, tuple(shapes)))
-
-
-class Dropout(_Layer):
-    _module_name = 'dropout'
-    def __init__(self, p):
-        """ Dropout layer
-
-        param p: probability of deactivating a neuron
-        """
-
-        super(Dropout, self).__init__()
-        self._p = p
-
-    def forward(self, data):
-        return layers.dropout(data, self._p)
-
-
-class FullyConnected(Symbolic):
-    # TODO support providing weight as input
-    def __init__(self, *args, **kwargs):
-        name = kwargs.get('name', None)
-
-        data = mxnet.symbol.Variable('data')
-        fully_connected = mxnet.symbol.FullyConnected(data, *args, **kwargs)
-
-        super(FullyConnected, self).__init__(fully_connected)
-
-        init_configs = kwargs.get('init_configs', None)
-        self._register_init_configs(init_configs)
-        update_configs = kwargs.get('update_configs', None)
-        self._register_update_configs(update_configs)
-
-    def forward(self, data):
-        return super(FullyConnected, self).forward(data=data)
-
-    def param_shapes(self, input_shape):
-        return super(FullyConnected, self).param_shapes(data=input_shape)
-
-    def aux_param_shapes(self, input_shape):
-        return {}
-
-
-class Embedding(Symbolic):
-    # TODO support providing weight as input
-    def __init__(self, *args, **kwargs):
-        name = kwargs.get('name', None)
-
-        data = mxnet.symbol.Variable('data')
-        embedding = mxnet.symbol.Embedding(data, *args, **kwargs)
-
-        super(Embedding, self).__init__(embedding)
-
-        init_configs = kwargs.get('init_configs', None)
-        self._register_init_configs(init_configs)
-        update_configs = kwargs.get('update_configs', None)
-        self._register_update_configs(update_configs)
-
-    def forward(self, data):
-        return super(Embedding, self).forward(data=data)
-
-    def param_shapes(self, input_shape):
-        return super(Embedding, self).param_shapes(data=input_shape)
-
-    def aux_param_shapes(self, input_shape):
-        return {}
-
-
-class Convolution(Symbolic):
-    def __init__(self, *args, **kwargs):
-        # TODO interface (currently mxnet)
-        # TODO input weight/bias not supported currently
-        # TODO name consistency with mxnet (for loading pre-trained mxnet model)
-
-        name = kwargs.get('name', None)
-
-        data = mxnet.symbol.Variable('data')
-        convolution = mxnet.symbol.Convolution(data, *args, **kwargs)
-
-        super(Convolution, self).__init__(convolution)
-
-        init_configs = kwargs.get('init_configs', None)
-        self._register_init_configs(init_configs)
-        update_configs = kwargs.get('update_configs', None)
-        self._register_update_configs(update_configs)
-
-    def forward(self, data):
-        return super(Convolution, self).forward(data=data)
-
-    def param_shapes(self, input_shape):
-        return super(Convolution, self).param_shapes(data=input_shape)
-
-    def aux_param_shapes(self, input_shape):
-        return {}
-
-
-class Pooling(Symbolic):
-    def __init__(self, *args, **kwargs):
-        name = kwargs.get('name', None)
-
-        data = mxnet.symbol.Variable('data')
-        pooling = mxnet.symbol.Pooling(data, *args, **kwargs)
-
-        super(Pooling, self).__init__(pooling)
-
-    def forward(self, data):
-        return super(Pooling, self).forward(data=data)
-
-    def param_shapes(self, input_shape):
-        return {}
-
-    def aux_param_shapes(self, input_shape):
-        return {}
-
-
-class BatchNorm(Symbolic):
-    # TODO training/inference mode
-    def __init__(self, *args, **kwargs):
-        name = kwargs.get('name', None)
-
-        data = mxnet.symbol.Variable('data')
-        batch_norm = mxnet.symbol.BatchNorm(data, *args, **kwargs)
-
-        super(BatchNorm, self).__init__(batch_norm)
-
-        # TODO merge into __init__
-        init_configs = kwargs.get('init_configs', None)
-        update_configs = kwargs.get('update_configs', None)
-
-    def forward(self, data):
-        return super(BatchNorm, self).forward(data=data)
-
-    def param_shapes(self, input_shape):
-        return super(BatchNorm, self).param_shapes(data=input_shape)
-
-    def aux_param_shapes(self, input_shape):
-        return super(BatchNorm, self).aux_param_shapes(data=input_shape)
-
-
 class RNN(Symbolic):
     # TODO bidirectional
     def __init__(self, num_hidden, act_type):
