@@ -1,6 +1,7 @@
 from time import time
 import numpy as np
 import mxnet as mx
+import mxnet.minpy
 import mxnet.contrib.autograd as autograd
 from minpy.nn.model_builder import *
 from minpy.nn.modules import *
@@ -102,7 +103,10 @@ if __name__ == '__main__':
         data, labels = unpack_batch(batch)
 
         t0 = time()
+        mxnet.minpy.enable_jit()
         predictions = model.forward(data, is_train=True)
+        mxnet.minpy.JITContext().mark_as_output(predictions)
+        mxnet.minpy.disable_jit()
         tft += time() - t0
 
         #loss = model.loss(predictions, labels, is_train=True)
