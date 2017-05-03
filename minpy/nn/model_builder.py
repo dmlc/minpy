@@ -1,6 +1,7 @@
 from functools import reduce as _reduce
 import operator as _operator
 
+import mxnet.minpy
 import mxnet.ndarray as _nd
 import mxnet.contrib.autograd as _autograd
 
@@ -333,6 +334,7 @@ class Layer(Module):
                     self._model.params[name] = \
                         getattr(_init, init_config['init_rule'])(shape, init_config) \
                         .as_in_context(context)
+                    mxnet.minpy.JITContext().mark_as_output(self._model.params[name])
             if self._model._attach_all:
                 self._model.attach(name, self._model.params[name])
 
@@ -348,6 +350,7 @@ class Layer(Module):
                     self._model.aux_params[name] = \
                         getattr(_init, init_config['init_rule'])(shape, init_config) \
                         .as_in_context(context)
+                    mxnet.minpy.JITContext().mark_as_output(self._model.aux_params[name])
 
     def _get_param(self, param_name):
         return self._model.params[param_name]
