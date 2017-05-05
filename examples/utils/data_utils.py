@@ -2,7 +2,9 @@
 import six.moves.cPickle as pickle
 import numpy as np
 import os, sys, random
-from imread import imread
+import cv2
+from sklearn.datasets import fetch_mldata
+from scipy.misc import imread
 
 def load_CIFAR_batch(filename):
     """ load single batch of cifar """
@@ -282,3 +284,17 @@ def get_MNIST_data(**kwargs):
     test = NDArrayIter(data['test_data'], data['test_label'], batch_size, shuffle=False)
 
     return training, test
+
+def fetch_and_get_mnist():
+    mnist = fetch_mldata('MNIST original')
+    np.random.seed(1234) # set seed for deterministic ordering
+    p = np.random.permutation(mnist.data.shape[0])
+    X = mnist.data[p]  
+    X = X.reshape((70000, 28, 28))
+    X = np.asarray([cv2.resize(x, (64,64)) for x in X])
+    X = X.astype(np.float32)/(255.0/2) - 1.0
+    X = X.reshape((70000, 1, 64, 64))
+    X = np.tile(X, (1, 3, 1, 1))
+    X_train = X[:60000]
+    X_test = X[60000:]
+    return X_train, X_test
