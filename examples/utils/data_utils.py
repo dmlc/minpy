@@ -298,7 +298,6 @@ def get_MNIST_data(**kwargs):
 
     return training, test
 
-<<<<<<< HEAD
 
 def get_imagenet_data(batch_size=None, path=None):
     """Load Imagenet data.
