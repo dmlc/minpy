@@ -11,6 +11,7 @@ import numpy as np
 
 from .. import array
 
+
 class DataBatch(object): # pylint: disable=too-few-public-methods
     """Default object for holding a mini-batch of data and related information."""
 

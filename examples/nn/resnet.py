@@ -90,17 +90,6 @@ if __name__ == '__main__':
     parser.add_argument('--gpu_index', type=int, default=0)
     args = parser.parse_args()
 
-    # TODO data iterator ending batch issue
-    '''
-    from examples.utils.data_utils import get_CIFAR10_data
-    data = get_CIFAR10_data(args.data_dir)
-
-    from minpy.nn.io import NDArrayIter
-    batch_size = 128
-    train_data_iter = NDArrayIter(data=data['X_train'], label=data['y_train'], batch_size=batch_size, shuffle=True)
-    val_data_iter = NDArrayIter(data=data['X_test'], label=data['y_test'], batch_size=batch_size, shuffle=False)
-    '''
-
     from mxnet.context import Context
     context = mx.cpu() if args.gpu_index < 0 else mx.gpu(args.gpu_index)
     Context.default_ctx = context
@@ -108,6 +97,7 @@ if __name__ == '__main__':
     unpack_batch = lambda batch : \
         (batch.data[0].as_in_context(context), batch.label[0].as_in_context(context))
 
+    # TODO data iterator ending batch issue
     from load_cifar10_data_iter import *
     train_data_iter, val_data_iter = load_cifar10_data_iter(batch_size=128, path=args.data_dir)
     

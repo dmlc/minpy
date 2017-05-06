@@ -2,7 +2,7 @@
 import six.moves.cPickle as pickle
 import numpy as np
 import os, sys, random
-from imread import imread
+# from imread import imread
 
 def load_CIFAR_batch(filename):
     """ load single batch of cifar """
@@ -261,6 +261,18 @@ def load_models(models_dir):
 
 
 def get_MNIST_data(**kwargs):
+    """Load MNIST data.
+
+    Inputs:
+        - batch_size:
+        - data_dir:
+        - normalize:
+        - shape:
+
+    Returns:
+        - training: mxnet.io.NDArrayIter
+        - test: mxnet.io.NDArrayIter
+    """
     from joblib import load
     data = load(kwargs['data_dir'] + 'mnist.dat')
 
@@ -280,5 +292,66 @@ def get_MNIST_data(**kwargs):
     batch_size = kwargs['batch_size']
     training = NDArrayIter(data['train_data'], data['train_label'], batch_size, shuffle=True)
     test = NDArrayIter(data['test_data'], data['test_label'], batch_size, shuffle=False)
+
+    return training, test
+
+
+def get_imagenet_data(batch_size=None, path=None):
+    """Load Imagenet data.
+
+    Inputs:
+        - batch_size:
+        - data_dir:
+
+    Returns:
+        - training: mxnet.io.ImageRecordIter
+        - test: mxnet.io.ImageRecordIter
+    """
+    path = '%sILSVRC2012_img_val.tar' % path
+
+    r_mean = 123.680
+    g_mean = 116.779
+    b_mean = 103.939
+    mean = int((r_mean + g_mean + b_mean) / 3)
+    scale = 1 / 59.4415
+
+    from mxnet.io import ImageRecordIter
+
+    training = ImageRecordIter(
+        batch_size         = batch_size,
+        data_name          = 'data',
+        data_shape         = (3, 224, 224),
+        fill_value         = mean,
+        label_name         = 'softmax_label',
+        mean_r             = r_mean,
+        mean_g             = g_mean,
+        mean_b             = b_mean,
+        num_parts          = 2,
+        pad                = 4,
+        path_imgrec        = path,
+        part_index         = 0,
+        preprocess_threads = 16,
+        rand_crop          = True,
+        rand_mirror        = True,
+        scale              = scale,
+        shuffle            = True,
+        verbose            = False,
+    )
+
+    test = ImageRecordIter(
+        batch_size         = batch_size,
+        data_name          = 'data',
+        data_shape         = (3, 224, 224),
+        label_name         = 'softmax_label',
+        mean_r             = r_mean,
+        mean_g             = g_mean,
+        mean_b             = b_mean,
+        num_parts          = 2,
+        part_index         = 1,
+        path_imgrec        = path,
+        preprocess_threads = 16,
+        scale              = scale,
+        verbose            = False,
+    )
 
     return training, test

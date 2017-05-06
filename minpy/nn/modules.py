@@ -75,20 +75,26 @@ criterion:
     1. an operator is parameterized
     2. an operator fits into frameworks of containers, especially Sequential
 '''
-globals()['Activation'] = lambda **kwargs : _Operatorized('Activation', **kwargs)
-globals()['BatchNorm'] = lambda **kwargs : _Operatorized('BatchNorm', **kwargs)
-globals()['Convolution'] = lambda **kwargs : _Operatorized('Convolution', **kwargs)
-globals()['Deconvolution'] = lambda **kwargs : _Operatorized('Deconvolution', **kwargs)
-globals()['Dropout'] = lambda **kwargs : _Operatorized('Dropout', **kwargs)
-globals()['Embedding'] = lambda **kwargs : _Operatorized('Embedding', **kwargs)
-globals()['FullyConnected'] = lambda **kwargs : _Operatorized('FullyConnected', **kwargs)
-globals()['LeakyReLU'] = lambda **kwargs : _Operatorized('LeakyReLU', **kwargs)
-globals()['Pooling'] = lambda **kwargs : _Operatorized('Pooling', **kwargs)
+Activation = lambda **kwargs : _Operatorized('Activation', **kwargs)
+BatchNorm = lambda **kwargs : _Operatorized('BatchNorm', **kwargs)
+Convolution = lambda **kwargs : _Operatorized('Convolution', **kwargs)
+Deconvolution = lambda **kwargs : _Operatorized('Deconvolution', **kwargs)
+Dropout = lambda **kwargs : _Operatorized('Dropout', **kwargs)
+Embedding = lambda **kwargs : _Operatorized('Embedding', **kwargs)
+FullyConnected = lambda **kwargs : _Operatorized('FullyConnected', **kwargs)
+LeakyReLU = lambda **kwargs : _Operatorized('LeakyReLU', **kwargs)
+Pooling = lambda **kwargs : _Operatorized('Pooling', **kwargs)
+RNN = lambda **kwargs : _Operatorized('RNN', **kwargs)
 
 # grammar sugar
-globals()['ReLU'] = lambda : _Operatorized('Activation', act_type='relu')
-globals()['Sigmoid'] = lambda : _Operatorized('Activation', act_type='sigmoid')
-globals()['Tanh'] = lambda : _Operatorized('Activation', act_type='tanh')
+ReLU = lambda : _Operatorized('Activation', act_type='relu')
+Sigmoid = lambda : _Operatorized('Activation', act_type='sigmoid')
+Tanh = lambda : _Operatorized('Activation', act_type='tanh')
+
+RNNReLU = lambda **kwargs : _Operatorized('RNN', mode='rnn_relu', **kwargs)
+RNNTanh = lambda **kwargs : _Operatorized('RNN', mode='rnn_tanh', **kwargs)
+GRU = lambda **kwargs : _Operatorized('RNN', mode='gru', **kwargs)
+LSTM = lambda **kwargs : _Operatorized('RNN', mode='lstm', **kwargs)
 
 class Variable(_Layer):
     _module_name = 'variable'
@@ -152,6 +158,7 @@ class BatchFlatten(_Layer):
     def forward(self, X):
         return X.reshape((X.shape[0], X[0].size,))
 
+
 class FullyConnectedND(_Layer):
     _module_name = 'fullyconnected-nd'
     def __init__(self, num_hidden, name=None):
@@ -166,92 +173,3 @@ class FullyConnectedND(_Layer):
         for i in range(1, len(xshape)):
             indim *= xshape[i]
         return {self.weight : (indim, self._num_hidden), self.bias : (self._num_hidden,)}
-
-'''
-class RNN(Symbolic):
-    # TODO bidirectional
-    def __init__(self, num_hidden, act_type):
-        """ Perform one step of Elman RNN.
-            param str act_type: 'relu', 'sigmoid', 'softrelu' or 'tanh'.
-        """
-
-        data = mxnet.symbol.Variable('data')
-        hidden = mxnet.symbol.Variable('hidden')
-        data = mxnet.symbol.FullyConnected(data=data, num_hidden=num_hidden, no_bias=True)
-        hidden = mxnet.symbol.FullyConnected(data=hidden, num_hidden=num_hidden, name='HH')
-        network = data + hidden
-        network = mxnet.symbol.Activation(data=network, act_type=act_type)
-
-        super(RNN, self).__init__(network, ('data', 'hidden'))
-
-        self._register_init_configs({self.HH_weight : {'value' : minpy.numpy.eye(num_hidden)}})
-
-        self._num_hidden = num_hidden
-        
-        # TODO default_init_configs
-    
-    def forward(self, data, hidden):
-        if hidden is None:
-            N, D = data.shape
-            hidden = minpy.numpy.zeros((N, self._num_hidden))
-        return super(RNN, self).forward(data=data, hidden=hidden)
-
-    def param_shapes(self, data_shape, hidden_shape=None):
-        if hidden_shape is None:
-            N, D = data_shape
-            hidden_shape = (N, self._num_hidden)
-        return super(RNN, self).param_shapes(data=data_shape, hidden=hidden_shape)
-
-    def aux_param_shapes(self, *args):
-        return {}
-
-
-class LSTM(Symbolic):
-    def __init__(self, num_hidden, act_type):
-        """ One step of LSTM.
-        """
-        data = mxnet.symbol.Variable('data')
-        hidden = mxnet.symbol.Variable('hidden')
-        data = mxnet.symbol.FullyConnected(data=data, num_hidden=4 * num_hidden, no_bias=True)
-        hidden = mxnet.symbol.FullyConnected(data=hidden, num_hidden=4 * num_hidden)
-        network = data + hidden
-
-        sliced = mxnet.symbol.SliceChannel(data=network, num_outputs=4, axis=1)
-        i = mxnet.symbol.Activation(data=sliced[0], act_type='sigmoid')
-        f = mxnet.symbol.Activation(data=sliced[1], act_type='sigmoid')
-        o = mxnet.symbol.Activation(data=sliced[2], act_type='sigmoid')
-        g = mxnet.symbol.Activation(data=sliced[3], act_type='tanh')
-
-        cell = mxnet.symbol.Variable('cell')
-        next_cell = f * cell + i * g
-        next_hidden = o * mxnet.symbol.Activation(data=next_cell, act_type=act_type)
-        symbol = mxnet.symbol.Group((next_hidden, next_cell))
-
-        super(LSTM, self).__init__(symbol, ('data', 'hidden', 'cell'))
-
-        self._num_hidden = num_hidden
-
-        # TODO default_init_configs
-    
-    def forward(self, data, hidden=None, cell=None):
-        N, D = data.shape
-        if hidden is None: hidden = minpy.numpy.zeros((N, self._num_hidden))
-        if cell is None: cell = minpy.numpy.zeros((N, self._num_hidden))
-
-        # returns next_hidden, next_cell
-        return super(LSTM, self).forward(data=data, hidden=hidden, cell=cell)
-
-    def param_shapes(self, data_shape, hidden_shape=None, cell_shape=None):
-        if hidden_shape is None:
-            N, D = data_shape
-            hidden_shape = (N, self._num_hidden)
-
-        if cell_shape is None:
-            N, D = data_shape
-            cell_shape = (N, self._num_hidden)
-
-        return super(LSTM, self).param_shapes(data=data_shape, hidden=hidden_shape, cell=cell_shape)
-
-    def aux_param_shapes(self, *args):
-        return {}
-'''
