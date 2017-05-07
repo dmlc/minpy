@@ -556,7 +556,7 @@ class Model(_model.ModelBase):
 
     def attach(self, name, array):
         if name not in self.grad_dict:
-            self.grad_dict[name] = _nd.zeros(array.shape)
+            self.grad_dict[name] = _nd.NDArray(_nd._new_alloc_handle(array.shape, array.context, True, array.dtype))
             _autograd.mark_variables((array,), (self.grad_dict[name],))
         return self
 
