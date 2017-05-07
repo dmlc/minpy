@@ -31,7 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--gpu_index', type=int, default=0)
     parser.add_argument('--mode', type=str, required=True)
-    parser.add_argument('--num_layers', type=int, required=True)
+    parser.add_argument('--num_layers', type=int, default=1)
     parser.add_argument('--state_size', type=int, required=True)
     parser.add_argument('--patch', type=int, default=7)
     args = parser.parse_args()

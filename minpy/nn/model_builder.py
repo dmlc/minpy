@@ -437,7 +437,7 @@ class Layer(Module):
 class Model(_model.ModelBase):
     # TODO detach/resume (parameter, layer)
     # TODO check duplicated layers
-    def __init__(self, loss=None, attach_all=True):
+    def __init__(self, loss=None, attach_all=True, jit=True):
         """
         param loss: LinearRegression, LogisticRegression, MAERegression, Softmax, SVM
         """
@@ -457,6 +457,7 @@ class Model(_model.ModelBase):
         self.grad_dict = {}
 
         self._attach_all = attach_all
+        self._jit = jit
 
     def __setattr__(self, attr, attr_value):
         '''
@@ -530,10 +531,27 @@ class Model(_model.ModelBase):
     def decorator(f):
         def wrapped(self, *args, **kwargs):
             is_train = kwargs.pop('is_train', False)
+
             if is_train: self.training()
             else: self.inference()
+
             with _autograd.TrainingStateScope(is_train):
-                return f(self, *args, **kwargs)
+                if self._jit: mxnet.minpy.enable_jit()
+
+                results = f(self, *args, **kwargs)
+
+                if self._jit:
+                    jit_context = mxnet.minpy.JITContext()
+                    if isinstance(results, tuple):
+                        for result in results:
+                            if isinstance(result, _nd.NDArray):
+                                jit_context.mark_as_output(result)
+                    elif isinstance(results, _nd.NDArray):
+                        jit_context.mark_as_output(results)
+                    mxnet.minpy.disable_jit()
+
+                return results
+
         return wrapped
 
     def attach(self, name, array):

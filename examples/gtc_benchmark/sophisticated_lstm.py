@@ -10,7 +10,7 @@ from examples.utils.data_utils import get_MNIST_data
 
 class SophisticatedLSTM(Model):
     def __init__(self, num_hidden):
-        super(SophisticatedLSTM, self).__init__()
+        super(SophisticatedLSTM, self).__init__(jit=True)
 
         self._num_hidden = num_hidden
 
@@ -90,33 +90,47 @@ if __name__ == '__main__':
         data, labels = unpack_batch(batch)
 
         t0 = time()
+#       mxnet.minpy.enable_jit()
         predictions = model.forward(data, is_train=True)
+#       mxnet.minpy.JITContext().mark_as_output(predictions)
+#       mxnet.minpy.disable_jit()
         tft += time() - t0
 
-        loss = model.loss(predictions, labels, is_train=True)
+        #loss = model.loss(predictions, labels, is_train=True)
+        #print_readable_loss(loss, labels)
+
+        onehot_labels = mx.nd.one_hot(labels, 10)
+        loss = model.loss(predictions, onehot_labels, is_train=True)
+#       print('Loss %.6f' % loss.asnumpy())
 
         t0 = time()
         autograd.compute_gradient((loss,))
+        for k, v in model.grad_dict.items():
+            v.wait_to_read()
         bt += time() - t0
 
-        updater(model.grad_dict)
+#       updater(model.grad_dict)
 
-        if (i + 1) % 100 == 0:
-            print tft, bt
+        if (i + 1) % 20 == 0:
+            print('Per batch forward time %.3f. Per batch backward time %.3f' % (tft / 20, bt / 20))
+            if (i + 1) % 100 == 0: break
 
     tft /= (i + 1)
     bt /= (i + 1)
+    print tft, bt
 
     test_data_iter.reset()
     for i, batch in enumerate(test_data_iter):
         data, labels = unpack_batch(batch)
-        
+
         t0 = time()
         scores = model.forward(data)
         ift += time() - t0
 
-    print ift
+        if (i + 1) % 100 == 0: break
+
     ift /= (i + 1)
+    print ift
 
     import cPickle as pickle
-    pickle.dump((tft, ift, bt,), open('time/sophisticated-lstm-%d' % args.num_hidden, 'w'))
+    pickle.dump((tft, ift, bt,), open('time/sophisticated-lstm-jit-%d' % args.num_hidden, 'w'))

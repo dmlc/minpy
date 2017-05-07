@@ -13,7 +13,7 @@ def sigmoid(x):
 
 class NaiveLSTM(Model):
     def __init__(self, num_hidden):
-        super(NaiveLSTM, self).__init__()
+        super(NaiveLSTM, self).__init__(jit=True)
 
         self._num_hidden = num_hidden
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         batch_size = args.batch_size,
         data_dir   = args.data_dir,
         normalize  = True,
-        shape      = (784 // args.patch, args.patch),
+        shape      = (784 / args.patch, args.patch),
     )
 
     model = NaiveLSTM(args.num_hidden)
@@ -103,10 +103,10 @@ if __name__ == '__main__':
         data, labels = unpack_batch(batch)
 
         t0 = time()
-        mxnet.minpy.enable_jit()
+#       mxnet.minpy.enable_jit()
         predictions = model.forward(data, is_train=True)
-        mxnet.minpy.JITContext().mark_as_output(predictions)
-        mxnet.minpy.disable_jit()
+#       mxnet.minpy.JITContext().mark_as_output(predictions)
+#       mxnet.minpy.disable_jit()
         tft += time() - t0
 
         #loss = model.loss(predictions, labels, is_train=True)
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
         onehot_labels = mx.nd.one_hot(labels, 10)
         loss = model.loss(predictions, onehot_labels, is_train=True)
-        print('Loss %.6f' % loss.asnumpy())
+#       print('Loss %.6f' % loss.asnumpy())
 
         t0 = time()
         autograd.compute_gradient((loss,))
@@ -122,15 +122,15 @@ if __name__ == '__main__':
             v.wait_to_read()
         bt += time() - t0
 
-        updater(model.grad_dict)
+#       updater(model.grad_dict)
 
         if (i + 1) % 20 == 0:
             print('Per batch forward time %.3f. Per batch backward time %.3f' % (tft / 20, bt / 20))
-            tft = 0
-            bt = 0
+            if (i + 1) % 100 == 0: break
 
     tft /= (i + 1)
     bt /= (i + 1)
+    print tft, bt
 
     test_data_iter.reset()
     for i, batch in enumerate(test_data_iter):
@@ -140,7 +140,10 @@ if __name__ == '__main__':
         scores = model.forward(data)
         ift += time() - t0
 
+        if (i + 1) % 100 == 0: break
+
     ift /= (i + 1)
+    print ift
 
     import cPickle as pickle
-    pickle.dump((tft, ift, bt,), open('time/naive-lstm-%d' % args.num_hidden, 'w'))
+    pickle.dump((tft, ift, bt,), open('time/naive-lstm-jit-%d' % args.num_hidden, 'w'))
