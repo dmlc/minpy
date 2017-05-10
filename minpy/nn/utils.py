@@ -16,3 +16,16 @@ def _np_decorator(f):
 def cross_entropy(p, labels):
     labels = labels.astype(_np.int)
     return -_np.mean(_np.log(p[_np.arange(len(p)), labels]))
+
+
+import mxnet.context as _context
+def unpack_batch(batch):
+    """
+    Inputs:
+      - batch: a batch provided by mxnet.io.DataIter
+    Returns:
+      - data: mx.ndarray.NDArray
+      - labels: mx.ndarray.NDArray
+    """
+    context = _context.Context.default_ctx
+    return batch.data[0].as_in_context(context), batch.label[0].as_in_context(context)
