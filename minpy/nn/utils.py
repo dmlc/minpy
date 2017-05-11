@@ -1,4 +1,5 @@
 import numpy as _np
+import mxnet as _mx
 import mxnet.ndarray as _nd
 import mxnet.context as _context
 
@@ -31,7 +32,7 @@ def unpack_batch(batch):
     return batch.data[0].as_in_context(context), batch.label[0].as_in_context(context)
 
 
-def count_parameters(params):
+def count_params(params):
     """
     Inputs:
       - params: a list, tuple or dict of arrays (mxnet.ndarray.NDArray)
@@ -44,3 +45,21 @@ def count_parameters(params):
         'All parameters must be mxnet.ndarray.NDArray.'
 
     return sum(param.size for param in params)
+
+
+def copy_arrays(arrays, context=None):
+    """
+    Inputs:
+      - arrays: a list, tuple or dict of arrays (mxnet.ndarray.NDArray)
+      - context: the context of duplicated arrays (optional, mxnet.cpu() by default)
+    Returns:
+      - arrays: a list, tuple or dict of duplicated arrays located in context
+    """
+    if context is None: context = _mx.cpu()
+
+    copy = lambda array : array.as_in_context(context)
+
+    if isinstance(arrays, dict):
+        return dict(zip(arrays.keys(), map(copy, arrays.values())))
+    else: 
+        return map(copy, arrays)
