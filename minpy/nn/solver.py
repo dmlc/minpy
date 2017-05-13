@@ -156,8 +156,10 @@ class Solver(object):
             self.init_configs[p] = init_config
 
     def _reset_data_iterators(self):
-        self.train_dataiter.reset()
-        self.test_dataiter.reset()
+        if self.train_dataiter:
+            self.train_dataiter.reset()
+        if self.test_dataiter:
+            self.test_dataiter.reset()
 
     def _step(self, batch):
         """
