@@ -3,6 +3,8 @@ A reinforcement learning example in MinPy based on Karpathy's 'Pong from Pixels'
     Ref: http://karpathy.github.io/2016/05/31/rl/
 """
 
+from __future__ import division
+
 import argparse
 
 import gym

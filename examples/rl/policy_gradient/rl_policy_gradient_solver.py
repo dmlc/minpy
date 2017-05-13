@@ -175,7 +175,7 @@ class RLPolicyGradientSolver(Solver):
                 if self.verbose:
                     print('Saving model parameters...')
                 file_name = os.path.join(self.save_dir, 'params_%d.p' % episode_number)
-                with open(file_name, 'w') as f:
+                with open(file_name, 'wb') as f:
                     pickle.dump({k: v.asnumpy() for k, v in self.model.params.items()}, f)
                 if self.verbose:
                     print('Wrote parameter file %s' % file_name)
