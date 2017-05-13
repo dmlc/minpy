@@ -127,7 +127,7 @@ class RLPolicyGradientSolver(Solver):
         # Accumulate gradients since updates are only performed every `update_every` iterations.
         grad_buffer = self._init_grad_buffer()
 
-        for episode_number in xrange(1, self.num_episodes):
+        for episode_number in range(1, self.num_episodes):
             episode_start = time.time()
 
             # Generate an episode of training data.
@@ -148,7 +148,7 @@ class RLPolicyGradientSolver(Solver):
             grads = dict(zip(param_keys, grad_arrays))
 
             # Accumulate gradients until an update is performed.
-            for k, v in grads.iteritems():
+            for k, v in grads.items():
                 grad_buffer[k] += v
 
             # Misc. diagnostic info.
@@ -176,9 +176,9 @@ class RLPolicyGradientSolver(Solver):
                     print('Saving model parameters...')
                 file_name = os.path.join(self.save_dir, 'params_%d.p' % episode_number)
                 with open(file_name, 'w') as f:
-                    pickle.dump({k: v.asnumpy() for k, v in self.model.params.iteritems()}, f)
+                    pickle.dump({k: v.asnumpy() for k, v in self.model.params.items()}, f)
                 if self.verbose:
                     print('Wrote parameter file %s' % file_name)
 
     def _init_grad_buffer(self):
-        return {k: np.zeros_like(v) for k, v in self.model.params.iteritems()}
+        return {k: np.zeros_like(v) for k, v in self.model.params.items()}

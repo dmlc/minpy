@@ -12,6 +12,10 @@ import numpy
 
 from rl_policy_gradient_solver import RLPolicyGradientSolver
 
+# Please uncomment following if you have GPU-enabled MXNet installed.
+#from minpy.context import set_context, gpu
+#set_context(gpu(0)) # set the global context as gpu(0)
+
 class PongPreprocessor(object):
     def __init__(self):
         self.prev = None
@@ -72,7 +76,7 @@ class PolicyNetwork(ModelBase):
     def discount_rewards(self, rs):
         drs = np.zeros_like(rs).asnumpy()
         s = 0
-        for t in reversed(xrange(0, len(rs))):
+        for t in reversed(range(0, len(rs))):
             # Reset the running sum at a game boundary.
             if rs[t] != 0:
                 s = 0
