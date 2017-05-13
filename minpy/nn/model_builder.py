@@ -127,8 +127,8 @@ class Sequential(Container):
 
     def forward(self, *args):
         # It is recommended that all forward functions, especially those in Sequential, only receive positional arguments.
-        to_tuple = lambda results : results if isinstance(results, tuple) else (results,)
-        forward_module = lambda args, module : to_tuple(module(*args))
+        to_tuple = lambda results: results if isinstance(results, tuple) else (results,)
+        forward_module = lambda args, module: to_tuple(module(*args))
         result = _reduce(forward_module, self._modules, args)
         if len(result) == 1: result, = result
         return result
@@ -200,8 +200,8 @@ class Mul(Binary):
 # TODO div etc.
 
 def _register_configs(configs, to_register):
-    ''' param dict configs: pair param_name(str) : param_configs(dict)
-        param to_register: pair param_name(str) : param_configs(dict) or attr(str) : attr_value(object)
+    ''' param dict configs: pair param_name(str): param_configs(dict)
+        param to_register: pair param_name(str): param_configs(dict) or attr(str): attr_value(object)
     '''
 
     _configs = {}
@@ -250,21 +250,21 @@ class Layer(Module):
 
         # default init configs
         default_init_configs = \
-            {name : self._get_default_init_config(name) for name in self._module_param_names}
+            {name: self._get_default_init_config(name) for name in self._module_param_names}
         default_init_configs.update(
-            {name : self._get_default_init_config(name) for name in self._module_aux_param_names}
+            {name: self._get_default_init_config(name) for name in self._module_aux_param_names}
         )
 
-        self._init_configs = {name : {} for name in self._param_names}
-        self._init_configs.update({name : {} for name in self._aux_param_names})
+        self._init_configs = {name: {} for name in self._param_names}
+        self._init_configs.update({name: {} for name in self._aux_param_names})
 
         self._register_init_configs(default_init_configs)
 
         # default update configs
         # user must specify update configs explicitly
-        default_update_configs = {'update_rule' : 'unspecified'}
+        default_update_configs = {'update_rule': 'unspecified'}
 
-        self._update_configs = {name : {} for name in self._param_names}
+        self._update_configs = {name: {} for name in self._param_names}
 
         self._register_update_configs(default_update_configs)
 
@@ -278,9 +278,9 @@ class Layer(Module):
             assert bool(self._model), 'A parameterized layer must be bound to a model.'
 
             array_args = tuple(filter(_is_array, args))
-            array_kwargs = {key : value for key, value in kwargs.items() if is_array(value)}
+            array_kwargs = {key: value for key, value in kwargs.items() if is_array(value)}
 
-            get_shape = lambda array : array.shape
+            get_shape = lambda array: array.shape
             arg_shapes = tuple(map(get_shape, array_args))
             kwarg_shapes = dict(zip(array_kwargs.keys(), tuple(map(get_shape, array_kwargs.values()))))
 
@@ -310,19 +310,19 @@ class Layer(Module):
     @staticmethod
     def _get_default_init_config(param_name):
         if 'weight' in param_name:
-            return {'init_rule' : 'xavier'}
+            return {'init_rule': 'xavier'}
         elif 'bias' in param_name:
-            return {'init_rule' : 'constant', 'value' : 0}
+            return {'init_rule': 'constant', 'value': 0}
         elif 'beta' in param_name:
-            return {'init_rule' : 'constant', 'value' : 0}
+            return {'init_rule': 'constant', 'value': 0}
         elif 'gamma' in param_name:
-            return {'init_rule' : 'constant', 'value' : 1}
+            return {'init_rule': 'constant', 'value': 1}
         elif 'moving_mean' in param_name:
-            return {'init_rule' : 'constant', 'value' : 0}
+            return {'init_rule': 'constant', 'value': 0}
         elif 'moving_var' in param_name:
-            return {'init_rule' : 'constant', 'value' : 1}
+            return {'init_rule': 'constant', 'value': 1}
         else:
-            return {'init_rule' : 'constant', 'value' : 0}
+            return {'init_rule': 'constant', 'value': 0}
  
     def _init_params(self, param_shapes, context):
         # param_shapes: dict
@@ -367,12 +367,12 @@ class Layer(Module):
     def _parse_param_configs(self, configs):
         '''
             parsed configs might contain:
-                1. pair param_name(str) : configs(dict), which are parameter-specific configs
-                2. pair attr_name(str) : attr_value(object), which are global configs
+                1. pair param_name(str): configs(dict), which are parameter-specific configs
+                2. pair attr_name(str): attr_value(object), which are global configs
         '''
         if configs is None: return {}
 
-        _configs = {key : value for key, value in configs.items()}
+        _configs = {key: value for key, value in configs.items()}
 
         for identifier in _configs:
             if isinstance(identifier, tuple): # configs applied to a group of parameters
@@ -477,8 +477,8 @@ class Model(_model.ModelBase):
         object.__setattr__(self, attr, attr_value)
 
     def _register_model(self, model):
-        model.attach = lambda _, name, array : self.attach(name, array)
-        model.detach = lambda _, name : self.detach(name)
+        model.attach = lambda _, name, array: self.attach(name, array)
+        model.detach = lambda _, name: self.detach(name)
 
     def _register_module(self, module):
         # check duplication
