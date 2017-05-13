@@ -60,7 +60,7 @@ class Module(object):
 
     def __call__(self, *args, **kwargs):
         raise NotImplementedError()
-        
+
     def __setitem__(self, _):
         raise NotImplementedError()
 
@@ -208,7 +208,7 @@ class Binary(Parallel):
     def _affiliate_to(self, model):
         for module in (self._left, self._right):
             module._affiliate_to(model)
-   
+
 
 class Add(Binary):
     """ lhs_module + rhs_module
@@ -251,7 +251,7 @@ def _register_configs(configs, to_register):
             # identifier is a param name and attr_value is a dict containing configs specific to this parameter
             # memorize and skip it
             _configs[identifier] = attr_value
-        else: 
+        else:
             # a global attribute, modify this attribute for all parameters
             for config in configs.values():
                 # TODO the modification might be ineligible
@@ -342,7 +342,7 @@ class Layer(Module):
 
     def _assign_param_names(self, *params):
         return tuple('%s_%s' % (self._name, param) for param in params)
-    
+
     def _affiliate_to(self, model):
         model._update_configs.update(self._update_configs)
         self._model = model
@@ -363,7 +363,7 @@ class Layer(Module):
             return {'init_rule': 'constant', 'value': 1}
         else:
             return {'init_rule': 'constant', 'value': 0}
- 
+
     def _init_params(self, param_shapes, context):
         # param_shapes: dict
         for name, shape in param_shapes.items():
@@ -379,7 +379,7 @@ class Layer(Module):
                 self._model.attach(name, self._model.params[name])
 
         # register update_configs in model
-        
+
     def _init_aux_params(self, aux_param_shapes, context):
         # aux_param_shapes: dict
         for name, shape in aux_param_shapes.items():
@@ -472,7 +472,7 @@ class Layer(Module):
         """ Returns a dict containing the auxiliary parameters of a layer.
         """
         return dict(zip(self._aux_param_names, self._get_aux_params(*self._aux_param_names)))
-   
+
     # TODO privatize method
     def param_shapes(self, *args, **kwargs):
         """ Infer parameter shapes.
@@ -543,7 +543,7 @@ class Model(_model.ModelBase):
 
         self._modules.add(module)
         self._module_names.add(module.name)
-        
+
         module._affiliate_to(self)
 
     def _register_iterable(self, iterable):
@@ -565,20 +565,20 @@ class Model(_model.ModelBase):
     def aux_param_configs(self):
         raise NotImplementedError()
     '''
-        
+
     def add_param(*args, **kwargs):
         raise NotImplementedError()
- 
+
     def add_params(*args, **kwargs):
         raise NotImplementedError()
-        
+
     def add_aux_param(*args, **kwargs):
         raise NotImplementedError()
- 
+
     # requires implementation
     def forward(self):
         raise NotImplementedError()
-    
+
     def forward_batch(self):
         # TODO eliminate?
         raise NotImplementedError()
@@ -648,7 +648,7 @@ class Model(_model.ModelBase):
         """
         for module in self._modules:
             module.training()
-  
+
     def inference(self):
         """ Set model's state to inference.
         """
@@ -668,7 +668,7 @@ class _ConfigParser(object):
 
     def __init__(self, configs):
         object.__setattr__(self, '_configs', configs)
-    
+
     def __getattr__(self, attr):
         attr_values = set(config[attr] for config in self._configs.values() if attr in config)
         assert len(attr_values) == 1, 'Inconsistent or non-existent attribute.'
@@ -716,7 +716,7 @@ class Updater(_ConfigParser):
         # those attributes are local to self
         for attr, attr_value in kwargs.items():
             setattr(self, attr, attr_value)
-    
+
     def __call__(self, grad_dict):
         """ Only update parameters corresponding to gradients contained in grad_dict.
             User could update parameters selectively by manipulating grad_dict.

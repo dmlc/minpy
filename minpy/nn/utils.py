@@ -12,7 +12,7 @@ def _np_decorator(f):
         return f(*args, **kwargs)
 
     return wrapped
-        
+
 
 @_np_decorator
 def cross_entropy(p, labels):
@@ -61,5 +61,5 @@ def copy_arrays(arrays, context=None):
 
     if isinstance(arrays, dict):
         return dict(zip(arrays.keys(), map(copy, arrays.values())))
-    else: 
+    else:
         return map(copy, arrays)

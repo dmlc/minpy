@@ -19,7 +19,7 @@ class _Operatorized(_Layer):
 
         variables = kwargs.pop('variables', None)
         self._variables = ('data',) if variables is None else variables
-        
+
         self._kwargs = dict(kwargs)
 
         kwargs.update({v: _symbol.Variable(v) for v in self._variables})
@@ -39,17 +39,17 @@ class _Operatorized(_Layer):
         aux_params = tuple(map(eliminate_prefix, aux_params))
 
         super(_Operatorized, self).__init__(params, aux_params, name)
-    
+
     def forward(self, *args, **kwargs):
         is_array = lambda array: isinstance(array, _nd.NDArray)
 
-        kwarg_dict = dict(zip(self._variables, filter(is_array, args))) 
+        kwarg_dict = dict(zip(self._variables, filter(is_array, args)))
         for key, value in kwargs.items():
             if is_array(value): kwarg_dict[key] = value
-        
+
         kwarg_dict.update(dict(zip(self._module_param_names, self._get_params(*self._param_names))))
         kwarg_dict.update(dict(zip(self._module_aux_param_names, self._get_aux_params(*self._aux_param_names))))
-        
+
         kwarg_dict.update(self._kwargs)
 
         return self._operator(**kwarg_dict)
