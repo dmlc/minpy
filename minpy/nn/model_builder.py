@@ -1,3 +1,8 @@
+"""
+Infrastructures for building models.
+"""
+
+
 from functools import reduce as _reduce
 import operator as _operator
 
@@ -10,6 +15,7 @@ import minpy.nn.optim as _optim
 import minpy.nn.model as _model
 
 
+# pylint: disable=locally-disabled, invalid-name
 _module_counter = {}
 
 
@@ -43,9 +49,13 @@ class Module(object):
 
     @property
     def name(self):
+        """ A module's unique name.
+        """
         return self._name
 
     def forward(self, *args, **kwargs):
+        """ A virtual method.
+        """
         raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
@@ -84,6 +94,8 @@ class Module(object):
 
 
 class Container(Module):
+    """ An abstract class for containers of modules.
+    """
     # TODO provide an interface for indexing contained modules
     def __init__(self, name):
         super(Container, self).__init__(name)
@@ -92,13 +104,19 @@ class Container(Module):
         return self.forward(*args, **kwargs)
 
     def param_shapes(self, input_shape):
+        """ Infer the shapes of parameters given input shape.
+        """
         return {}
 
     def aux_param_shapes(self, input_shape):
+        """ Infer the shapes of auxiliary parameters given input shape.
+        """
         return {}
 
 
 class Sequential(Container):
+    """ A sequentially-arranged group of modules.
+    """
     _module_name = 'sequential'
     def __init__(self, *args, **kwargs):
         """ Sequential network.
@@ -134,10 +152,14 @@ class Sequential(Container):
         return result
 
     def training(self):
+        """ Set module's state to training.
+        """
         for module in self._modules:
             module.training()
 
     def inference(self):
+        """ Set module's state to inference.
+        """
         for module in self._modules:
             module.inference()
 
@@ -145,12 +167,17 @@ class Sequential(Container):
         for module in self._modules:
             module._affiliate_to(model)
 
+
 class Parallel(Container):
+    """ An abstract class for implementing containers of parallel modules.
+    """
     def __init__(self, name=None):
         super(Parallel, self).__init__(name)
 
 
 class Binary(Parallel):
+    """ An abstract class for implementing containers of binary parallel modules.
+    """
     # TODO training/inference
     def __init__(self, left, right, operator, name):
         super(Binary, self).__init__(name)
@@ -167,10 +194,14 @@ class Binary(Parallel):
         return self._operator(left, right)
 
     def training(self):
+        """ Set module's state to training.
+        """
         self._left.training()
         self._right.training()
 
     def inference(self):
+        """ Set module's state to inference.
+        """
         self._left.inference()
         self._right.inference()
 
@@ -180,24 +211,31 @@ class Binary(Parallel):
    
 
 class Add(Binary):
+    """ lhs_module + rhs_module
+    """
     _module_name = 'add'
     def __init__(self, left, right, name=None):
         super(Add, self).__init__(left, right, _operator.add, name)
 
 
 class Sub(Binary):
+    """ lhs_module - rhs_module
+    """
     _module_name = 'sub'
     def __init__(self, left, right, name=None):
         super(Sub, self).__init__(left, right, _operator.sub, name)
 
 
 class Mul(Binary):
+    """ lhs_module * rhs_module
+    """
     _module_name = 'mul'
     def __init__(self, left, right, name=None):
         super(Mul, self).__init__(left, right, _operator.mul, name)
 
 
 # TODO div etc.
+
 
 def _register_configs(configs, to_register):
     ''' param dict configs: pair param_name(str): param_configs(dict)
@@ -226,6 +264,8 @@ def _register_configs(configs, to_register):
 
 
 class Layer(Module):
+    """ An abstract class for parameterized layers.
+    """
     def __init__(self, params=None, aux_params=None, name=None):
         '''
             Currently, a layer must be bound to a model.
@@ -412,29 +452,45 @@ class Layer(Module):
         raise NotImplementedError()
 
     def training(self):
+        """ Set module's state to training.
+        """
         self._mode = 'training'
 
     def inference(self):
+        """ Set module's state to inference.
+        """
         self._mode = 'inference'
 
     @property
     def param_dict(self):
+        """ Returns a dict containing the parameters of a layer.
+        """
         return dict(zip(self._param_names, self._get_params(*self._param_names)))
 
     @property
     def aux_param_dict(self):
+        """ Returns a dict containing the auxiliary parameters of a layer.
+        """
         return dict(zip(self._aux_param_names, self._get_aux_params(*self._aux_param_names)))
    
+    # TODO privatize method
     def param_shapes(self, *args, **kwargs):
+        """ Infer parameter shapes.
+        """
         # customized layer must specify the shapes of ALL params
         return {}
 
+    # TODO privatize method
     def aux_param_shapes(self, *args, **kwargs):
+        """ Infer auxiliary parameter shapes.
+        """
         # customized layer must specify the shapes of ALL aux params
         return {}
 
 
 class Model(_model.ModelBase):
+    """ A trainable model.
+    """
     # TODO detach/resume (parameter, layer)
     # TODO check duplicated layers
     def __init__(self, loss=None, attach_all=True, jit=True):
@@ -529,6 +585,8 @@ class Model(_model.ModelBase):
 
     @staticmethod
     def decorator(f):
+        """ Decorator for model.forward and model.loss.
+        """
         def wrapped(self, *args, **kwargs):
             is_train = kwargs.pop('is_train', False)
 
@@ -555,29 +613,45 @@ class Model(_model.ModelBase):
         return wrapped
 
     def attach(self, name, array):
+        """ Attach an array to computation graph.
+        Inputs:
+          - name: a str
+          - array: mxnet.ndarray.NDArray
+        """
         if name not in self.grad_dict:
             self.grad_dict[name] = _nd.NDArray(_nd._new_alloc_handle(array.shape, array.context, True, array.dtype))
             _autograd.mark_variables((array,), (self.grad_dict[name],))
         return self
 
     def detach(self, name):
+        """ Detach an array from computation graph.
+            (not implemented)
+        """
         raise NotImplementedError()
 
     def grad(self):
+        """ Returns a function that computes gradients.
+            (not implemented)
+        """
         raise NotImplementedError()
 
     def grad_and_loss(self, data, labels):
+        """ Returns a function that computes gradients and loss.
+            (not implemented)
+        """
         raise NotImplementedError()
 
     # TODO load/save (inherited method)
 
     def training(self):
-        # training mode
+        """ Set model's state to training.
+        """
         for module in self._modules:
             module.training()
   
     def inference(self):
-        # inference mode
+        """ Set model's state to inference.
+        """
         for module in self._modules:
             module.inference()
 
@@ -614,16 +688,24 @@ class _ConfigParser(object):
         self._configs[param_name] = dict(configs)
 
     def keys(self):
+        """ Returns keys of configuration dict.
+        """
         return self._configs.keys()
 
     def values(self):
+        """ Returns keys of configuration dict.
+        """
         return self._configs.values()
 
     def items(self):
+        """ Returns items of configuration dict.
+        """
         return self._configs.items()
 
 
 class Updater(_ConfigParser):
+    """ Optimizer.
+    """
     def __init__(self, model, **kwargs):
         # duplicate so that there could be multiple updaters for one model
         configs = dict(model._update_configs)
