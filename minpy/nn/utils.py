@@ -1,3 +1,7 @@
+# pylint: disable-all
+# TODO fix pylint warnings
+
+
 import numpy as _np
 import mxnet as _mx
 import mxnet.ndarray as _nd
@@ -39,7 +43,8 @@ def count_params(params):
     Returns:
       - n: total number of parameters
     """
-    if isinstance(params, dict): params = params.values()
+    if isinstance(params, dict):
+        params = params.values()
 
     assert all(isinstance(param, _nd.NDArray) for param in params), \
         'All parameters must be mxnet.ndarray.NDArray.'
@@ -55,7 +60,8 @@ def copy_arrays(arrays, context=None):
     Returns:
       - arrays: a list, tuple or dict of duplicated arrays located in context
     """
-    if context is None: context = _mx.cpu()
+    if context is None:
+        context = _mx.cpu()
 
     copy = lambda array : array.as_in_context(context)
 

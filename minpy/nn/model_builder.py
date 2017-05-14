@@ -1,11 +1,16 @@
+# pylint: disable-all
+# TODO fix pylint warnings
 """
 Infrastructures for building models.
 """
 
 
+from collections import Iterable as _Iterable
 from functools import reduce as _reduce
 import operator as _operator
 
+# pylint: disable=locally-disabled, no-name-in-module
+# pylint: disable=locally-disabled, import-error
 import mxnet.minpy
 import mxnet.ndarray as _nd
 import mxnet.contrib.autograd as _autograd
@@ -30,7 +35,6 @@ def _is_array(array):
     return isinstance(array, _nd.NDArray)
 
 
-from collections import Iterable as _Iterable
 def _is_iterable(instance):
     return isinstance(instance, _Iterable)
 
@@ -44,7 +48,8 @@ class Module(object):
     _module_name = None
     def __init__(self, name):
         super(Module, self).__init__()
-        if self._module_name is None: raise NotImplementedError()
+        if self._module_name is None:
+            raise NotImplementedError()
         self._name = _module_prefix(self._module_name) if name is None else name
 
     @property
@@ -59,12 +64,6 @@ class Module(object):
         raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
-        raise NotImplementedError()
-
-    def __setitem__(self, _):
-        raise NotImplementedError()
-
-    def __setitem__(self, _):
         raise NotImplementedError()
 
     def __repr__(self):
@@ -98,20 +97,37 @@ class Container(Module):
     """
     # TODO provide an interface for indexing contained modules
     def __init__(self, name):
+        # pylint: disable=locally-disabled, useless-super-delegation
         super(Container, self).__init__(name)
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
-    def param_shapes(self, input_shape):
+    def param_shapes(self, _):
+        # pylint: disable=locally-disabled, no-self-use
         """ Infer the shapes of parameters given input shape.
         """
         return {}
 
-    def aux_param_shapes(self, input_shape):
+    def aux_param_shapes(self, _):
+        # pylint: disable=locally-disabled, no-self-use
         """ Infer the shapes of auxiliary parameters given input shape.
         """
         return {}
+
+    def _affiliate_to(self, model):
+        '''
+            responsible for
+                (1). refering to model.params and model.aux_params
+                (2). update model._update_configs
+                (3). if isinstance(self, Container): call _affiliate_to of contained modules
+        '''
+        raise NotImplementedError()
+
+    def forward(self, *args, **kwargs):
+        """ A virtual method.
+        """
+        raise NotImplementedError()
 
 
 class Sequential(Container):
@@ -143,12 +159,16 @@ class Sequential(Container):
     def __str__(self):
         return str(self._modules)
 
-    def forward(self, *args):
-        # It is recommended that all forward functions, especially those in Sequential, only receive positional arguments.
+    def forward(self, *args, **kwargs):
+        """
+        It is recommended that all forward functions, especially those in Sequential,
+        only receive positional arguments.
+        """
         to_tuple = lambda results: results if isinstance(results, tuple) else (results,)
         forward_module = lambda args, module: to_tuple(module(*args))
         result = _reduce(forward_module, self._modules, args)
-        if len(result) == 1: result, = result
+        if len(result) == 1:
+            result, = result
         return result
 
     def training(self):
@@ -164,10 +184,13 @@ class Sequential(Container):
             module.inference()
 
     def _affiliate_to(self, model):
+        # pylint: disable=locally-disabled, protected-access
         for module in self._modules:
             module._affiliate_to(model)
 
 
+# pylint: disable=locally-disabled, abstract-method
+# pylint: disable=locally-disabled, useless-super-delegation
 class Parallel(Container):
     """ An abstract class for implementing containers of parallel modules.
     """
@@ -239,16 +262,21 @@ class Mul(Binary):
 
 def _register_configs(configs, to_register):
     ''' param dict configs: pair param_name(str): param_configs(dict)
-        param to_register: pair param_name(str): param_configs(dict) or attr(str): attr_value(object)
+        param to_register: pair param_name(str):
+            param_configs(dict) or attr(str): attr_value(object)
     '''
 
     _configs = {}
 
     # register global attributes
     for identifier, attr_value in to_register.items():
-        assert isinstance(identifier, str), KeyError() # global attribute must be str (e.g. 'learning_rate')
+        # global attribute must be str (e.g. 'learning_rate')
+        assert isinstance(identifier, str), KeyError()
         if identifier in configs:
-            # identifier is a param name and attr_value is a dict containing configs specific to this parameter
+            '''
+            identifier is a param name and
+            attr_value is a dict containing configs specific to this parameter
+            '''
             # memorize and skip it
             _configs[identifier] = attr_value
         else:
@@ -273,16 +301,22 @@ class Layer(Module):
 
         super(Layer, self).__init__(name)
 
-        if params is None: params = tuple()
-        self._module_param_names = params                     # local param names
-        self._param_names = self._assign_param_names(*params) # global param names (identifiable in model)
+        if params is None:
+            params = tuple()
+        # local param names
+        self._module_param_names = params
+        # global param names (identifiable in model)
+        self._param_names = self._assign_param_names(*params)
         for param, param_name in zip(params, self._param_names):
             setattr(self, param, param_name)
         # TODO Is it necessary to bind one layer to multiple models?
 
-        if aux_params is None: aux_params = tuple()
-        self._module_aux_param_names = aux_params                     # local aux param names
-        self._aux_param_names = self._assign_param_names(*aux_params) # global aux param names (identifiable in model)
+        if aux_params is None:
+            aux_params = tuple()
+        # local aux param names
+        self._module_aux_param_names = aux_params
+        # global aux param names (identifiable in model)
+        self._aux_param_names = self._assign_param_names(*aux_params)
         for aux_param, aux_param_name in zip(aux_params, self._aux_param_names):
             setattr(self, '_%s' % aux_param, aux_param_name)
 
@@ -410,7 +444,8 @@ class Layer(Module):
                 1. pair param_name(str): configs(dict), which are parameter-specific configs
                 2. pair attr_name(str): attr_value(object), which are global configs
         '''
-        if configs is None: return {}
+        if configs is None:
+            return {}
 
         _configs = {key: value for key, value in configs.items()}
 
@@ -418,7 +453,8 @@ class Layer(Module):
             if isinstance(identifier, tuple): # configs applied to a group of parameters
                 config = _configs.pop(identifier)
                 # expand group configs to parameter-specific configs
-                for param_name in identifier: _configs[param_name] = config
+                for param_name in identifier:
+                    _configs[param_name] = config
 
         # convert local (module) name to global name
         for module_param_name, param_name in \
@@ -550,7 +586,8 @@ class Model(_model.ModelBase):
         for element in iterable:
             if isinstance(element, Module):
                 self._register_module(element)
-            elif isinstance(element, str): continue
+            elif isinstance(element, str):
+                continue
             elif _is_iterable(element):
                 self._register_iterable(element)
 
@@ -590,11 +627,14 @@ class Model(_model.ModelBase):
         def wrapped(self, *args, **kwargs):
             is_train = kwargs.pop('is_train', False)
 
-            if is_train: self.training()
-            else: self.inference()
+            if is_train:
+                self.training()
+            else:
+                self.inference()
 
             with _autograd.TrainingStateScope(is_train):
-                if self._jit: mxnet.minpy.enable_jit()
+                if self._jit:
+                    mxnet.minpy.enable_jit()
 
                 results = f(self, *args, **kwargs)
 

@@ -1,3 +1,5 @@
+# pylint: disable-all
+# TODO fix pylint warnings
 """
 Modules
 """
@@ -45,7 +47,8 @@ class _Operatorized(_Layer):
 
         kwarg_dict = dict(zip(self._variables, filter(is_array, args)))
         for key, value in kwargs.items():
-            if is_array(value): kwarg_dict[key] = value
+            if is_array(value):
+                kwarg_dict[key] = value
 
         kwarg_dict.update(dict(zip(self._module_param_names, self._get_params(*self._param_names))))
         kwarg_dict.update(dict(zip(self._module_aux_param_names, self._get_aux_params(*self._aux_param_names))))
