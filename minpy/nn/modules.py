@@ -1,3 +1,10 @@
+# pylint: disable-all
+# TODO fix pylint warnings
+"""
+Modules
+"""
+
+
 import mxnet.ndarray as _nd
 import mxnet.symbol as _symbol
 
@@ -14,17 +21,17 @@ class _Operatorized(_Layer):
 
         variables = kwargs.pop('variables', None)
         self._variables = ('data',) if variables is None else variables
-        
+
         self._kwargs = dict(kwargs)
 
-        kwargs.update({v : _symbol.Variable(v) for v in self._variables})
+        kwargs.update({v: _symbol.Variable(v) for v in self._variables})
 
         self._symbol = getattr(_symbol, operator_name)(name='symbol', **kwargs)
         self._operator = getattr(_nd, operator_name)
 
         self._module_name = operator_name.lower()
 
-        eliminate_prefix = lambda name : name.replace('symbol_', '')
+        eliminate_prefix = lambda name: name.replace('symbol_', '')
 
         params = set(self._symbol.list_arguments())
         params = params.difference(set(self._variables))
@@ -34,17 +41,18 @@ class _Operatorized(_Layer):
         aux_params = tuple(map(eliminate_prefix, aux_params))
 
         super(_Operatorized, self).__init__(params, aux_params, name)
-    
-    def forward(self, *args, **kwargs):
-        is_array = lambda array : isinstance(array, _nd.NDArray)
 
-        kwarg_dict = dict(zip(self._variables, filter(is_array, args))) 
+    def forward(self, *args, **kwargs):
+        is_array = lambda array: isinstance(array, _nd.NDArray)
+
+        kwarg_dict = dict(zip(self._variables, filter(is_array, args)))
         for key, value in kwargs.items():
-            if is_array(value): kwarg_dict[key] = value
-        
+            if is_array(value):
+                kwarg_dict[key] = value
+
         kwarg_dict.update(dict(zip(self._module_param_names, self._get_params(*self._param_names))))
         kwarg_dict.update(dict(zip(self._module_aux_param_names, self._get_aux_params(*self._aux_param_names))))
-        
+
         kwarg_dict.update(self._kwargs)
 
         return self._operator(**kwarg_dict)
@@ -60,7 +68,7 @@ class _Operatorized(_Layer):
         for param_name, shape in shapes.items():
             shapes[param_name.replace('symbol_', '')] = shapes.pop(param_name)
         local_to_global = dict(zip(self._module_param_names, self._param_names))
-        shapes = {local_to_global[name] : shape for name, shape in shapes.items()}
+        shapes = {local_to_global[name]: shape for name, shape in shapes.items()}
         return shapes
 
     # TODO
@@ -75,26 +83,29 @@ criterion:
     1. an operator is parameterized
     2. an operator fits into frameworks of containers, especially Sequential
 '''
-Activation = lambda **kwargs : _Operatorized('Activation', **kwargs)
-BatchNorm = lambda **kwargs : _Operatorized('BatchNorm', **kwargs)
-Convolution = lambda **kwargs : _Operatorized('Convolution', **kwargs)
-Deconvolution = lambda **kwargs : _Operatorized('Deconvolution', **kwargs)
-Dropout = lambda **kwargs : _Operatorized('Dropout', **kwargs)
-Embedding = lambda **kwargs : _Operatorized('Embedding', **kwargs)
-FullyConnected = lambda **kwargs : _Operatorized('FullyConnected', **kwargs)
-LeakyReLU = lambda **kwargs : _Operatorized('LeakyReLU', **kwargs)
-Pooling = lambda **kwargs : _Operatorized('Pooling', **kwargs)
-RNN = lambda **kwargs : _Operatorized('RNN', **kwargs)
+# pylint: disable=locally-disabled, invalid-name
+Activation = lambda **kwargs: _Operatorized('Activation', **kwargs)
+BatchNorm = lambda **kwargs: _Operatorized('BatchNorm', **kwargs)
+Convolution = lambda **kwargs: _Operatorized('Convolution', **kwargs)
+Deconvolution = lambda **kwargs: _Operatorized('Deconvolution', **kwargs)
+Dropout = lambda **kwargs: _Operatorized('Dropout', **kwargs)
+Embedding = lambda **kwargs: _Operatorized('Embedding', **kwargs)
+FullyConnected = lambda **kwargs: _Operatorized('FullyConnected', **kwargs)
+LeakyReLU = lambda **kwargs: _Operatorized('LeakyReLU', **kwargs)
+Pooling = lambda **kwargs: _Operatorized('Pooling', **kwargs)
+RNN = lambda **kwargs: _Operatorized('RNN', **kwargs)
 
 # grammar sugar
-ReLU = lambda : _Operatorized('Activation', act_type='relu')
-Sigmoid = lambda : _Operatorized('Activation', act_type='sigmoid')
-Tanh = lambda : _Operatorized('Activation', act_type='tanh')
+# pylint: disable=locally-disabled, invalid-name
+ReLU = lambda: _Operatorized('Activation', act_type='relu')
+Sigmoid = lambda: _Operatorized('Activation', act_type='sigmoid')
+Tanh = lambda: _Operatorized('Activation', act_type='tanh')
 
-RNNReLU = lambda **kwargs : _Operatorized('RNN', mode='rnn_relu', **kwargs)
-RNNTanh = lambda **kwargs : _Operatorized('RNN', mode='rnn_tanh', **kwargs)
-GRU = lambda **kwargs : _Operatorized('RNN', mode='gru', **kwargs)
-LSTM = lambda **kwargs : _Operatorized('RNN', mode='lstm', **kwargs)
+# pylint: disable=locally-disabled, invalid-name
+RNNReLU = lambda **kwargs: _Operatorized('RNN', mode='rnn_relu', **kwargs)
+RNNTanh = lambda **kwargs: _Operatorized('RNN', mode='rnn_tanh', **kwargs)
+GRU = lambda **kwargs: _Operatorized('RNN', mode='gru', **kwargs)
+LSTM = lambda **kwargs: _Operatorized('RNN', mode='lstm', **kwargs)
 
 class Variable(_Layer):
     _module_name = 'variable'
@@ -110,7 +121,7 @@ class Variable(_Layer):
         return self._get_param(self.variable)
 
     def param_shapes(self, *args):
-        return {self.variable : self._shape}
+        return {self.variable: self._shape}
 
 
 class Identity(_Layer):
@@ -172,4 +183,4 @@ class FullyConnectedND(_Layer):
         indim = 1
         for i in range(1, len(xshape)):
             indim *= xshape[i]
-        return {self.weight : (indim, self._num_hidden), self.bias : (self._num_hidden,)}
+        return {self.weight: (indim, self._num_hidden), self.bias: (self._num_hidden,)}

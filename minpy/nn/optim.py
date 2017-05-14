@@ -38,7 +38,7 @@ def sgd(w, dw, config=None):
 
     config format:
     - lr: Scalar learning rate.
-    - wd: 
+    - wd:
     - rescale_grad:
     - clip_gradient:
     """
@@ -57,7 +57,7 @@ def sgd_momentum(w, dw, config=None):
     - lr: Scalar learning rate.
     - momentum: Scalar between 0 and 1 giving the momentum value.
                 Setting momentum = 0 reduces to sgd.
-    - wd: 
+    - wd:
     - rescale_grad:
     - clip_gradient:
     """
@@ -79,7 +79,7 @@ def rmsprop(w, dw, config=None):
     - gamma1: Scalar between 0 and 1 giving the decay rate for the squared
                   gradient cache.
     - epsilon: Small scalar used for smoothing to avoid dividing by zero.
-    - wd: 
+    - wd:
     - rescale_grad:
     - clip_gradient:
     - clip_weights:

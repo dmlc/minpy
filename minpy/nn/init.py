@@ -68,6 +68,7 @@ def gaussian(shape, config):
         Initialized array of size `shape`
 
     """
+    # pylint: disable=locally-disabled, invalid-name
     mu = config.setdefault('mu', 0.0)
     stdvar = config.setdefault('stdvar', 0.001)
     return _nd.random_normal(loc=mu, scale=stdvar, shape=shape)
