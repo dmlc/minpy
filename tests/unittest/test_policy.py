@@ -21,7 +21,7 @@ def test_policy():
     def gaussian_cluster_generator(num_samples=10000, num_features=500, num_classes=5):
         mu = np.random.rand(num_classes, num_features)
         sigma = np.ones((num_classes, num_features)) * 0.1
-        num_cls_samples = num_samples / num_classes
+        num_cls_samples = int(num_samples / num_classes)
         x = np.zeros((num_samples, num_features))
         y = np.zeros((num_samples, num_classes))
         for i in range(num_classes):
