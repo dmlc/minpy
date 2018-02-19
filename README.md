@@ -4,6 +4,10 @@
 [![PyPI version](https://badge.fury.io/py/minpy.svg)](https://badge.fury.io/py/minpy)
 [![Docs](https://readthedocs.org/projects/minpy/badge/?version=latest)](https://minpy.readthedocs.io/en/latest/)
 
+**Please try [MXNet Gluon](https://github.com/apache/incubator-mxnet)**.
+Our project has merged with MXNet Gluon which follows our vision.
+This repo is being deprecated.
+
 This repository aims at providing a high performing and flexible deep learning platform, by prototyping a pure [NumPy](http://www.numpy.org/) interface above [MXNet](https://github.com/dmlc/mxnet) backend. In one word, you get the following automatically with your NumPy code:
 ```python
 import minpy.numpy as np
